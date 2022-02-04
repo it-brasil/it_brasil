@@ -156,6 +156,7 @@
                 <field name="fiscal_operation_id" optional="hide" />
                 <field name="fiscal_operation_line_id" optional="show" />
                 <field name="cfop_id" optional="hide" />
+                <field name="ncm_id" optional="hide" />
                 <field
                     name="fiscal_tax_ids"
                     attrs="{'invisible': [('document_type_id', '=', False)]}"
