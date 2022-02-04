@@ -65,25 +65,25 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
         if xpath_mappings is None:
             xpath_mappings = (
                 # (placeholder_xpath, fiscal_xpath)
-                ("//group[@name='fiscal_fields']", "//group[@name='fiscal_fields']"),
-                ("//page[@name='fiscal_taxes']", "//page[@name='fiscal_taxes']"),
+                (".//group[@name='fiscal_fields']", "//group[@name='fiscal_fields']"),
+                (".//page[@name='fiscal_taxes']", "//page[@name='fiscal_taxes']"),
                 (
-                    "//page[@name='fiscal_line_extra_info']",
+                    ".//page[@name='fiscal_line_extra_info']",
                     "//page[@name='fiscal_line_extra_info']",
                 ),
                 # these will only collect (invisible) fields for onchanges:
                 (
-                    "//group[@name='fiscal_taxes_fields']",
+                    ".//control[@name='fiscal_taxes_fields']...",
                     "//page[@name='fiscal_taxes']//field",
                 ),
                 (
-                    "//group[@name='fiscal_line_extra_info_fields']",
+                    ".//control[@name='fiscal_line_extra_info_fields']...",
                     "//page[@name='fiscal_line_extra_info']//field",
                 ),
             )
         for placeholder_xpath, fiscal_xpath in xpath_mappings:
             fiscal_nodes = fsc_doc.xpath(fiscal_xpath)
-            for target_node in doc.xpath(placeholder_xpath):
+            for target_node in doc.findall(placeholder_xpath):
                 if len(fiscal_nodes) == 1:
                     # replace unique placeholder
                     # (deepcopy is required to inject fiscal nodes in possible
@@ -94,6 +94,8 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
                     # append multiple fields to placeholder container
                     for fiscal_node in fiscal_nodes:
                         field = deepcopy(fiscal_node)
+                        if not field.attrib.get("optional"):
+                            field.attrib["invisible"] = "1"
                         target_node.append(field)
         return doc
 
@@ -166,9 +168,10 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
                 record.financial_total_gross = (
                     record.financial_total + record.discount_value
                 )
-                #record.financial_discount_value = record.discount_value
+                record.financial_discount_value = record.discount_value
             else:
                 record.financial_total_gross = record.financial_total = 0.0
+                record.financial_discount_value = 0.0
 
     def _compute_taxes(self, taxes, cst=None):
         self.ensure_one()
@@ -759,8 +762,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
     @api.model
     def _update_fiscal_quantity(self, product_id, price, quantity, uom_id, uot_id):
         result = {"uot_id": uom_id, "fiscal_quantity": quantity, "fiscal_price": price}
-
-        if uom_id != uot_id:
+        if uot_id and uom_id != uot_id:
             result["uot_id"] = uot_id
             if product_id and price and quantity:
                 product = self.env["product.product"].browse(product_id)

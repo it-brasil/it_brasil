@@ -105,7 +105,6 @@ def create_fake_certificate_file(valid, passwd, issuer, country, subject):
 
     return b64encode(p12.export(passwd))
 
-
 def path_edoc_company(company_id):
     db_name = company_id._cr.dbname
     filestore = config.filestore(db_name)

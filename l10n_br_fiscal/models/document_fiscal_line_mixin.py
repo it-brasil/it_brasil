@@ -231,11 +231,10 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         compute="_compute_amounts",
     )
 
-    # financial_discount_value = fields.Monetary(
-    #     string="Financial Discount Value",
-    #     compute="_compute_amounts",
-    #     default=0.0,
-    # )
+    financial_discount_value = fields.Monetary(
+        string="Financial Discount Value",
+        compute="_compute_amounts",
+    )
 
     amount_tax_included = fields.Monetary(string="Amount Tax Included")
 
