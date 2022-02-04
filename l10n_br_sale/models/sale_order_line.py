@@ -34,8 +34,8 @@ class SaleOrderLine(models.Model):
     )
 
     quantity = fields.Float(
-        related='product_uom_qty',
-        depends=['product_uom_qty'],
+        related='qty_to_invoice',
+        depends=['qty_to_invoice'],
     )
 
     uom_id = fields.Many2one(

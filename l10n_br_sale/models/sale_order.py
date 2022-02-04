@@ -247,7 +247,9 @@ class SaleOrder(models.Model):
         return result
 
     def action_invoice_create(self, grouped=False, final=False):
+        # def _create_invoices(self, grouped=False, final=False, date=None):
         inv_ids = super().action_invoice_create(grouped=grouped, final=final)
+        # inv_ids = super()._create_invoices(grouped=grouped, final=final, date=date)
         
         # In brazilian localization we need to overwrite this method
         # because when there are a sale order line with different Document
