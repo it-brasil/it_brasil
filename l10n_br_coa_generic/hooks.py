@@ -20,14 +20,11 @@ def post_init_hook(cr, registry):
 
     # Load COA to Demo Company
     if not tools.config.get("without_demo"):
-        user_admin = env.ref("base.user_admin")
         company = env.ref(
             "l10n_br_base.empresa_lucro_presumido", raise_if_not_found=False
         )
         if company:
-            user_admin.company_id = company
-            coa_generic_tmpl.sudo(user=user_admin.id).try_loading_for_current_company()
-
+            coa_generic_tmpl.try_loading(company=company)
             tools.convert_file(
                 cr,
                 "l10n_br_coa_generic",
@@ -36,7 +33,4 @@ def post_init_hook(cr, registry):
                 mode="init",
                 noupdate=True,
                 kind="init",
-                report=None,
             )
-
-            user_admin.company_id = env.ref("base.main_company")

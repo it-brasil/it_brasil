@@ -4,8 +4,6 @@
 from odoo import api, fields, models
 from odoo.tools import float_is_zero
 
-from odoo.addons import decimal_precision as dp
-
 from ..constants.fiscal import (
     FINAL_CUSTOMER_YES,
     FISCAL_IN,
@@ -85,18 +83,18 @@ class Tax(models.Model):
     )
 
     percent_amount = fields.Float(
-        string="Percent", digits=dp.get_precision("Fiscal Tax Percent"), required=True
+        string="Percent", digits="Fiscal Tax Percent", required=True
     )
 
     percent_reduction = fields.Float(
         string="Percent Reduction",
-        digits=dp.get_precision("Fiscal Tax Percent"),
+        digits="Fiscal Tax Percent",
         required=True,
     )
 
     percent_debit_credit = fields.Float(
         string="Percent Debit/Credit",
-        digits=dp.get_precision("Fiscal Tax Percent"),
+        digits="Fiscal Tax Percent",
         required=True,
     )
 
@@ -107,7 +105,7 @@ class Tax(models.Model):
     )
 
     value_amount = fields.Float(
-        string="Value", digits=dp.get_precision("Fiscal Tax Value"), required=True
+        string="Value", digits="Fiscal Tax Value", required=True
     )
 
     uot_id = fields.Many2one(comodel_name="uom.uom", string="Tax UoM")
@@ -156,12 +154,12 @@ class Tax(models.Model):
 
     icmsst_mva_percent = fields.Float(
         string="MVA Percent",
-        digits=dp.get_precision("Fiscal Tax Percent"),
+        digits="Fiscal Tax Percent",
         required=True,
     )
 
     icmsst_value = fields.Float(
-        string="PFC Value", digits=dp.get_precision("Fiscal Tax Value"), required=True
+        string="PFC Value", digits="Fiscal Tax Value", required=True
     )
 
     _sql_constraints = [
@@ -179,7 +177,7 @@ class Tax(models.Model):
         return cst
 
     def _compute_tax_base(self, tax, tax_dict, **kwargs):
-        company = kwargs.get("company", tax.env.user.company_id)
+        company = kwargs.get("company", tax.env.company)
         currency = kwargs.get("currency", company.currency_id)
         precision = currency.decimal_places
         fiscal_price = kwargs.get("fiscal_price", 0.00)
@@ -245,7 +243,7 @@ class Tax(models.Model):
         tax_dict["percent_reduction"] = tax.percent_reduction
         tax_dict["percent_amount"] = tax_dict.get("percent_amount", tax.percent_amount)
 
-        company = kwargs.get("company", tax.env.user.company_id)
+        company = kwargs.get("company", tax.env.company)
         # partner = kwargs.get("partner")
         currency = kwargs.get("currency", company.currency_id)
         precision = currency.decimal_places

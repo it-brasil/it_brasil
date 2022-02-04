@@ -4,7 +4,7 @@
 
 from odoo import fields, models
 
-from odoo.addons.account.models.account_invoice import TYPE2JOURNAL
+# from odoo.addons.account.models.account_invoice import TYPE2JOURNAL
 
 FISCAL_TYPE_INVOICE = {
     "purchase": "in_invoice",
@@ -49,9 +49,10 @@ class Operation(models.Model):
         else:
             new_action = self.env.ref("l10n_br_account.fiscal_invoice_all_action")
         invoice_type = FISCAL_TYPE_INVOICE[self.fiscal_type]
-        journal_type = TYPE2JOURNAL[invoice_type]
+        # TODO FIXME migrate!
+        journal_type = "TODO"  # TYPE2JOURNAL[invoice_type]
         new_action["context"] = {
-            "type": invoice_type,
+            "move_type": invoice_type,
             "default_fiscal_operation_type": self.fiscal_type,
             "default_fiscal_operation_id": self.id,
             "journal_type": journal_type,
@@ -61,7 +62,7 @@ class Operation(models.Model):
 
     def action_create_new(self):
         action = super().action_create_new()
-        action["res_model"] = "account.invoice"
+        action["res_model"] = "account.move"
         action["view_id"] = self.env.ref("l10n_br_account.fiscal_invoice_form").id
         action["context"] = self._change_action_view(action)["context"]
         return action
@@ -71,4 +72,4 @@ class Operation(models.Model):
         return self._change_action_view(action)
 
     def _fiscal_document_object(self):
-        return self.env["account.invoice"]
+        return self.env["account.move"]

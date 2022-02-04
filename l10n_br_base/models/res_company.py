@@ -14,21 +14,18 @@ class Company(models.Model):
     _name = "res.company"
     _inherit = [_name, "format.address.mixin", "l10n_br_base.party.mixin"]
 
-    def _get_company_address_fields(self, partner):
-        partner_fields = super()._get_company_address_fields(partner)
-        partner_fields.update(
-            {
-                "legal_name": partner.legal_name,
-                "cnpj_cpf": partner.cnpj_cpf,
-                "inscr_est": partner.inscr_est,
-                "inscr_mun": partner.inscr_mun,
-                "district": partner.district,
-                "city_id": partner.city_id,
-                "suframa": partner.suframa,
-                "state_tax_number_ids": [(6, 0, partner.state_tax_number_ids.ids)],
-            }
-        )
-        return partner_fields
+    def _get_company_address_field_names(self):
+        partner_fields = super()._get_company_address_field_names()
+        return partner_fields + [
+            "legal_name",
+            "cnpj_cpf",
+            "inscr_est",
+            "inscr_mun",
+            "district",
+            "city_id",
+            "suframa",
+            "state_tax_number_ids",
+        ]
 
     def _inverse_legal_name(self):
         """ Write the l10n_br specific functional fields. """
@@ -125,16 +122,14 @@ class Company(models.Model):
     def _fields_view_get(
         self, view_id=None, view_type="form", toolbar=False, submenu=False
     ):
-        res = super(Company, self)._fields_view_get(
-            view_id, view_type, toolbar, submenu
-        )
+        res = super()._fields_view_get(view_id, view_type, toolbar, submenu)
         if view_type == "form":
             res["arch"] = self._fields_view_get_address(res["arch"])
         return res
 
     def write(self, values):
         try:
-            result = super(Company, self).write(values)
+            result = super().write(values)
         except Exception as e:
             if not config["without_demo"] and values.get("currency_id"):
                 # required for demo installation

@@ -4,17 +4,13 @@
 
 import logging
 
-from odoo import SUPERUSER_ID, _, api, tools
-
-from .constants.fiscal import CERTIFICATE_TYPE_ECNPJ
-from .tools import misc
+from odoo import _, tools
 
 _logger = logging.getLogger(__name__)
 
 
 def post_init_hook(cr, registry):
     """Import XML data to change core data"""
-    env = api.Environment(cr, SUPERUSER_ID, {})
 
     files = [
         "data/l10n_br_fiscal.cnae.csv",
@@ -42,10 +38,10 @@ def post_init_hook(cr, registry):
             mode="init",
             noupdate=True,
             kind="init",
-            report=None,
         )
 
     if not tools.config["without_demo"]:
+        """ import pudb;pu.db
         demofiles = [
             "demo/l10n_br_fiscal.ncm-demo.csv",
             "demo/l10n_br_fiscal.nbm-demo.csv",
@@ -62,6 +58,8 @@ def post_init_hook(cr, registry):
             "demo/res_users_demo.xml",
             "demo/icms_tax_definition_demo.xml",
         ]
+        """
+        x = 1
 
         # Load only demo CSV files with few lines instead of thousands
         # unless a flag mention the contrary
@@ -78,32 +76,31 @@ def post_init_hook(cr, registry):
 
         _logger.info(_("Loading l10n_br_fiscal demo files."))
 
-        for f in demofiles:
-            tools.convert_file(
-                cr,
-                "l10n_br_fiscal",
-                f,
-                None,
-                mode="init",
-                noupdate=True,
-                kind="demo",
-                report=None,
-            )
+        # for f in demofiles:
+        #     tools.convert_file(
+        #         cr,
+        #         "l10n_br_fiscal",
+        #         f,
+        #         None,
+        #         mode="init",
+        #         noupdate=True,
+        #         kind="demo",
+        #     )
 
-        companies = [
-            env.ref("base.main_company", raise_if_not_found=False),
-            env.ref("l10n_br_base.empresa_lucro_presumido", raise_if_not_found=False),
-            env.ref("l10n_br_base.empresa_simples_nacional", raise_if_not_found=False),
-        ]
+    #    companies = [
+    #        env.ref("base.main_company", raise_if_not_found=False),
+    #        env.ref("l10n_br_base.empresa_lucro_presumido", raise_if_not_found=False),
+    #        env.ref("l10n_br_base.empresa_simples_nacional", raise_if_not_found=False),
+    #    ]
 
-        for company in companies:
-            l10n_br_fiscal_certificate_id = env["l10n_br_fiscal.certificate"]
-            company.certificate_nfe_id = l10n_br_fiscal_certificate_id.create(
-                misc.prepare_fake_certificate_vals()
-            )
-            company.certificate_ecnpj_id = l10n_br_fiscal_certificate_id.create(
-                misc.prepare_fake_certificate_vals(cert_type=CERTIFICATE_TYPE_ECNPJ)
-            )
+    #        for company in companies:
+    #            l10n_br_fiscal_certificate_id = env["l10n_br_fiscal.certificate"]
+    #            company.certificate_nfe_id = l10n_br_fiscal_certificate_id.create(
+    #                misc.prepare_fake_certificate_vals()
+    #            )
+    #            company.certificate_ecnpj_id = l10n_br_fiscal_certificate_id.create(
+    #                misc.prepare_fake_certificate_vals(cert_type=CERTIFICATE_TYPE_ECNPJ)
+    #            )
 
     if tools.config["without_demo"]:
         prodfiles = []
@@ -136,7 +133,6 @@ def post_init_hook(cr, registry):
                 mode="init",
                 noupdate=True,
                 kind="init",
-                report=None,
             )
 
     # Load post files
@@ -155,27 +151,25 @@ def post_init_hook(cr, registry):
             mode="init",
             noupdate=True,
             kind="init",
-            report=None,
         )
 
     # Load post demo files
-    if not tools.config["without_demo"]:
-        posdemofiles = [
-            "demo/fiscal_document_demo.xml",
-        ]
+    # if not tools.config["without_demo"]:
+    #     posdemofiles = [
+    #         "demo/fiscal_document_demo.xml",
+    #     ]
 
-        _logger.info(
-            _("Loading l10n_br_fiscal post demo files. It may take a minute...")
-        )
+    #     _logger.info(
+    #         _("Loading l10n_br_fiscal post demo files. It may take a minute...")
+    #     )
 
-        for file in posdemofiles:
-            tools.convert_file(
-                cr,
-                "l10n_br_fiscal",
-                file,
-                None,
-                mode="demo",
-                noupdate=True,
-                kind="init",
-                report=None,
-            )
+    #     for file in posdemofiles:
+    #         tools.convert_file(
+    #             cr,
+    #             "l10n_br_fiscal",
+    #             file,
+    #             None,
+    #             mode="demo",
+    #             noupdate=True,
+    #             kind="init",
+    #         )

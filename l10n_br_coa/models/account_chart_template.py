@@ -12,7 +12,7 @@ class AccountChartTemplate(models.Model):
         super().load_for_current_company(sale_tax_rate, purchase_tax_rate)
         # Remove Company default taxes configuration
         if self.currency_id == self.env.ref("base.BRL"):
-            self.env.user.company_id.write(
+            self.env.company.write(
                 {
                     "account_sale_tax_id": False,
                     "account_purchase_tax_id": False,
@@ -66,13 +66,53 @@ class AccountChartTemplate(models.Model):
                         refund_account_id = group_tax_account_template[
                             acc_names.get(tax.type_tax_use, {}).get("refund_account_id")
                         ]
+
                     tax.write(
                         {
-                            "account_id": account_ref.get(account_id.id, False),
-                            "refund_account_id": account_ref.get(
-                                refund_account_id.id, False
-                            ),
+                            "invoice_repartition_line_ids": [
+                                (5, 0, 0),
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "factor_percent": 100,
+                                        "repartition_type": "base",
+                                    },
+                                ),
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "factor_percent": 100,
+                                        "repartition_type": "tax",
+                                        "account_id": account_ref.get(
+                                            account_id.id, False
+                                        ),
+                                    },
+                                ),
+                            ],
+                            "refund_repartition_line_ids": [
+                                (5, 0, 0),
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "factor_percent": 100,
+                                        "repartition_type": "base",
+                                    },
+                                ),
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "factor_percent": 100,
+                                        "repartition_type": "tax",
+                                        "account_id": account_ref.get(
+                                            refund_account_id.id, False
+                                        ),
+                                    },
+                                ),
+                            ],
                         }
                     )
-
         return account_ref, taxes_ref

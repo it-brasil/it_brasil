@@ -6,8 +6,6 @@ import logging
 
 from odoo import api, fields, models, tools
 
-from odoo.addons import decimal_precision as dp
-
 from ..constants.fiscal import (
     COEFFICIENT_R,
     INDUSTRY_TYPE,
@@ -43,16 +41,12 @@ _logger = logging.getLogger(__name__)
 class ResCompany(models.Model):
     _inherit = "res.company"
 
-    def _get_company_address_fields(self, partner):
-        """ Read the l10n_br specific functional fields. """
-        partner_fields = super()._get_company_address_fields(partner)
-        partner_fields.update(
-            {
-                "tax_framework": partner.tax_framework,
-                "cnae_main_id": partner.cnae_main_id,
-            }
-        )
-        return partner_fields
+    def _get_company_address_field_names(self):
+        partner_fields = super()._get_company_address_field_names()
+        return partner_fields + [
+            "tax_framework",
+            "cnae_main_id",
+        ]
 
     def _inverse_cnae_main_id(self):
         """ Write the l10n_br specific functional fields. """
@@ -205,6 +199,7 @@ class ResCompany(models.Model):
         comodel_name="l10n_br_fiscal.simplified.tax",
         compute="_compute_simplifed_tax",
         string="Simplified Tax",
+        store=True,
         readonly=True,
     )
 
@@ -220,7 +215,7 @@ class ResCompany(models.Model):
         string="Simplifed Tax Percent",
         compute="_compute_simplifed_tax",
         store=True,
-        digits=dp.get_precision("Fiscal Tax Percent"),
+        digits="Fiscal Tax Percent",
     )
 
     payroll_amount = fields.Monetary(

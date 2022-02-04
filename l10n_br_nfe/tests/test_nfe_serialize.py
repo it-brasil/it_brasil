@@ -40,8 +40,6 @@ class TestNFeExport(TransactionCase):
             line._onchange_fiscal_operation_id()
             line._onchange_fiscal_operation_line_id()
 
-        nfe._compute_amount()
-
     def test_serialize_xml(self):
         for nfe in self.nfe_list:
             nfe_id = nfe["record_id"]

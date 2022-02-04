@@ -13,7 +13,7 @@ class TestAccountTaxes(TransactionCase):
         )
 
         self.env.user.company_ids += self.l10n_br_company
-        self.env.user.company_id = self.l10n_br_company
+        self.env.company = self.l10n_br_company
 
     def test_account_taxes(self):
         """Test if account taxes are related with fiscal taxes"""
@@ -30,7 +30,7 @@ class TestAccountTaxes(TransactionCase):
             )
         )
         for l10n_br_coa_chart in l10n_br_coa_charts:
-            l10n_br_coa_chart.try_loading_for_current_company()
+            l10n_br_coa_chart.try_loading()
             account_taxes = self.env["account.tax"].search(
                 [("company_id", "=", self.l10n_br_company.id)]
             )

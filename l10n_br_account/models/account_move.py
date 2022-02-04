@@ -15,16 +15,16 @@ class AccountMove(models.Model):
     _inherit = "account.move"
 
     def _prepare_wh_invoice(self, move_line, fiscal_group):
-        wh_date_invoice = move_line.invoice_id.date_invoice
+        wh_date_invoice = move_line.move_id.date
         wh_due_invoice = wh_date_invoice.replace(day=fiscal_group.wh_due_day)
         values = {
             "partner_id": fiscal_group.partner_id.id,
-            "date_invoice": wh_date_invoice,
+            "date": wh_date_invoice,
             "date_due": wh_due_invoice + relativedelta(months=1),
             "type": "in_invoice",
             "account_id": fiscal_group.partner_id.property_account_payable_id.id,
             "journal_id": move_line.journal_id.id,
-            "origin": move_line.invoice_id.number,
+            "origin": move_line.move_id.name,
         }
         return values
 
@@ -34,7 +34,7 @@ class AccountMove(models.Model):
             "quantity": move_line.quantity,
             "uom_id": move_line.product_uom_id,
             "price_unit": abs(move_line.balance),
-            "invoice_id": invoice.id,
+            "move_id": invoice.id,
             "account_id": move_line.account_id.id,
             "wh_move_line_id": move_line.id,
             "account_analytic_id": move_line.analytic_account_id.id,
@@ -44,7 +44,7 @@ class AccountMove(models.Model):
     def _finalize_invoices(self, invoices):
         for invoice in invoices:
             invoice.compute_taxes()
-            for line in invoice.invoice_line_ids:
+            for line in invoice.line_ids:
                 # Use additional field helper function (for account extensions)
                 line._set_additional_fields(invoice)
             invoice._onchange_cash_rounding()
@@ -53,18 +53,18 @@ class AccountMove(models.Model):
         for move in self:
             for line in move.line_ids.filtered(lambda l: l.tax_line_id):
                 # Create Wh Invoice only for supplier invoice
-                if line.invoice_id and line.invoice_id.type != "in_invoice":
+                if line.move_id and line.move_id.type != "in_invoice":
                     continue
 
                 account_tax_group = line.tax_line_id.tax_group_id
                 if account_tax_group and account_tax_group.fiscal_tax_group_id:
                     fiscal_group = account_tax_group.fiscal_tax_group_id
                     if fiscal_group.tax_withholding:
-                        invoice = self.env["account.invoice"].create(
+                        invoice = self.env["account.move"].create(
                             self._prepare_wh_invoice(line, fiscal_group)
                         )
 
-                        self.env["account.invoice.line"].create(
+                        self.env["account.move.line"].create(
                             self._prepare_wh_invoice_line(invoice, line)
                         )
 
@@ -74,9 +74,9 @@ class AccountMove(models.Model):
     def _withholding_validate(self):
         for m in self:
             invoices = (
-                self.env["account.invoice.line"]
+                self.env["account.move.line"]
                 .search([("wh_move_line_id", "in", m.mapped("line_ids").ids)])
-                .mapped("invoice_id")
+                .mapped("move_id")
             )
 
             invoices.filtered(lambda i: i.state == "open").action_invoice_cancel()
@@ -85,16 +85,28 @@ class AccountMove(models.Model):
             invoices.invalidate_cache()
             invoices.filtered(lambda i: i.state == "draft").unlink()
 
-    def post(self, invoice=False):
-        result = super().post(invoice)
-        if invoice:
-            if (
-                invoice.document_type_id
-                and invoice.document_electronic
-                and invoice.issuer == DOCUMENT_ISSUER_COMPANY
-                and invoice.state_edoc != SITUACAO_EDOC_AUTORIZADA
-            ):
-                self.button_cancel()
+    # def action_document_confirm(self):
+    # return super().action_document_confirm()
+
+    def action_create_return(self):
+        return True
+
+    def action_post(self, invoice=False):
+        # TODO FIXME migrate: no mode invoice keyword     
+           
+        result = super().action_post()
+        if not self.document_type_id:
+            return result
+        self.fiscal_document_id._change_state('a_enviar')
+        if self.state == 'draft':
+            if invoice:
+                if (
+                    invoice.document_type_id
+                    and invoice.document_electronic
+                    and invoice.issuer == DOCUMENT_ISSUER_COMPANY
+                    and invoice.state_edoc != SITUACAO_EDOC_AUTORIZADA
+                ):
+                    self.button_cancel()
         return result
 
     def button_cancel(self):

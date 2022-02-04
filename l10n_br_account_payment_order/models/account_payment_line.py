@@ -126,7 +126,8 @@ class AccountPaymentLine(models.Model):
     communication_type = fields.Selection(
         selection_add=[
             ("cnab", "CNAB"),
-        ]
+        ],
+        ondelete="cascade",
     )
 
     # No caso de Ordens de Pagto vinculadas devido o

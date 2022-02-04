@@ -153,9 +153,7 @@ class Document(models.Model):
     company_id = fields.Many2one(
         comodel_name="res.company",
         string="Company",
-        default=lambda self: self.env["res.company"]._company_default_get(
-            "l10n_br_fiscal.document"
-        ),
+        default=lambda self: self.env.company,
     )
 
     line_ids = fields.One2many(
@@ -348,23 +346,6 @@ class Document(models.Model):
     def _compute_name(self):
         for r in self:
             r.name = r._compute_document_name()
-
-    @api.depends(
-        "line_ids.estimate_tax",
-        "line_ids.price_gross",
-        "line_ids.amount_untaxed",
-        "line_ids.amount_tax",
-        "line_ids.amount_taxed",
-        "line_ids.amount_total",
-        "line_ids.financial_total",
-        "line_ids.financial_total_gross",
-        "line_ids.financial_discount_value",
-        "line_ids.amount_tax_included",
-        "line_ids.amount_tax_not_included",
-        "line_ids.amount_tax_withholding",
-    )
-    def _compute_amount(self):
-        super()._compute_amount()
 
     @api.model
     def create(self, values):
@@ -564,7 +545,7 @@ class Document(models.Model):
         compose_form = self.env.ref("mail.email_compose_message_wizard_form", False)
         lang = self.env.context.get("lang")
         if template and template.lang:
-            lang = template._render_template(template.lang, self._name, self.id)
+            lang = template._render_template(template.lang, self._name, [self.id])
         self = self.with_context(lang=lang)
         ctx = dict(
             default_model="l10n_br_fiscal.document",

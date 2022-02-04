@@ -51,23 +51,13 @@ class NFeLine(spec_models.StackedModel):
         related="uom_id.code",
     )
 
-    nfe40_qCom = fields.Float(
-        string="nfe40 qCom",
-        related="quantity",
+    nfe40_uTrib = fields.Char(
+        related="uot_id.code",
     )
 
     nfe40_vUnCom = fields.Float(
         related="price_unit",
         string="Valor unitário de comercialização",
-    )
-
-    nfe40_uTrib = fields.Char(
-        related="uot_id.code",
-    )
-
-    nfe40_qTrib = fields.Float(
-        string="nfe40_qTrib",
-        related="fiscal_quantity",
     )
 
     nfe40_vUnTrib = fields.Float(
@@ -451,6 +441,8 @@ class NFeLine(spec_models.StackedModel):
 
         self.nfe40_NCM = self.ncm_id.code_unmasked or False
         self.nfe40_CEST = self.cest_id and self.cest_id.code_unmasked or False
+        self.nfe40_qCom = self.quantity
+        self.nfe40_qTrib = self.fiscal_quantity
         self.nfe40_pICMS = self.icms_percent
         self.nfe40_pICMSST = self.icmsst_percent
         self.nfe40_pMVAST = self.icmsst_mva_percent
@@ -491,7 +483,7 @@ class NFeLine(spec_models.StackedModel):
         if xsd_field == "nfe40_indIncentivo":
             return self.issqn_incentive
         if xsd_field == "nfe40_xProd":
-            return self.name[:120].replace("\n", "").strip()
+           return self.name[:120].replace("\n", "").strip()
         if xsd_field in ["nfe40_cEAN", "nfe40_cEANTrib"] and not self[xsd_field]:
             return "SEM GTIN"
         elif xsd_field == "nfe40_CST":

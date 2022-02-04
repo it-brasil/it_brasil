@@ -19,11 +19,11 @@
                 </page>
             </xpath>
             <!-- TODO: remover na v14, herança mail.thread já é feita pelo core -->
-            <sheet position="after">
+            <!-- <sheet position="after">
                 <div class="oe_chatter">
                     <field name="message_ids" widget="mail_thread" />
                 </div>
-            </sheet>
+            </sheet> -->
         </field>
     </record>
 

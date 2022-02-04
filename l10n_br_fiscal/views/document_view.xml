@@ -61,7 +61,6 @@
     <field name="arch" type="xml">
       <form string="Fiscal Document">
         <field name="id" invisible="1" />
-<!--        <field name="state_edoc" invisible="1"/>-->
         <field name="currency_id" invisible="1" />
         <field name="document_electronic" invisible="1" />
         <field name="fiscal_operation_type" invisible="1" />
@@ -209,7 +208,7 @@
                             attrs="{'readonly': [('issuer', '=', 'company')], 'required': [('issuer', '=', 'partner'), ('document_electronic', '=', True)], 'invisible': [('document_electronic', '=', False)]}"
                         >
               <field name="document_key" force_save="1" class="oe_inline" />
-              <button
+              <!--button
                                 name="action_search_key"
                                 type="object"
                                 class="oe_inline btn-sm btn-link mb4 fa fa-search oe_edit_only"
@@ -222,7 +221,7 @@
                                 class="oe_inline btn-sm btn-link mb4 fa fa-upload oe_edit_only"
                                 aria-label="Upload"
                                 title="Upload"
-                            />
+                            /-->
             </div>
           </group>
           <group>

@@ -4,7 +4,6 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 # pylint: disable=api-one-deprecated
 
-from lxml import etree
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -52,14 +51,14 @@ SHADOWED_FIELDS = [
 
 
 class AccountInvoice(models.Model):
-    _name = "account.invoice"
+    _name = "account.move"
     _inherit = [
         _name,
         "l10n_br_fiscal.document.mixin.methods",
         "l10n_br_fiscal.document.invoice.mixin",
     ]
     _inherits = {"l10n_br_fiscal.document": "fiscal_document_id"}
-    _order = "date_invoice DESC, number DESC"
+    _order = "date DESC, name DESC"
 
     # initial account.invoice inherits on fiscal.document that are
     # disable with active=False in their fiscal_document table.
@@ -104,12 +103,13 @@ class AccountInvoice(models.Model):
 
     document_type = fields.Char(
         related="document_type_id.code",
+        string="Document Code",
         store=True,
     )
 
     def _get_amount_lines(self):
         """Get object lines instaces used to compute fields"""
-        return self.mapped("invoice_line_ids")
+        return self.mapped("line_ids")
 
     @api.model
     def _shadowed_fields(self):
@@ -134,9 +134,7 @@ class AccountInvoice(models.Model):
     def fields_view_get(
         self, view_id=None, view_type="form", toolbar=False, submenu=False
     ):
-
-        order_view = super().fields_view_get(view_id, view_type, toolbar, submenu)
-
+        invoice_view = super().fields_view_get(view_id, view_type, toolbar, submenu)
         if view_type == "form":
             view = self.env["ir.ui.view"]
 
@@ -144,36 +142,71 @@ class AccountInvoice(models.Model):
                 invoice_line_form_id = self.env.ref(
                     "l10n_br_account.fiscal_invoice_line_form"
                 ).id
+                sub_form_view = self.env["account.move.line"].fields_view_get(
+                    view_id=invoice_line_form_id, view_type="form"
+                )["arch"]
+                sub_form_node = self.env["account.move.line"].inject_fiscal_fields(
+                    sub_form_view
+                )
+                sub_arch, sub_fields = view.postprocess_and_fields(
+                    sub_form_node, "account.move.line", False
+                )
+                line_field_name = "invoice_line_ids"
+                invoice_view["fields"][line_field_name]["views"]["form"] = {
+                    "fields": sub_fields,
+                    "arch": sub_arch,
+                }
+
             else:
-                invoice_line_form_id = self.env.ref(
-                    "l10n_br_account.invoice_line_form"
-                ).id
+                if invoice_view["fields"].get("invoice_line_ids"):
+                    invoice_line_form_id = self.env.ref(
+                        "l10n_br_account.invoice_form"
+                    ).id
+                    sub_form_view = invoice_view["fields"]["invoice_line_ids"]["views"][
+                        "form"
+                    ]["arch"]
 
-            sub_form_view = self.env["account.invoice.line"].fields_view_get(
-                view_id=invoice_line_form_id, view_type="form"
-            )["arch"]
+                    sub_form_node = self.env["account.move.line"].inject_fiscal_fields(
+                        sub_form_view
+                    )
+                    sub_arch, sub_fields = view.postprocess_and_fields(
+                        sub_form_node, "account.move.line", False
+                    )
+                    line_field_name = "invoice_line_ids"
+                    invoice_view["fields"][line_field_name]["views"]["form"] = {
+                        "fields": sub_fields,
+                        "arch": sub_arch,
+                    }
 
-            sub_form_node = etree.fromstring(
-                self.env["account.invoice.line"].fiscal_form_view(sub_form_view)
-            )
+                if invoice_view["fields"].get("line_ids"):
+                    invoice_line_form_id = self.env.ref(
+                        "l10n_br_account.invoice_form"
+                    ).id
+                    sub_form_view = invoice_view["fields"]["line_ids"]["views"]["tree"][
+                        "arch"
+                    ]
 
-            sub_arch, sub_fields = view.postprocess_and_fields(
-                "account.invoice.line", sub_form_node, None
-            )
+                    sub_form_node = self.env["account.move.line"].inject_fiscal_fields(
+                        sub_form_view
+                    )
+                    sub_arch, sub_fields = view.postprocess_and_fields(
+                        sub_form_node, "account.move.line", False
+                    )
+                    line_field_name = "line_ids"
+                    invoice_view["fields"][line_field_name]["views"]["tree"] = {
+                        "fields": sub_fields,
+                        "arch": sub_arch,
+                    }
 
-            order_view["fields"]["invoice_line_ids"]["views"]["form"] = {}
-
-            order_view["fields"]["invoice_line_ids"]["views"]["form"][
-                "fields"
-            ] = sub_fields
-            order_view["fields"]["invoice_line_ids"]["views"]["form"]["arch"] = sub_arch
-
-        return order_view
+        return invoice_view
 
     @api.model
     def default_get(self, fields_list):
         defaults = super().default_get(fields_list)
-        invoice_type = self.env.context.get("type", "out_invoice")
+        invoice_type = self.env.context.get("default_move_type", "out_invoice")
+        # acrescentei o if abaixo com o return dava erro ao adicionar um diario qualquer
+        if invoice_type == 'entry':
+            return defaults
         defaults["fiscal_operation_type"] = INVOICE_TO_OPERATION[invoice_type]
         if defaults["fiscal_operation_type"] == FISCAL_OUT:
             defaults["issuer"] = DOCUMENT_ISSUER_COMPANY
@@ -184,10 +217,20 @@ class AccountInvoice(models.Model):
     @api.model
     def create(self, values):
         if not values.get("document_type_id"):
-            values.update(
-                {"fiscal_document_id": self.env.user.company_id.fiscal_dummy_id.id}
-            )
+            values.update({"fiscal_document_id": self.env.company.fiscal_dummy_id.id})
         invoice = super().create(values)
+        # quando cria uma fatura diretamente em faturamento 
+        # nao esta gravando os campos abaixo
+        for ln in invoice.invoice_line_ids:
+            if not ln.icms_cst_id:
+                for lnv in values['invoice_line_ids']:
+                    if lnv[2]['icms_cst_id'] and lnv[2]['product_id'] == ln.product_id.id:
+                        ln.update({
+                            'icms_cst_id': lnv[2]['icms_cst_id'],
+                            'ipi_cst_id': lnv[2]['ipi_cst_id'],
+                            'pis_cst_id': lnv[2]['pis_cst_id'],
+                            'cofins_cst_id': lnv[2]['cofins_cst_id'],
+                        })
         invoice._write_shadowed_fields()
         return invoice
 
@@ -201,15 +244,14 @@ class AccountInvoice(models.Model):
         self.filtered(lambda i: i.state in ("draft", "cancel")).write(
             {"move_name": False}
         )
-        unlink_invoices = self.env["account.invoice"]
+        unlink_invoices = self.env["account.move"]
         unlink_documents = self.env["l10n_br_fiscal.document"]
         for invoice in self:
             if not invoice.exists():
                 continue
             if (
                 invoice.fiscal_document_id
-                and invoice.fiscal_document_id
-                != self.env.user.company_id.fiscal_dummy_id.id
+                and invoice.fiscal_document_id != self.env.company.fiscal_dummy_id.id
             ):
                 unlink_documents |= invoice.fiscal_document_id
             unlink_invoices |= invoice
@@ -225,65 +267,71 @@ class AccountInvoice(models.Model):
             default["line_ids"] = False
         return super().copy(default)
 
-    @api.one
     @api.depends(
-        "invoice_line_ids",
+        "line_ids.price_total",
+        # TODO FIXME migrate!
+        #        "tax_line_ids.amount",
+        #        "tax_line_ids.amount_rounding",
         "currency_id",
         "company_id",
-        "date_invoice",
-        "type",
+        "invoice_date",
+        "move_type",
     )
     def _compute_amount(self):
-        inv_lines = self.invoice_line_ids.filtered(
-            lambda l: not l.fiscal_operation_line_id
-            or l.fiscal_operation_line_id.add_to_amount
-        )
-        for inv_line in inv_lines:
-            if inv_line.cfop_id:
-                if inv_line.cfop_id.finance_move:
-                    self.amount_untaxed += inv_line.price_subtotal
-                    self.amount_tax += inv_line.price_tax
-                    self.amount_total += inv_line.price_total
-            else:
-                self.amount_untaxed += inv_line.price_subtotal
-                self.amount_tax += inv_line.price_tax
-                self.amount_total += inv_line.price_total
-
-        self.amount_total -= self.amount_tax_withholding
-
-        amount_total_company_signed = self.amount_total
-        amount_untaxed_signed = self.amount_untaxed
-        if (
-            self.currency_id
-            and self.company_id
-            and self.currency_id != self.company_id.currency_id
-        ):
-            currency_id = self.currency_id
-            amount_total_company_signed = currency_id._convert(
-                self.amount_total,
-                self.company_id.currency_id,
-                self.company_id,
-                self.date_invoice or fields.Date.today(),
+        for move in self:
+            inv_lines = move.line_ids.filtered(
+                lambda l: not l.fiscal_operation_line_id
+                or l.fiscal_operation_line_id.add_to_amount
             )
-            amount_untaxed_signed = currency_id._convert(
-                self.amount_untaxed,
-                self.company_id.currency_id,
-                self.company_id,
-                self.date_invoice or fields.Date.today(),
-            )
-        sign = self.type in ["in_refund", "out_refund"] and -1 or 1
-        self.amount_total_company_signed = amount_total_company_signed * sign
-        self.amount_total_signed = self.amount_total * sign
-        self.amount_untaxed_signed = amount_untaxed_signed * sign
+            for inv_line in inv_lines:
+                if inv_line.cfop_id:
+                    if inv_line.cfop_id.finance_move:
+                        move.amount_untaxed += inv_line.price_subtotal
+                        # TODO FIXME migrate!
+                        # move.amount_tax += inv_line.price_tax
+                        move.amount_total += inv_line.price_total
+                else:
+                    move.amount_untaxed += inv_line.price_subtotal
+                    # TODO FIXME migrate!
+                    # move.amount_tax += inv_line.price_tax
+                    move.amount_total += inv_line.price_total
+
+            # TODO FIXME migrate, this create
+            # a financial_discount_value CacheMiss error
+            # is it because lines still have amount_* fields?
+            # move.amount_total -= move.amount_tax_withholding
+
+            amount_total_signed = move.amount_total
+            amount_untaxed_signed = move.amount_untaxed
+            if (
+                move.currency_id
+                and move.company_id
+                and move.currency_id != move.company_id.currency_id
+            ):
+                currency_id = move.currency_id
+                amount_total_signed = currency_id._convert(
+                    move.amount_total,
+                    move.company_id.currency_id,
+                    move.company_id,
+                    move.invoice_date or fields.Date.today(),
+                )
+                amount_untaxed_signed = currency_id._convert(
+                    move.amount_untaxed,
+                    move.company_id.currency_id,
+                    move.company_id,
+                    move.invoice_date or fields.Date.today(),
+                )
+            sign = move.move_type in ["in_refund", "out_refund"] and -1 or 1
+            move.amount_total_signed = amount_total_signed * sign
+            move.amount_untaxed_signed = amount_untaxed_signed * sign
 
     @api.model
     def invoice_line_move_line_get(self):
+        # TODO FIXME migrate. No such method in Odoo 13+
         move_lines_dict = super().invoice_line_move_line_get()
         new_mv_lines_dict = []
         for line in move_lines_dict:
-            invoice_line = self.invoice_line_ids.filtered(
-                lambda l: l.id == line.get("invl_id")
-            )
+            invoice_line = self.line_ids.filtered(lambda l: l.id == line.get("invl_id"))
 
             if invoice_line.fiscal_operation_id:
                 if invoice_line.fiscal_operation_id.deductible_taxes:
@@ -304,6 +352,7 @@ class AccountInvoice(models.Model):
 
     @api.model
     def tax_line_move_line_get(self):
+        # TODO FIXME migrate. No such method in Odoo 13+
         tax_lines_dict = super().tax_line_move_line_get()
         if self.fiscal_operation_id and self.fiscal_operation_id.deductible_taxes:
             for tax_line in self.tax_line_ids:
@@ -313,7 +362,7 @@ class AccountInvoice(models.Model):
                 ]
 
                 deductible_tax = tax_line.tax_id.tax_group_id.deductible_tax(
-                    INVOICE_TAX_USER_TYPE[self.type]
+                    INVOICE_TAX_USER_TYPE[self.move_type]
                 )
 
                 if deductible_tax:
@@ -329,13 +378,14 @@ class AccountInvoice(models.Model):
                         "account_id": account.id,
                         "account_analytic_id": tax_line.account_analytic_id.id,
                         "analytic_tag_ids": analytic_tag_ids,
-                        "invoice_id": self.id,
+                        "move_id": self.id,
                     }
                     tax_lines_dict.append(tax_line_vals)
 
         return tax_lines_dict
 
     def finalize_invoice_move_lines(self, move_lines):
+        # TODO FIXME migrate. No such method in Odoo 13+
         lines = super().finalize_invoice_move_lines(move_lines)
         financial_lines = [
             line for line in lines if line[2]["account_id"] == self.account_id.id
@@ -356,18 +406,19 @@ class AccountInvoice(models.Model):
         return lines
 
     def get_taxes_values(self):
+        # TODO FIXME migrate. No such method in Odoo 13+
         tax_grouped = {}
         round_curr = self.currency_id.round
-        for line in self.invoice_line_ids:
+        for line in self.line_ids:
             if not line.account_id or line.display_type:
                 continue
 
-            computed_taxes = line.invoice_line_tax_ids.compute_all(
+            computed_taxes = line.tax_ids.compute_all(
                 price_unit=line.price_unit,
-                currency=line.invoice_id.currency_id,
+                currency=line.move_id.currency_id,
                 quantity=line.quantity,
                 product=line.product_id,
-                partner=line.invoice_id.partner_id,
+                partner=line.move_id.partner_id,
                 fiscal_taxes=line.fiscal_tax_ids,
                 operation_line=line.fiscal_operation_line_id,
                 ncm=line.ncm_id,
@@ -406,9 +457,9 @@ class AccountInvoice(models.Model):
             self.journal_id = self.fiscal_operation_id.journal_id
 
     def open_fiscal_document(self):
-        if self.env.context.get("type", "") == "out_invoice":
+        if self.env.context.get("move_type", "") == "out_invoice":
             action = self.env.ref("l10n_br_account.fiscal_invoice_out_action").read()[0]
-        elif self.env.context.get("type", "") == "in_invoice":
+        elif self.env.context.get("move_type", "") == "in_invoice":
             action = self.env.ref("l10n_br_account.fiscal_invoice_in_action").read()[0]
         else:
             action = self.env.ref("l10n_br_account.fiscal_invoice_all_action").read()[0]
@@ -426,6 +477,7 @@ class AccountInvoice(models.Model):
         """Usamos esse método para definir a data de emissão do documento
         fiscal e numeração do documento fiscal para ser usado nas linhas
         dos lançamentos contábeis."""
+        # TODO FIXME migrate. No such method in Odoo 13+
         super().action_date_assign()
         for invoice in self:
             if invoice.document_type_id:
@@ -436,7 +488,7 @@ class AccountInvoice(models.Model):
                     ):
                         invoice.comment_ids |= self.fiscal_operation_id.comment_ids
 
-                    for line in invoice.invoice_line_ids:
+                    for line in invoice.line_ids:
                         if (
                             not line.comment_ids
                             and line.fiscal_operation_line_id.comment_ids
@@ -449,6 +501,7 @@ class AccountInvoice(models.Model):
                     invoice.fiscal_document_id._document_number()
 
     def action_move_create(self):
+        # TODO FIXME migrate. No such method in Odoo 13+
         result = super().action_move_create()
         self.mapped("fiscal_document_id").filtered(
             lambda d: d.document_type_id
@@ -456,6 +509,7 @@ class AccountInvoice(models.Model):
         return result
 
     def action_invoice_draft(self):
+        # TODO FIXME migrate. No such method in Odoo 13+
         for i in self.filtered(lambda d: d.document_type_id):
             if i.state_edoc == SITUACAO_EDOC_CANCELADA:
                 if i.issuer == DOCUMENT_ISSUER_COMPANY:
@@ -469,14 +523,15 @@ class AccountInvoice(models.Model):
                     )
             if i.state_edoc != SITUACAO_EDOC_EM_DIGITACAO:
                 i.fiscal_document_id.action_document_back2draft()
-        return super().action_invoice_draft()
 
     def action_document_send(self):
         invoices = self.filtered(lambda d: d.document_type_id)
         if invoices:
             invoices.mapped("fiscal_document_id").action_document_send()
             for invoice in invoices:
-                invoice.move_id.post(invoice=invoice)
+                # da erro na linha abaixo
+                # invoice.move_id.post(invoice=invoice)
+                invoice.fiscal_document_id.action_document_send()
 
     def action_document_cancel(self):
         for i in self.filtered(lambda d: d.document_type_id):
@@ -494,13 +549,13 @@ class AccountInvoice(models.Model):
         """Sets fiscal document to draft state and cancel and set to draft
         the related invoice for both documents remain equivalent state."""
         for i in self.filtered(lambda d: d.document_type_id):
-            i.action_cancel()
-            i.action_invoice_draft()
+            i.button_cancel
+            i.button_draft
+            i.fiscal_document_id._change_state('em_digitacao')
 
     def action_invoice_open(self):
         result = super().action_invoice_open()
-
-        for record in self.filtered(lambda i: i.refund_invoice_id):
+        for record in self.filtered(lambda i: i.refund_move_id):
             if record.state == "open":
                 # Ao confirmar uma fatura/documento fiscal se é uma devolução
                 # é feito conciliado com o documento de origem para abater
@@ -511,8 +566,8 @@ class AccountInvoice(models.Model):
                         to_reconcile_lines += line
                     if line.reconciled:
                         line.remove_move_reconcile()
-                for line in record.refund_invoice_id.move_id.line_ids:
-                    if line.account_id.id == record.refund_invoice_id.account_id.id:
+                for line in record.refund_move_id.move_id.line_ids:
+                    if line.account_id.id == record.refund_move_id.account_id.id:
                         to_reconcile_lines += line
 
                 to_reconcile_lines.filtered(lambda l: l.reconciled).reconcile()
@@ -520,9 +575,7 @@ class AccountInvoice(models.Model):
         return result
 
     def action_invoice_cancel(self):
-        for i in self.filtered(lambda d: d.document_type_id):
-            i.fiscal_document_id.action_document_cancel()
-        return super().action_invoice_cancel()
+        self.button_cancel()
 
     def view_xml(self):
         self.ensure_one()
@@ -536,79 +589,79 @@ class AccountInvoice(models.Model):
         self.ensure_one()
         return self.fiscal_document_id.action_send_email()
 
-    def _get_refund_common_fields(self):
-        fields = super()._get_refund_common_fields()
-        fields += [
-            "fiscal_operation_id",
-            "document_type_id",
-            "document_serie_id",
-        ]
-        return fields
+    # TODO FIXME migrate. refund method are very different in Odoo 13+
+    # def _get_refund_common_fields(self):
+    #     fields = super()._get_refund_common_fields()
+    #     fields += [
+    #         "fiscal_operation_id",
+    #         "document_type_id",
+    #         "document_serie_id",
+    #     ]
+    #     return fields
 
-    @api.multi
-    @api.returns("self")
-    def refund(self, date_invoice=None, date=None, description=None, journal_id=None):
-        new_invoices = super().refund(date_invoice, date, description, journal_id)
+    # @api.returns("self")
+    # def refund(self, date=None, date=None, description=None, journal_id=None):
+    #     new_invoices = super().refund(date, date, description, journal_id)
 
-        force_fiscal_operation_id = False
-        if self.env.context.get("force_fiscal_operation_id"):
-            force_fiscal_operation_id = self.env["l10n_br_fiscal.operation"].browse(
-                self.env.context.get("force_fiscal_operation_id")
-            )
+    #     force_fiscal_operation_id = False
+    #     if self.env.context.get("force_fiscal_operation_id"):
+    #         force_fiscal_operation_id = self.env["l10n_br_fiscal.operation"].browse(
+    #             self.env.context.get("force_fiscal_operation_id")
+    #         )
 
-        for record in new_invoices.filtered(lambda i: i.document_type_id):
-            if (
-                not force_fiscal_operation_id
-                and not record.fiscal_operation_id.return_fiscal_operation_id
-            ):
-                raise UserError(
-                    _("""Document without Return Fiscal Operation! \n Force one!""")
-                )
+    #     for record in new_invoices.filtered(lambda i: i.document_type_id):
+    #         if (
+    #             not force_fiscal_operation_id
+    #             and not record.fiscal_operation_id.return_fiscal_operation_id
+    #         ):
+    #             raise UserError(
+    #                 _("""Document without Return Fiscal Operation! \n Force one!""")
+    #             )
 
-            record.fiscal_operation_id = (
-                force_fiscal_operation_id
-                or record.fiscal_operation_id.return_fiscal_operation_id
-            )
-            record.fiscal_document_id._onchange_fiscal_operation_id()
+    #         record.fiscal_operation_id = (
+    #             force_fiscal_operation_id
+    #             or record.fiscal_operation_id.return_fiscal_operation_id
+    #         )
+    #         record.fiscal_document_id._onchange_fiscal_operation_id()
 
-            for line in record.invoice_line_ids:
-                if (
-                    not force_fiscal_operation_id
-                    and not line.fiscal_operation_id.return_fiscal_operation_id
-                ):
-                    raise UserError(
-                        _(
-                            """Line without Return Fiscal Operation! \n
-                            Please force one! \n{}""".format(
-                                line.name
-                            )
-                        )
-                    )
+    #         for line in record.line_ids:
+    #             if (
+    #                 not force_fiscal_operation_id
+    #                 and not line.fiscal_operation_id.return_fiscal_operation_id
+    #             ):
+    #                 raise UserError(
+    #                     _(
+    #                         """Line without Return Fiscal Operation! \n
+    #                         Please force one! \n{}""".format(
+    #                             line.name
+    #                         )
+    #                     )
+    #                 )
 
-                line.fiscal_operation_id = (
-                    force_fiscal_operation_id
-                    or line.fiscal_operation_id.return_fiscal_operation_id
-                )
-                line._onchange_fiscal_operation_id()
+    #             line.fiscal_operation_id = (
+    #                 force_fiscal_operation_id
+    #                 or line.fiscal_operation_id.return_fiscal_operation_id
+    #             )
+    #             line._onchange_fiscal_operation_id()
 
-            refund_inv_id = record.refund_invoice_id
+    #         refund_inv_id = record.refund_move_id
 
-            if record.refund_invoice_id.document_type_id:
-                record.fiscal_document_id._document_reference(
-                    refund_inv_id.fiscal_document_id
-                )
+    #         if record.refund_move_id.document_type_id:
+    #             record.fiscal_document_id._document_reference(
+    #                 refund_inv_id.fiscal_document_id
+    #             )
 
-        return new_invoices
+    #     return new_invoices
 
-    def _refund_cleanup_lines(self, lines):
-        result = super()._refund_cleanup_lines(lines)
-        for _a, _b, vals in result:
-            if vals.get("fiscal_document_line_id"):
-                vals.pop("fiscal_document_line_id")
+    # def _refund_cleanup_lines(self, lines):
+    #     result = super()._refund_cleanup_lines(lines)
+    #     for _a, _b, vals in result:
+    #         if vals.get("fiscal_document_line_id"):
+    #             vals.pop("fiscal_document_line_id")
 
-        for i, line in enumerate(lines):
-            for name, _field in line._fields.items():
-                if name == "fiscal_tax_ids":
-                    result[i][2][name] = [(6, 0, line[name].ids)]
+    #     for i, line in enumerate(lines):
+    #         for name, _field in line._fields.items():
+    #             if name == "fiscal_tax_ids":
+    #                 result[i][2][name] = [(6, 0, line[name].ids)]
 
-        return result
+    #     return result

@@ -3,8 +3,6 @@
 
 from odoo import api, fields, models
 
-from odoo.addons import decimal_precision as dp
-
 from ..constants.fiscal import (
     FISCAL_COMMENT_LINE,
     PRODUCT_FISCAL_TYPE,
@@ -60,7 +58,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
 
     @api.model
     def _default_icmssn_range_id(self):
-        company = self.env.user.company_id
+        company = self.env.company
         stax_range_id = self.env["l10n_br_fiscal.simplified.tax.range"]
 
         if self.env.context.get("default_company_id"):
@@ -84,7 +82,11 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         default=lambda self: self.env.ref("base.BRL"),
     )
 
-    product_id = fields.Many2one(comodel_name="product.product", string="Product")
+    product_id = fields.Many2one(
+        comodel_name="product.product",
+        string="Product",
+        index=True,
+    )
 
     tax_icms_or_issqn = fields.Selection(
         selection=TAX_ICMS_OR_ISSQN,
@@ -92,9 +94,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         default=TAX_DOMAIN_ICMS,
     )
 
-    price_unit = fields.Float(
-        string="Price Unit", digits=dp.get_precision("Product Price")
-    )
+    price_unit = fields.Float(string="Price Unit", digits="Product Price")
 
     partner_id = fields.Many2one(comodel_name="res.partner", string="Partner")
 
@@ -104,7 +104,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
 
     quantity = fields.Float(
         string="Quantity",
-        digits=dp.get_precision("Product Unit of Measure"),
+        digits="Product Unit of Measure",
         default=1.0,
     )
 
@@ -135,6 +135,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     fiscal_operation_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.operation",
         string="Operation",
+        index=True,
         domain=lambda self: self._operation_domain(),
         default=_default_operation,
     )
@@ -148,6 +149,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     fiscal_operation_line_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.operation.line",
         string="Operation Line",
+        index=True,
         domain="[('fiscal_operation_id', '=', fiscal_operation_id), "
         "('state', '=', 'approved')]",
     )
@@ -155,6 +157,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     cfop_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.cfop",
         string="CFOP",
+        index=True,
         domain="[('type_in_out', '=', fiscal_operation_type)]",
     )
 
@@ -163,17 +166,15 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         string="CFOP Destination",
     )
 
-    fiscal_price = fields.Float(
-        string="Fiscal Price", digits=dp.get_precision("Product Price")
-    )
+    fiscal_price = fields.Float(string="Fiscal Price", digits="Product Price")
 
     uot_id = fields.Many2one(comodel_name="uom.uom", string="Tax UoM")
 
     fiscal_quantity = fields.Float(
-        string="Fiscal Quantity", digits=dp.get_precision("Product Unit of Measure")
+        string="Fiscal Quantity", digits="Product Unit of Measure"
     )
 
-    discount_value = fields.Monetary(string="Discount Value")
+    discount_value = fields.Monetary(string="Discount Value", default=0.0)
 
     insurance_value = fields.Monetary(string="Insurance Value")
 
@@ -197,8 +198,6 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     price_gross = fields.Monetary(
         compute="_compute_amounts",
         string="Amount Gross",
-        store=True,
-        readonly=True,
         help="Amount without discount.",
     )
 
@@ -232,10 +231,11 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         compute="_compute_amounts",
     )
 
-    financial_discount_value = fields.Monetary(
-        string="Financial Discount Value",
-        compute="_compute_amounts",
-    )
+    # financial_discount_value = fields.Monetary(
+    #     string="Financial Discount Value",
+    #     compute="_compute_amounts",
+    #     default=0.0,
+    # )
 
     amount_tax_included = fields.Monetary(string="Amount Tax Included")
 
@@ -549,15 +549,17 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         domain=[("tax_domain", "=", TAX_DOMAIN_II)],
     )
 
-    ii_base = fields.Monetary(string="II Base")
+    ii_base = fields.Float(string="II Base", digits="Account")
 
     ii_percent = fields.Float(string="II %")
 
-    ii_value = fields.Monetary(string="II Value")
+    ii_value = fields.Float(string="II Value", digits="Account")
 
-    ii_iof_value = fields.Monetary(string="IOF Value")
+    ii_iof_value = fields.Float(string="IOF Value", digits="Account")
 
-    ii_customhouse_charges = fields.Monetary(string="Despesas Aduaneiras")
+    ii_customhouse_charges = fields.Float(
+        string="Despesas Aduaneiras", digits="Account"
+    )
 
     # PIS/COFINS Fields
     # COFINS

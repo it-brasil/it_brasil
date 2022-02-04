@@ -2,8 +2,8 @@
 <odoo>
 
   <record id="fiscal_invoice_line_form" model="ir.ui.view">
-    <field name="name">l10n_br_account.invoice.line.form</field>
-    <field name="model">account.invoice.line</field>
+    <field name="name">l10n_br_account.move.line.form</field>
+    <field name="model">account.move.line</field>
     <field name="inherit_id" ref="l10n_br_fiscal.document_line_form" />
     <field name="mode">primary</field>
     <field name="arch" type="xml">
@@ -20,7 +20,7 @@
                     />
               <field
                         domain="[('company_id', '=', company_id)]"
-                        name="account_analytic_id"
+                        name="analytic_account_id"
                         groups="analytic.group_analytic_accounting"
                     />
               <field
@@ -32,14 +32,13 @@
           </group>
       </xpath>
       <xpath expr="//page[@name='fiscal_line_extra_info']" position="after">
-          <field name="invoice_type" invisible="1" />
           <page name="accounting" string="Accounting">
               <group>
                   <field
-                            name="invoice_line_tax_ids"
+                            name="tax_ids"
                             widget="many2many_tags"
                             options="{'no_create': True}"
-                            context="{'type': invoice_type}"
+                            context="{'type': parent.move_type}"
                             domain="[('type_tax_use','!=','none'),('company_id', '=', company_id)]"
                         />
               </group>

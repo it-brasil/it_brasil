@@ -6,6 +6,11 @@ from odoo.tests.common import TransactionCase
 
 
 class TestSupplierInvoice(TransactionCase):
+    """
+    This is a simple test for ensuring l10n_br_account doesn't break the basic
+    account module behavior with supplier invoices.
+    """
+
     def setUp(self):
         super(TestSupplierInvoice, self).setUp()
         self.purchase_account = self.env["account.account"].create(
@@ -22,17 +27,17 @@ class TestSupplierInvoice(TransactionCase):
                 code="TPJ",
                 type="purchase",
                 refund_sequence=True,
-                default_debit_account_id=self.purchase_account.id,
-                default_credit_account_id=self.purchase_account.id,
+                default_account_id=self.purchase_account.id,
             )
         )
-        self.invoice_1 = self.env["account.invoice"].create(
+        self.invoice_1 = self.env["account.move"].create(
             dict(
                 name="Test Supplier Invoice",
-                payment_term_id=self.env.ref("account.account_payment_term_advance").id,
+                # payment_term_id=self.env.ref(
+                # "account.account_payment_term_advance").id,
                 partner_id=self.env.ref("base.res_partner_3").id,
                 journal_id=self.purchase_journal.id,
-                invoice_line_ids=[
+                line_ids=[
                     (
                         0,
                         0,
@@ -53,7 +58,7 @@ class TestSupplierInvoice(TransactionCase):
                                     (
                                         "company_id",
                                         "=",
-                                        self.env.user.company_id.id,
+                                        self.env.company.id,
                                     ),
                                 ],
                                 limit=1,
@@ -71,8 +76,7 @@ class TestSupplierInvoice(TransactionCase):
         self.assertEqual(
             self.invoice_1.state, "draft", "Invoice should be in state Draft"
         )
-        self.invoice_1.action_invoice_open()
-        assert self.invoice_1.move_id, "Move Receivable not created for open invoice"
+        self.invoice_1.action_post()
         self.assertEqual(
-            self.invoice_1.state, "open", "Invoice should be in state Open"
+            self.invoice_1.state, "posted", "Invoice should be in state posted"
         )
