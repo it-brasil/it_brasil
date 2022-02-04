@@ -141,7 +141,7 @@ class NFe(spec_models.StackedModel):
     nfe40_det = fields.One2many(
         comodel_name="l10n_br_fiscal.document.line",
         inverse_name="document_id",
-        related="line_ids",
+        related="fiscal_line_ids",
     )
 
     nfe40_NFref = fields.One2many(
@@ -397,7 +397,6 @@ class NFe(spec_models.StackedModel):
         )
         session = Session()
         session.verify = False
-
         transmissao = TransmissaoSOAP(certificado, session)
         return edoc_nfe(
             transmissao,
@@ -482,8 +481,10 @@ class NFe(spec_models.StackedModel):
             valor = 0.0
             modo = "90"
             for fin in self.move_ids.financial_move_line_ids:
-                modo = fin.payment_mode_id.fiscal_type.payment_type
-                avista_aprazo = fin.payment_mode_id.fiscal_type.indPag
+                if not fin.move_id.payment_mode_id:
+                    raise UserError(_("Favor preencher os dados do pagamento"))                
+                modo = fin.move_id.payment_mode_id.fiscal_type.payment_type
+                avista_aprazo = fin.move_id.payment_mode_id.fiscal_type.indPag
                 valor += fin.debit
             self.nfe40_detPag = [
                 (5, 0, 0),
