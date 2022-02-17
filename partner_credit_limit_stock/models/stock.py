@@ -11,12 +11,14 @@ class Picking(models.Model):
 
     def button_validate(self):
         # TODO validar se o usuario é gerente se for executar somente o return ultima linha
+        gerente = self.env.user.has_group("sales_team.group_sale_manager")
         limite_disponivel = self.partner_id._check_limit()
         if limite_disponivel < 0:
-            msg = 'Your available credit limit' \
-                  ' Amount = %s \nCheck "%s" Accounts or Credit ' \
-                  'Limits.' % (limite_disponivel,
-                  self.partner_id.name)
-            raise UserError(_('You can not confirm Sale '
-                                'Order. \n' + msg))
+            if gerente:
+                msg = 'Your available credit limit' \
+                    ' Amount = %s \nCheck "%s" Accounts or Credit ' \
+                    'Limits.' % (limite_disponivel,
+                    self.partner_id.name)
+                raise UserError(_('You can not confirm Sale '
+                                    'Order. \n' + msg))
         return super(Picking, self).button_validate()
