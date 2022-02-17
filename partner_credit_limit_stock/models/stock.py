@@ -14,7 +14,7 @@ class Picking(models.Model):
         gerente = self.env.user.has_group("sales_team.group_sale_manager")
         limite_disponivel = self.partner_id._check_limit()
         if limite_disponivel < 0:
-            if gerente:
+            if not gerente:
                 msg = 'Your available credit limit' \
                     ' Amount = %s \nCheck "%s" Accounts or Credit ' \
                     'Limits.' % (limite_disponivel,
