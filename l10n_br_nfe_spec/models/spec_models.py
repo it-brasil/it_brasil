@@ -19,7 +19,7 @@ class NfeSpecMixin(models.AbstractModel):
         comodel_name="res.currency",
         string="Moeda",
         compute="_compute_brl_currency_id",
-        default=lambda self: self.env.ref("base.BRL").id,
+        # store=True,
     )
 
     def _compute_brl_currency_id(self):
