@@ -19,7 +19,6 @@ class ResPartner(models.Model):
 
     def _check_limit(self):
         self.ensure_one()
-        import pudb;pu.db
         moveline_obj = self.env['account.move.line']
         movelines = moveline_obj.search(
             [('partner_id', '=', self.id),
