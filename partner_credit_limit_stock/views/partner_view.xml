@@ -7,8 +7,10 @@
         <field name="inherit_id" ref="account.view_partner_property_form"/>
         <field name="arch" type="xml">
             <field name="property_account_position_id" position="after">
-                <field name="credit_limit"/>
-                <field name="credit_rest"/>
+                <field name="enable_credit_limit" widget="checkbox"/>
+                <field name="credit_limit" attrs="{'invisible':[('enable_credit_limit','=',False)]}"/>
+                <field name="credit_rest" attrs="{'invisible':[('enable_credit_limit','=',False)]}"/>
+                <field name="credit_negative_margin" attrs="{'invisible':[('enable_credit_limit','=',False)]}"/>
             </field>
         </field>
     </record>

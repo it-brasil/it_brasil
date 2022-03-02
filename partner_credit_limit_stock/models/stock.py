@@ -14,12 +14,14 @@ class Picking(models.Model):
         if self.partner_id:
             gerente = self.env.user.has_group("sales_team.group_sale_manager")
             limite_disponivel = self.partner_id._check_limit()
-            if limite_disponivel < 0:
-                if not gerente:
-                    msg = 'Your available credit limit' \
-                        ' Amount = %s \nCheck "%s" Accounts or Credit ' \
-                        'Limits.' % (limite_disponivel,
-                        self.partner_id.name)
-                    raise UserError(_('You can not confirm Sale '
-                                        'Order. \n' + msg))
+            bool_credit_limit = self.partner_id.enable_credit_limit
+            if bool_credit_limit:
+                if limite_disponivel == 0:
+                    if not gerente:
+                        msg = 'Your available credit limit' \
+                            ' Amount = %s \nCheck "%s" Accounts or Credit ' \
+                            'Limits.' % (limite_disponivel,
+                            self.partner_id.name)
+                        raise UserError(_('You can not confirm Sale '
+                                            'Order. \n' + msg))
         return super(Picking, self).button_validate()
