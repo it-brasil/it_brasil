@@ -602,9 +602,9 @@ class NFe(spec_models.StackedModel):
                 and self.nfe40_idDest == "2"
                 and self.nfe40_indIEDest == "9"
             ):
-                self.nfe40_vICMSUFDest = sum(self.line_ids.mapped("nfe40_vICMSUFDest"))
+                self.nfe40_vICMSUFDest = sum(self.fiscal_line_ids.mapped("nfe40_vICMSUFDest"))
                 self.nfe40_vICMSUFRemet = sum(
-                    self.line_ids.mapped("nfe40_vICMSUFRemet")
+                    self.fiscal_line_ids.mapped("nfe40_vICMSUFRemet")
                 )
             else:
                 self.nfe40_vICMSUFDest = 0.0
