@@ -28,6 +28,7 @@
                         name="cnae_main_id"
                         options="{'no_create': True, 'no_create_edit': True}"
                     />
+                    <field name="ind_final" />
                 </group>
             </group>
         </field>
