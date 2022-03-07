@@ -288,7 +288,6 @@ class AccountInvoice(models.Model):
     #             lambda l: not l.fiscal_operation_line_id
     #             or l.fiscal_operation_line_id.add_to_amount
     #         )
-    #         # import pudb;pu.db
     #         total_residual = 0.0
     #         total_residual_currency = 0.0
     #         currencies = move._get_lines_onchange_currency().currency_id
@@ -354,7 +353,6 @@ class AccountInvoice(models.Model):
     #     'line_ids.payment_id.state',
     #     'line_ids.full_reconcile_id')
     # def _compute_amount(self):
-    #     import pudb;pu.db
     #     for move in self:
 
     #         if move.payment_state == 'invoicing_legacy':

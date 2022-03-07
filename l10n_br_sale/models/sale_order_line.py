@@ -75,6 +75,8 @@ class SaleOrderLine(models.Model):
         string='Comments',
     )
 
+    ind_final = fields.Selection(related="order_id.ind_final")
+
     def _get_protected_fields(self):
         protected_fields = super()._get_protected_fields()
         return protected_fields + [

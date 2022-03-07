@@ -143,7 +143,6 @@ class SpecViewMixin(models.AbstractModel):
         # for spec in lib_node.member_data_items_:
         for field_name, field in lib_node._fields.items():
             # _logger.info("   field", field_name)
-            # import pudb; pudb.set_trace()
 
             # skip automatic m2 fields, non xsd fields
             # and display choice selector only where it is used
