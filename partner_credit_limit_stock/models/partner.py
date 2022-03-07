@@ -29,7 +29,7 @@ class ResPartner(models.Model):
         self.ensure_one()
         confirmed_sale_orders = self.env['sale.order'].sudo().search([
             ('partner_id', '=', self.id),
-            ('state', '=', 'sale'),
+            ('state', 'in', ['sale','done']),
             ('invoice_status', '!=', 'invoiced')
         ])
         invoice_lines = self.env['account.move.line'].sudo().search([
