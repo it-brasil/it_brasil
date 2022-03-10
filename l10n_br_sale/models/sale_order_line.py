@@ -111,6 +111,14 @@ class SaleOrderLine(models.Model):
                 'price_total': price_total + price_tax,
             })
 
+    # def _prepare_invoice_line(self, qty):
+    #     self.ensure_one()
+    #     result = self._prepare_br_fiscal_dict()
+    #     if self.product_id and self.product_id.invoice_policy == "delivery":
+    #         result["fiscal_quantity"] = self.fiscal_qty_delivered
+    #     result.update(super()._prepare_invoice_line(qty))
+    #     return result
+
     @api.onchange('product_uom', 'product_uom_qty')
     def _onchange_product_uom(self):
         """To call the method in the mixin to update
@@ -135,7 +143,12 @@ class SaleOrderLine(models.Model):
                 self.discount = ((self.discount_value * 100) /
                                  (self.product_uom_qty * self.price_unit))
 
-    @api.onchange('fiscal_tax_ids')
+    def _compute_tax_id(self):
+        super(SaleOrderLine, self)._compute_tax_id()
+        for line in self:
+            line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale")
+
+    @api.onchange("fiscal_tax_ids")
     def _onchange_fiscal_tax_ids(self):
         super()._onchange_fiscal_tax_ids()
-        self.tax_id |= self.fiscal_tax_ids.account_taxes()
+        self._compute_tax_id()
