@@ -254,7 +254,7 @@ class SaleOrder(models.Model):
                 result['journal_id'] = self.fiscal_operation_id.journal_id.id
 
         if self.copy_note and self.note:
-            result['customer_additional_data'] = self.note
+            result['manual_customer_additional_data'] = self.note
 
         return result
 

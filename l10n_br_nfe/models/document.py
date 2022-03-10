@@ -274,7 +274,7 @@ class NFe(spec_models.StackedModel):
         compute="_compute_nfe40_idDest",
     )
 
-    @api.depends("fiscal_additional_data", "fiscal_additional_data")
+    @api.depends("fiscal_additional_data", "customer_additional_data")
     def _compute_nfe40_additional_data(self):
         for record in self:
             record.nfe40_infCpl = False
@@ -730,7 +730,7 @@ class NFe(spec_models.StackedModel):
             xml_string = self.temp_xml_autorizacao(xml_string)
 
         pdf = base.ImprimirXml.imprimir(
-            string_xml=xml_string,
+            string_xml=xml_string, logo=self.company_id.logo
             # output_dir=self.authorization_event_id.file_path
         )
         # TODO: Alterar a opção output_dir para devolter também o arquivo do XML

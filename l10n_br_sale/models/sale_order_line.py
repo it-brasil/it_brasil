@@ -111,12 +111,6 @@ class SaleOrderLine(models.Model):
                 'price_total': price_total + price_tax,
             })
 
-    def _prepare_invoice_line(self, **optional_values):
-        self.ensure_one()
-        result = super()._prepare_invoice_line(**optional_values)
-        result.update(self._prepare_br_fiscal_dict())
-        return result
-
     @api.onchange('product_uom', 'product_uom_qty')
     def _onchange_product_uom(self):
         """To call the method in the mixin to update
