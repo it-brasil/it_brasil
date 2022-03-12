@@ -59,6 +59,8 @@ class StockMove(models.Model):
         string="Comments",
     )
 
+    ind_final = fields.Selection(related="picking_id.ind_final")
+
     # O price_unit fica negativo por metodos do core
     # durante o processo chamado pelo botão Validate p/
     # valorização de estoque, sem o compute o valor permance positivo.
@@ -156,8 +158,8 @@ class StockMove(models.Model):
         self._onchange_fiscal_taxes()
 
         new_move_obj = self.env["stock.move"].browse(new_move_id)
-        new_move_obj._onchange_commercial_quantity()
-        new_move_obj._onchange_fiscal_taxes()
+        # new_move_obj._onchange_commercial_quantity()
+        # new_move_obj._onchange_fiscal_taxes()
 
         return new_move_id
 

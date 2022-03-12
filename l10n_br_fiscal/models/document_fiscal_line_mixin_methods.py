@@ -779,7 +779,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             product_id = self.product_id.id
         self.update(
             self._update_fiscal_quantity(
-                product_id, self.price_unit, self.quantity, self.uom_id, self.uot_id
+                product_id, self.price_unit, self.quantity, self.uom_id.id, self.uot_id.id
             )
         )
 

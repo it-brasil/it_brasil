@@ -122,33 +122,38 @@ class SaleOrder(models.Model):
         string='Comments',
     )
 
+    @api.depends("order_line")
+    def _compute_amount(self):
+        super()._compute_amount()
+
     @api.depends('order_line.price_total')
     def _amount_all(self):
         """Compute the total amounts of the SO."""
         for order in self:
+            order._compute_amount()
             order.amount_gross = sum(
                 line.price_gross for line in order.order_line)
 
-            order.amount_discount = sum(
-                line.discount_value for line in order.order_line)
+            # order.amount_discount = sum(
+            #     line.discount_value for line in order.order_line)
 
-            order.amount_untaxed = sum(
-                line.price_subtotal for line in order.order_line)
+            # order.amount_untaxed = sum(
+            #     line.price_subtotal for line in order.order_line)
 
-            order.amount_tax = sum(
-                line.price_tax for line in order.order_line)
+            # order.amount_tax = sum(
+            #     line.price_tax for line in order.order_line)
 
-            order.amount_total = sum(
-                line.price_total for line in order.order_line)
+            # order.amount_total = sum(
+            #     line.price_total for line in order.order_line)
 
-            order.amount_freight = sum(
-                line.freight_value for line in order.order_line)
+            # order.amount_freight = sum(
+            #     line.freight_value for line in order.order_line)
 
-            order.amount_costs = sum(
-                line.other_costs_value for line in order.order_line)
+            # order.amount_costs = sum(
+            #     line.other_costs_value for line in order.order_line)
 
-            order.amount_insurance = sum(
-                line.insurance_value for line in order.order_line)
+            # order.amount_insurance = sum(
+            #     line.insurance_value for line in order.order_line)
 
     def write(self, vals):
         if len(vals) == 1 and (
