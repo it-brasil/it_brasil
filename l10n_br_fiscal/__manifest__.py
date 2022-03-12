@@ -33,7 +33,6 @@
         "data/l10n_br_fiscal.document.type.csv",
         "data/l10n_br_fiscal.product.genre.csv",
         "data/l10n_br_fiscal.cst.csv",
-        # "data/l10n_br_fiscal.ncm.csv",
         "data/l10n_br_fiscal.tax.csv",
         "data/l10n_br_fiscal.tax.pis.cofins.csv",
         "data/l10n_br_fiscal.ncm.csv",
