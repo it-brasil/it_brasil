@@ -92,8 +92,7 @@ class StockMove(models.Model):
         result.update({"fiscal_operation_id": self.fiscal_operation_id.id})
         # A mesma questão do self, aqui se uma linha for
         # 2binvoiced o Picking também será
-        # result.update({"invoice_state": self.mapped("invoice_state")[0]})
-        result.update({"invoice_state": self.invoice_state})
+        result.update({"invoice_state": self.mapped("invoice_state")[0]})
         return result
 
     @api.model
@@ -120,7 +119,6 @@ class StockMove(models.Model):
         return values
 
     def _get_price_unit_invoice(self, inv_type, partner, qty=1):
-
         result = super()._get_price_unit_invoice(inv_type, partner, qty)
         product = self.mapped("product_id")
         product.ensure_one()
