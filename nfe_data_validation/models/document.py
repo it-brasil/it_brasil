@@ -12,44 +12,99 @@ from io import StringIO
 class NFe(spec_models.StackedModel):
 	_inherit = "l10n_br_fiscal.document" # l10n_br_nfe
 
-	def valida_dados_obrigatorios(self):
-
-		msg = ''
+	def valida_dados_destinatario(self):
 		partner = self.partner_id
-		products = self.invoice_line_ids.product_id.product_tmpl_id
-
 		if partner:
+			msg = 'Os dados cadastrais do destinário estão incompletos. Favor preencher os seguintes campos:\n'
+			count = 0
 			if partner.company_type == 'person':
 				if not partner.legal_name:
-					msg += '\n O campo Nome Completo, no registro de contato, não foi preenchido'
+					msg += '\n    - Nome Completo;'
+					count += 1
 				if not partner.cnpj_cpf:
-					msg += '\n O campo CPF, no registro de contato, não foi preenchido'
+					msg += '\n    - CPF;'
+					count += 1
 			if partner.company_type == 'company':
 				if not partner.legal_name:
-					msg += '\n O campo Razão Social, no registro de contato, não foi preenchido'
+					msg += '\n    - Razão Social;'
+					count += 1
 				if not partner.cnpj_cpf:
-					msg += '\n O campo CNPJ, no registro de contato, não foi preenchido'
+					msg += '\n    - CNPJ;'
+					count += 1
 				if not partner.inscr_est:
-					msg += '\n O campo Inscrição Estadual, no registro de contato, não foi preenchido'
+					msg += '\n    - Inscrição Estadual;'
+					count += 1
+			if not partner.zip:
+				msg += '\n    - CEP;'
+				count += 1
+			if not partner.street_name:
+				msg += '\n    - Nome da Rua (Logradouro);'
+				count += 1
+			if not partner.street_number:
+				msg += '\n    - Casa (Número da rua);'
+				count += 1
+			if not partner.district:
+				msg += '\n    - Bairro;'
+				count += 1
+			if not partner.city:
+				msg += '\n    - Cidade;'
+				count += 1
+			if not partner.state_id:
+				msg += '\n    - Estado;'
+				count += 1
+			if not partner.country_id:
+				msg += '\n    - País;'
+				count += 1
+			if not partner.phone:
+				msg += '\n    - Telefone;'
+				count += 1
+			if count > 0:
+				raise ValidationError(msg)		
 		else: 
-			msg += 'Não há Parceiro vinculado ao documento fiscal'
+			raise ValidationError('Não há Parceiro vinculado ao documento fiscal!')
 
+
+	def valida_dados_produtos(self):
+		products = self.fiscal_line_ids.product_id.product_tmpl_id
 		if products:
+			final_msg = ''
 			for product in products:
-				if not product.ncm_id:
-					msg += '\n O campo Ncm, no cadastro do produto %s, não foi preenchido' %(product.name)
-				if not product.name:
-					msg += '\n O campo Nome do Produto para o produto de id %d não foi preenchido' %(product.product_id.product_tmpl_id.id)
+				count = 0
+				if product.name:
+					msg += 'Os dados cadastrais do produto %s estão incompletos. Favor preencher os seguintes campos:\n - ' %(product.name)
+					if not product.ncm_id:
+						lista += 'Ncm, ' 
+						count += 1
+					if not product.icms_origin:
+						lista += 'Origem do ICMS'
+						count += 1 
+					if msg.endswith(','):
+						msg = msg.rstrip(',')
+					msg += '\n\n'
+					final_msg += msg
+					if count > 0:
+						final_msg += msg
+				else:
+					count += 1
+					msg += 'Os dados cadastrais do produto com id %d estão incompletos. Favor preencher os seguintes campos:\n - Nome do Produto, ' %(product.product_id.product_tmpl_id.id)
+					if not product.ncm_id:
+						msg += 'Ncm, ' 
+					if not product.icms_origin:
+						msg += 'Origem do ICMS'
+					if msg.endswith(','):
+						msg = msg.rstrip(',')
+					msg += '\n\n'
+					final_msg += msg
+			if final_msg:
+				raise ValidationError(final_msg)
 		else:
-			msg += 'Não há Produto vinculado ao documento fiscal' 
-			
-		if msg: 
-			raise ValidationError(msg)
+			raise ValidationError('Não há Produto vinculado ao documento fiscal!')
 
 
 	def _valida_xml(self, xml_file):
 		self.ensure_one()
-		self.valida_dados_obrigatorios()
+		self.valida_dados_destinatario()
+		self.valida_dados_produtos()
 		erros = nfe_sub.schema_validation(StringIO(xml_file))
 		erros = "\n".join(erros)
 		self.write({"xml_error_message": erros or False})
