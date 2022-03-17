@@ -55,7 +55,9 @@ class NFe(spec_models.StackedModel):
 			if not partner.country_id:
 				msg += '\n    - País;'
 				count += 1
-			if not partner.phone:
+			if not partner.phone and partner.mobile:
+				partner.phone = partner.mobile
+			else:
 				msg += '\n    - Telefone;'
 				count += 1
 			if count > 0:
@@ -70,6 +72,7 @@ class NFe(spec_models.StackedModel):
 			final_msg = ''
 			for product in products:
 				count = 0
+				msg  = ''
 				if product.name:
 					msg += 'Os dados cadastrais do produto %s estão incompletos. Favor preencher os seguintes campos:\n - ' %(product.name)
 					if not product.ncm_id:
@@ -81,7 +84,6 @@ class NFe(spec_models.StackedModel):
 					if msg.endswith(','):
 						msg = msg.rstrip(',')
 					msg += '\n\n'
-					final_msg += msg
 					if count > 0:
 						final_msg += msg
 				else:
