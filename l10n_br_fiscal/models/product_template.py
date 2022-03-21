@@ -31,7 +31,7 @@ class ProductTemplate(models.Model):
     icms_origin = fields.Selection(
         selection=ICMS_ORIGIN,
         string="ICMS Origin",
-        company_dependent=True,
+        #company_dependent=True,
         default=ICMS_ORIGIN_DEFAULT,
     )
 
