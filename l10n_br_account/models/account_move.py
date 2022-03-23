@@ -53,6 +53,7 @@ class AccountMove(models.Model):
         for move in self:
             for line in move.line_ids.filtered(lambda l: l.tax_line_id):
                 # Create Wh Invoice only for supplier invoice
+                import pudb;pu.db
                 if line.move_id and line.move_id.type != "in_invoice":
                     continue
 
@@ -69,7 +70,7 @@ class AccountMove(models.Model):
                         )
 
                         self._finalize_invoices(invoice)
-                        invoice.action_invoice_open()
+                        invoice.action_post()
 
     def _withholding_validate(self):
         for m in self:
@@ -79,9 +80,9 @@ class AccountMove(models.Model):
                 .mapped("move_id")
             )
 
-            invoices.filtered(lambda i: i.state == "open").action_invoice_cancel()
+            invoices.filtered(lambda i: i.state == "open").button_cancel()
 
-            invoices.filtered(lambda i: i.state == "cancel").action_invoice_draft()
+            invoices.filtered(lambda i: i.state == "cancel").button_draft()
             invoices.invalidate_cache()
             invoices.filtered(lambda i: i.state == "draft").unlink()
 
@@ -97,7 +98,7 @@ class AccountMove(models.Model):
         result = super().action_post()
         if not self.document_type_id:
             return result
-        self.fiscal_document_id._change_state('a_enviar')
+        # self.fiscal_document_id._change_state('a_enviar')
         if self.state == 'draft':
             if invoice:
                 if (
@@ -110,5 +111,8 @@ class AccountMove(models.Model):
         return result
 
     def button_cancel(self):
-        self._withholding_validate()
+        # TODO FIXME migration
+        # Esse método é responsavel por verificar se há alguma fatura de impostos retidos
+        # associado a essa fatura e cancela-las também. o método precisa ser refatorado.
+        # self._withholding_validate()
         return super().button_cancel()
