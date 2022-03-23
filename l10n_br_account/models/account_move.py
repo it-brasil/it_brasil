@@ -53,7 +53,6 @@ class AccountMove(models.Model):
         for move in self:
             for line in move.line_ids.filtered(lambda l: l.tax_line_id):
                 # Create Wh Invoice only for supplier invoice
-                import pudb;pu.db
                 if line.move_id and line.move_id.type != "in_invoice":
                     continue
 

@@ -382,12 +382,16 @@ class NFeLine(spec_models.StackedModel):
                 xsd_fields.remove("nfe40_ICMS")
                 xsd_fields.remove("nfe40_II")
         elif class_obj._name == "nfe.40.icms":
-            xsd_fields = [self.nfe40_choice11]
-            icms_tag = self.nfe40_choice11.replace("nfe40_", "")  # FIXME
-            binding_module = sys.modules[self._binding_module]
-            icms_binding = getattr(binding_module, icms_tag + "Type")
-            icms_dict = self._export_fields_icms()
-            export_dict[icms_tag] = icms_binding(**icms_dict)
+            # import pudb;pu.db
+            # adicionei este if pra conseguir CONFIRMAR a fatura
+            # com itens errados dos itens dos diarios
+            if self.nfe40_choice11:
+                xsd_fields = [self.nfe40_choice11]
+                icms_tag = self.nfe40_choice11.replace("nfe40_", "")  # FIXME
+                binding_module = sys.modules[self._binding_module]
+                icms_binding = getattr(binding_module, icms_tag + "Type")
+                icms_dict = self._export_fields_icms()
+                export_dict[icms_tag] = icms_binding(**icms_dict)
         elif class_obj._name == "nfe.40.icmsufdest":
             # DIFAL
             self.nfe40_vBCUFDest = str("%.02f" % self.icms_destination_base)
