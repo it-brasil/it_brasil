@@ -141,7 +141,7 @@ class AccountMoveLine(models.Model):
     def _compute_price(self):
         """Compute the amounts of the SO line."""
         # TODO FIXME migrate. No such method in Odoo 13+
-        import pudb;pu.db
+        #import pudb;pu.db
         if self.document_type_id:
             # Call mixin compute method
             self._compute_amounts()
