@@ -55,8 +55,9 @@ class NFe(spec_models.StackedModel):
 			if not partner.country_id:
 				msg += '\n    - País;'
 				count += 1
-			if not partner.partner_phone and partner.mobile:
-				partner.partner_phone = partner.mobile
+			if not partner.phone:
+				if partner.mobile:
+					partner.phone = partner.mobile
 			else:
 				msg += '\n    - Telefone;'
 				count += 1
