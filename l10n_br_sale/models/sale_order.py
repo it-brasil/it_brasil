@@ -267,8 +267,8 @@ class SaleOrder(models.Model):
 
         return result
 
-    # def _create_invoices(self, grouped=False, final=False, date=None):
-    #     inv_ids = super()._create_invoices(grouped=grouped, final=final, date=date)
+    def _create_invoices(self, grouped=False, final=False, date=None):
+        inv_ids = super()._create_invoices(grouped=grouped, final=final, date=date)
     #     for inv_line in inv_ids.invoice_line_ids:
     #         inv_line._get_fields_onchange_balance()
         # In brazilian localization we need to overwrite this method
@@ -339,7 +339,7 @@ class SaleOrder(models.Model):
         #                 if fiscal_document_type.id == document_type.id:
         #                     inv_line.move_id = invoice.id
 
-        # return inv_ids
+        return inv_ids
 
     def _get_amount_lines(self):
         """Get object lines instaces used to compute fields"""
