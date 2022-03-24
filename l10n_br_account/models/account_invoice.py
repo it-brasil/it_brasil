@@ -214,35 +214,36 @@ class AccountMove(models.Model):
             defaults["issuer"] = DOCUMENT_ISSUER_PARTNER
         return defaults
 
-    @api.model
+    @api.model_create_multi
     def create(self, values):
-        if not values.get("document_type_id"):
-            values.update({"fiscal_document_id": self.env.company.fiscal_dummy_id.id})
+        for vals in values:
+            if not vals.get("document_type_id"):
+                vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
 
         # quando cria uma fatura diretamente em faturamento 
         # nao esta gravando os campos abaixo
-        for ln in invoice.invoice_line_ids:
-            if not ln.icms_cst_id:
-                if 'invoice_line_ids' in values:
-                    for lnv in values['invoice_line_ids']:
-                        if 'icms_cst_id' in lnv[2] and lnv[2]['icms_cst_id'] and \
-                            lnv[2]['product_id'] == ln.product_id.id:
-                            ln.update({
-                                'icms_cst_id': lnv[2]['icms_cst_id'],
-                                'ipi_cst_id': lnv[2]['ipi_cst_id'],
-                                'pis_cst_id': lnv[2]['pis_cst_id'],
-                                'cofins_cst_id': lnv[2]['cofins_cst_id'],
-                            })
-            if not ln.ncm_id:
-                if 'invoice_line_ids' in values:
-                    for lnv in values['invoice_line_ids']:
-                        if 'ncm_id' in lnv[2] and lnv[2]['ncm_id'] and \
-                            lnv[2]['product_id'] == ln.product_id.id:
-                            ln.update({
-                                'ncm_id': lnv[2]['ncm_id'],
-                                'cest_id': lnv[2]['cest_id'],
-                            })
+        # for ln in invoice.invoice_line_ids:
+        #     if not ln.icms_cst_id:
+        #         if 'invoice_line_ids' in values:
+        #             for lnv in values['invoice_line_ids']:
+        #                 if 'icms_cst_id' in lnv[2] and lnv[2]['icms_cst_id'] and \
+        #                     lnv[2]['product_id'] == ln.product_id.id:
+        #                     ln.update({
+        #                         'icms_cst_id': lnv[2]['icms_cst_id'],
+        #                         'ipi_cst_id': lnv[2]['ipi_cst_id'],
+        #                         'pis_cst_id': lnv[2]['pis_cst_id'],
+        #                         'cofins_cst_id': lnv[2]['cofins_cst_id'],
+        #                     })
+        #     if not ln.ncm_id:
+        #         if 'invoice_line_ids' in values:
+        #             for lnv in values['invoice_line_ids']:
+        #                 if 'ncm_id' in lnv[2] and lnv[2]['ncm_id'] and \
+        #                     lnv[2]['product_id'] == ln.product_id.id:
+        #                     ln.update({
+        #                         'ncm_id': lnv[2]['ncm_id'],
+        #                         'cest_id': lnv[2]['cest_id'],
+        #                     })
 
         invoice._write_shadowed_fields()
         return invoice
@@ -274,7 +275,7 @@ class AccountMove(models.Model):
     def copy(self, default=None):
         default = default or {}
         if self.document_type_id:
-            default["line_ids"] = False
+            default["fiscal_line_ids"] = False
         else:
             default["line_ids"] = self.line_ids[0]
         return super().copy(default)
