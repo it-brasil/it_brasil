@@ -219,12 +219,9 @@ class AccountMove(models.Model):
         if not values.get("document_type_id"):
             values.update({"fiscal_document_id": self.env.company.fiscal_dummy_id.id})
         invoice = super().create(values)
-        # import pudb;pu.db
-        # if 'sale_order' in values:
-        # invoice._recompute_tax_lines(False)
+
         # quando cria uma fatura diretamente em faturamento 
         # nao esta gravando os campos abaixo
-
         for ln in invoice.invoice_line_ids:
             if not ln.icms_cst_id:
                 if 'invoice_line_ids' in values:
@@ -238,7 +235,6 @@ class AccountMove(models.Model):
                                 'cofins_cst_id': lnv[2]['cofins_cst_id'],
                             })
             if not ln.ncm_id:
-                #import pudb;pu.db
                 if 'invoice_line_ids' in values:
                     for lnv in values['invoice_line_ids']:
                         if 'ncm_id' in lnv[2] and lnv[2]['ncm_id'] and \
@@ -483,7 +479,6 @@ class AccountMove(models.Model):
     def invoice_line_move_line_get(self):
         move_lines_dict = super().invoice_line_move_line_get()
         new_mv_lines_dict = []
-        #import pudb;pu.db
         for line in move_lines_dict:
             invoice_line = self.line_ids.filtered(lambda l: l.id == line.get("invl_id"))
 
@@ -506,7 +501,6 @@ class AccountMove(models.Model):
 
     @api.model
     def tax_line_move_line_get(self):
-        #import pudb;pu.db
         tax_lines_dict = super().tax_line_move_line_get()
         if self.fiscal_operation_id and self.fiscal_operation_id.deductible_taxes:
             for tax_line in self.tax_line_ids:

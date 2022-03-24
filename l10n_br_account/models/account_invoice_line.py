@@ -141,7 +141,6 @@ class AccountMoveLine(models.Model):
     def _compute_price(self):
         """Compute the amounts of the SO line."""
         # TODO FIXME migrate. No such method in Odoo 13+
-        #import pudb;pu.db
         if self.document_type_id:
             # Call mixin compute method
             self._compute_amounts()
@@ -188,7 +187,11 @@ class AccountMoveLine(models.Model):
         vals = self._convert_to_write(self.read(self._shadowed_fields())[0])
         if default:  # in case you want to use new rather than write later
             return {"default_%s" % (k,): vals[k] for k in vals.keys()}
-        return vals
+        if vals['product_id']:
+            return vals
+        else:
+            return False
+
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -224,19 +227,22 @@ class AccountMoveLine(models.Model):
         lines = super().create(vals_list)
         if fiscal_doc_id and dummy_doc.id != fiscal_doc_id:
             for line in lines:
+                # # verificar se carregou o NCM
+                if not line.ncm_id:
+                    line.ncm_id = line.product_id.ncm_id.id
+                # # # coloquei o if abaixo, pois criava duas linhas uma sem o item, um valor negativo
+                # if not line.product_id:
+                #     continue
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-                doc_id = line.move_id.fiscal_document_id.id
-                shadowed_fiscal_vals["document_id"] = doc_id
-                line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+                if shadowed_fiscal_vals:
+                    doc_id = line.move_id.fiscal_document_id.id
+                    shadowed_fiscal_vals["document_id"] = doc_id
+                    line.fiscal_document_line_id.write(shadowed_fiscal_vals)
         return lines
 
     def write(self, values):
-        dummy_doc = self.env.company.fiscal_dummy_id
-        dummy_line = fields.first(dummy_doc.fiscal_line_ids)
-        if values.get("move_id"):
-            values["document_id"] = (
-                self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-            )
+        # Mudei aqui para o sistema colocar somente na linha do produto
+        # o document_id , assim ao gerar o xml so gera do item produto
         result = super().write(values)
         for line in self:
             if line.wh_move_line_id and (
@@ -245,9 +251,18 @@ class AccountMoveLine(models.Model):
                 raise UserError(
                     _("You can't edit one invoice related a withholding entry")
                 )
+            dummy_doc = self.env.company.fiscal_dummy_id
+            dummy_line = fields.first(dummy_doc.fiscal_line_ids)
             if line.fiscal_document_line_id != dummy_line:
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-                line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+                if shadowed_fiscal_vals:
+                    line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+            if values.get("move_id"):
+                if line.product_id:
+                    line.write({"document_id": 
+                        self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
+                    })
+
         return result
 
     def unlink(self):
