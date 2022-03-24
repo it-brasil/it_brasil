@@ -225,7 +225,9 @@ class AccountMoveLine(models.Model):
         if sale and credit != debit:
             return True
         lines = super().create(vals_list)
-        if fiscal_doc_id and dummy_doc.id != fiscal_doc_id:
+        # import pudb;pu.db
+        # if fiscal_doc_id and dummy_doc.id != fiscal_doc_id:
+        if dummy_doc.id != fiscal_doc_id:
             for line in lines:
                 # # verificar se carregou o NCM
                 if not line.ncm_id:
@@ -241,6 +243,26 @@ class AccountMoveLine(models.Model):
         return lines
 
     def write(self, values):
+        # dummy_doc = self.env.company.fiscal_dummy_id
+        # dummy_line = fields.first(dummy_doc.fiscal_line_ids)
+        # if values.get("move_id"):
+        #     values["document_id"] = (
+        #         self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
+        #     )
+        # result = super().write(values)
+        # for line in self:
+        #     if line.wh_move_line_id and (
+        #         "quantity" in values or "price_unit" in values
+        #     ):
+        #         raise UserError(
+        #             _("You can't edit one invoice related a withholding entry")
+        #         )
+        #     if line.fiscal_document_line_id != dummy_line:
+        #         shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
+        #         line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+        # return result
+
+
         # Mudei aqui para o sistema colocar somente na linha do produto
         # o document_id , assim ao gerar o xml so gera do item produto
         result = super().write(values)
@@ -381,7 +403,7 @@ class AccountMoveLine(models.Model):
                 fiscal_price=self.env.context.get("fiscal_price"),
                 fiscal_quantity=self.env.context.get("fiscal_quantity"),
                 uot=self.env.context.get("uot_id"),
-                icmssn_range=self.env.context.get("icmssn_range_id"),
+                icmssn_range=self.env.context.get("icmssn_range"),
                 icms_origin=self.env.context.get("icms_origin"))
 
             for tax_res in taxes_res['taxes']:
@@ -484,7 +506,7 @@ class AccountMoveLine(models.Model):
                 fiscal_price=self.env.context.get("fiscal_price"),
                 fiscal_quantity=self.env.context.get("fiscal_quantity"),
                 uot=self.env.context.get("uot_id"),
-                icmssn_range=self.env.context.get("icmssn_range_id"),
+                icmssn_range=self.env.context.get("icmssn_range"),
                 icms_origin=self.env.context.get("icms_origin"))
 
 
