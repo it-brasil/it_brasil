@@ -58,9 +58,9 @@ class NFe(spec_models.StackedModel):
 			if not partner.phone:
 				if partner.mobile:
 					partner.phone = partner.mobile
-			else:
-				msg += '\n    - Telefone;'
-				count += 1
+				else:
+					msg += '\n    - Telefone;'
+					count += 1
 			if count > 0:
 				raise ValidationError(msg)		
 		else: 
@@ -77,10 +77,10 @@ class NFe(spec_models.StackedModel):
 				if product.name:
 					msg += 'Os dados cadastrais do produto %s estão incompletos. Favor preencher os seguintes campos:\n - ' %(product.name)
 					if not product.ncm_id:
-						lista += 'Ncm, ' 
+						msg += 'Ncm, ' 
 						count += 1
 					if not product.icms_origin:
-						lista += 'Origem do ICMS'
+						msg += 'Origem do ICMS'
 						count += 1 
 					if msg.endswith(','):
 						msg = msg.rstrip(',')
