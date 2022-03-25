@@ -222,7 +222,8 @@ class AccountMoveLine(models.Model):
                 sale = True
         # Coloquei isso pq da erro de Diario não Balanceado,
         # dobra o move_line
-        if sale and credit != debit:
+
+        if sale and round(credit,2) != round(debit,2):
             return True
         lines = super().create(vals_list)
         # import pudb;pu.db
