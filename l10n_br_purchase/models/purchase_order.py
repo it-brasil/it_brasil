@@ -130,3 +130,21 @@ class PurchaseOrder(models.Model):
     @api.depends("order_line.price_total")
     def _amount_all(self):
         self._compute_amount()
+
+    def _prepare_invoice(self):
+        self.ensure_one()
+        result = super()._prepare_invoice()
+        result.update(self._prepare_br_fiscal_dict())
+
+        document_type_id = self._context.get('document_type_id')
+
+        if document_type_id:
+            document_type = self.env['l10n_br_fiscal.document.type'].browse(
+                document_type_id)
+        else:
+            document_type = self.company_id.document_type_id
+            document_type_id = self.company_id.document_type_id.id
+        if document_type:
+            result['document_type_id'] = document_type_id
+        return result
+
