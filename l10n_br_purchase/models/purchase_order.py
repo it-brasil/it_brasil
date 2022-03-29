@@ -147,3 +147,4 @@ class PurchaseOrder(models.Model):
         if document_type:
             result['document_type_id'] = document_type_id
         return result
+
