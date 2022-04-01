@@ -168,34 +168,33 @@ class SaleOrder(models.Model):
         res = super(SaleOrder, self).write(vals)
         return res
 
-    # @api.model
-    # def fields_view_get(self, view_id=None, view_type="form",
-    #                     toolbar=False, submenu=False):
+    @api.model
+    def fields_view_get(
+        self, view_id=None, view_type="form", toolbar=False, submenu=False
+    ):
 
-    #     order_view = super().fields_view_get(
-    #         view_id, view_type, toolbar, submenu
-    #     )
+        order_view = super().fields_view_get(view_id, view_type, toolbar, submenu)
 
-    #     if view_type == 'form':
-    #         sub_form_view = order_view.get(
-    #             'fields', {}).get('order_line', {}).get(
-    #             'views', {}).get('form', {}).get('arch', {})
+        if view_type == "form":
 
-    #         view = self.env['ir.ui.view']
+            view = self.env["ir.ui.view"]
 
-    #         sub_form_node = etree.fromstring(
-    #             self.env['sale.order.line'].fiscal_form_view(sub_form_view))
+            sub_form_view = order_view["fields"]["order_line"]["views"]["form"]["arch"]
 
-    #         sub_arch, sub_fields = view.postprocess_and_fields(
-    #             'sale.order.line', sub_form_node, None)
+            sub_form_node = self.env["sale.order.line"].inject_fiscal_fields(
+                sub_form_view
+            )
 
-    #         order_view['fields']['order_line']['views']['form'][
-    #             'fields'] = sub_fields
+            sub_arch, sub_fields = view.postprocess_and_fields(
+                sub_form_node, "sale.order.line", False
+            )
 
-    #         order_view['fields']['order_line']['views']['form'][
-    #             'arch'] = sub_arch
+            order_view["fields"]["order_line"]["views"]["form"] = {
+                "fields": sub_fields,
+                "arch": sub_arch,
+            }
 
-    #     return order_view
+        return order_view
 
     @api.onchange('discount_rate')
     def onchange_discount_rate(self):
@@ -241,7 +240,6 @@ class SaleOrder(models.Model):
         self.ensure_one()
         result = super()._prepare_invoice()
         result.update(self._prepare_br_fiscal_dict())
-
         document_type_id = self._context.get('document_type_id')
 
         if document_type_id:
@@ -267,8 +265,8 @@ class SaleOrder(models.Model):
 
         return result
 
-    def _create_invoices(self, grouped=False, final=False, date=None):
-        inv_ids = super()._create_invoices(grouped=grouped, final=final, date=date)
+    # def _create_invoices(self, grouped=False, final=False, date=None):
+    #     inv_ids = super()._create_invoices(grouped=grouped, final=final, date=date)
     #     for inv_line in inv_ids.invoice_line_ids:
     #         inv_line._get_fields_onchange_balance()
         # In brazilian localization we need to overwrite this method
@@ -339,7 +337,7 @@ class SaleOrder(models.Model):
         #                 if fiscal_document_type.id == document_type.id:
         #                     inv_line.move_id = invoice.id
 
-        return inv_ids
+        # return inv_ids
 
     def _get_amount_lines(self):
         """Get object lines instaces used to compute fields"""

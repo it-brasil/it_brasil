@@ -217,15 +217,28 @@ class SaleOrderLine(models.Model):
                 self.discount = ((self.discount_value * 100) /
                                  (self.product_uom_qty * self.price_unit))
 
+    # def _compute_tax_id(self):
+    #     super(SaleOrderLine, self)._compute_tax_id()
+    #     for line in self:
+    #         line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale")
     def _compute_tax_id(self):
-        super(SaleOrderLine, self)._compute_tax_id()
+        super()._compute_tax_id()
         for line in self:
             line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale")
+            if line.order_id.fiscal_operation_id.deductible_taxes:
+                line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale", deductible=True)            
+
+    # @api.onchange("fiscal_tax_ids")
+    # def _onchange_fiscal_tax_ids(self):
+    #     super()._onchange_fiscal_tax_ids()
+    #     self._compute_tax_id()
 
     @api.onchange("fiscal_tax_ids")
     def _onchange_fiscal_tax_ids(self):
         super()._onchange_fiscal_tax_ids()
-        self._compute_tax_id()
+        self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale")
+        if self.order_id.fiscal_operation_id.deductible_taxes:
+            self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale",deductible=True)
 
     @api.onchange("fiscal_operation_line_id")
     def _onchange_fiscal_operation_line_id(self):
