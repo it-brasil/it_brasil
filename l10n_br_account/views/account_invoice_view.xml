@@ -268,6 +268,8 @@
                 <field name="cfop_destination" force_save="1" invisible="1" />
                 <field name="price_subtotal" invisible="1" />
                 <field name="price_total" invisible="1" />
+                <field name="credit" invisible="1" />
+                <field name="debit" invisible="1" />
             </xpath>
 
             <xpath
