@@ -281,42 +281,50 @@ class AccountMove(models.Model):
         return super().copy(default)
 
     def _recompute_tax_lines(self, recompute_tax_base_amount=False):
-        """ Compute the dynamic tax lines of the journal entry.
+        """Compute the dynamic tax lines of the journal entry.
         :param recompute_tax_base_amount: Flag forcing only the recomputation of the `tax_base_amount` field.
         """
         self.ensure_one()
         in_draft_mode = self != self._origin
 
         def _serialize_tax_grouping_key(grouping_dict):
-            ''' Serialize the dictionary values to be used in the taxes_map.
+            """ Serialize the dictionary values to be used in the taxes_map.
             :param grouping_dict: The values returned by '_get_tax_grouping_key_from_tax_line' or '_get_tax_grouping_key_from_base_line'.
             :return: A string representing the values.
-            '''
-            return '-'.join(str(v) for v in grouping_dict.values())
+            """
+            return "-".join(str(v) for v in grouping_dict.values())
 
         def _compute_base_line_taxes(base_line):
-            ''' Compute taxes amounts both in company currency / foreign currency as the ratio between
+            """Compute taxes amounts both in company currency / foreign currency as the ratio between
             amount_currency & balance could not be the same as the expected currency rate.
             The 'amount_currency' value will be set on compute_all(...)['taxes'] in multi-currency.
             :param base_line:   The account.move.line owning the taxes.
             :return:            The result of the compute_all method.
-            '''
+            """
             move = base_line.move_id
 
             if move.is_invoice(include_receipts=True):
                 handle_price_include = True
                 sign = -1 if move.is_inbound() else 1
                 quantity = base_line.quantity
-                is_refund = move.move_type in ('out_refund', 'in_refund')
-                price_unit_wo_discount = sign * base_line.price_unit * (1 - (base_line.discount / 100.0))
+                is_refund = move.move_type in ("out_refund", "in_refund")
+                price_unit_wo_discount = (
+                    sign * base_line.price_unit * (1 - (base_line.discount / 100.0))
+                )
             else:
                 handle_price_include = False
                 quantity = 1.0
-                tax_type = base_line.tax_ids[0].type_tax_use if base_line.tax_ids else None
-                is_refund = (tax_type == 'sale' and base_line.debit) or (tax_type == 'purchase' and base_line.credit)
+                tax_type = (
+                    base_line.tax_ids[0].type_tax_use if base_line.tax_ids else None
+                )
+                is_refund = (tax_type == 'sale' and base_line.debit) or (
+                    tax_type == 'purchase' and base_line.credit
+                    )
                 price_unit_wo_discount = base_line.amount_currency
 
-            balance_taxes_res = base_line.tax_ids._origin.with_context(force_sign=move._get_tax_force_sign()).compute_all(
+            balance_taxes_res = base_line.tax_ids._origin.with_context(
+                force_sign=move._get_tax_force_sign()
+            ).compute_all(
                 price_unit_wo_discount,
                 currency=base_line.currency_id,
                 quantity=quantity,
@@ -338,7 +346,7 @@ class AccountMove(models.Model):
                 fiscal_quantity=base_line.fiscal_quantity,
                 uot=base_line.uot_id,
                 icmssn_range=base_line.icmssn_range_id,
-                icms_origin=base_line.icms_origin
+                icms_origin=base_line.icms_origin,
             )
             if move.move_type == 'entry':
                 repartition_field = is_refund and 'refund_repartition_line_ids' or 'invoice_repartition_line_ids'
