@@ -195,14 +195,14 @@ class AccountMoveLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if len(vals_list):
+            move = self.env['account.move'].browse(vals_list[0].get('move_id'))
+            if move.is_invoice(include_receipts=True):
+                if vals_list[0].get('exclude_from_invoice_tab'):
+                    return vals_list
         dummy_doc = self.env.company.fiscal_dummy_id
         fiscal_doc_id = False
-        credit = 0.0
-        debit = 0.0
-        sale = False
         for values in vals_list:
-            credit += values['credit']
-            debit += values['debit']
             fiscal_doc_id = (
                 self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
             )
@@ -218,24 +218,14 @@ class AccountMoveLine(models.Model):
                     values.get("uot_id"),
                 )
             )
-            if 'sale_line_ids' in values:
-                sale = True
-        # Coloquei isso pq da erro de Diario não Balanceado,
-        # dobra o move_line
-
-        if sale and round(credit,2) != round(debit,2):
-            return True
         lines = super().create(vals_list)
-        # import pudb;pu.db
+
         # if fiscal_doc_id and dummy_doc.id != fiscal_doc_id:
         if dummy_doc.id != fiscal_doc_id:
             for line in lines:
                 # # verificar se carregou o NCM
                 if not line.ncm_id:
                     line.ncm_id = line.product_id.ncm_id.id
-                # # # coloquei o if abaixo, pois criava duas linhas uma sem o item, um valor negativo
-                # if not line.product_id:
-                #     continue
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
                 if shadowed_fiscal_vals:
                     doc_id = line.move_id.fiscal_document_id.id
@@ -244,28 +234,6 @@ class AccountMoveLine(models.Model):
         return lines
 
     def write(self, values):
-        # dummy_doc = self.env.company.fiscal_dummy_id
-        # dummy_line = fields.first(dummy_doc.fiscal_line_ids)
-        # if values.get("move_id"):
-        #     values["document_id"] = (
-        #         self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-        #     )
-        # result = super().write(values)
-        # for line in self:
-        #     if line.wh_move_line_id and (
-        #         "quantity" in values or "price_unit" in values
-        #     ):
-        #         raise UserError(
-        #             _("You can't edit one invoice related a withholding entry")
-        #         )
-        #     if line.fiscal_document_line_id != dummy_line:
-        #         shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-        #         line.fiscal_document_line_id.write(shadowed_fiscal_vals)
-        # return result
-
-
-        # Mudei aqui para o sistema colocar somente na linha do produto
-        # o document_id , assim ao gerar o xml so gera do item produto
         result = super().write(values)
         for line in self:
             if line.wh_move_line_id and (
@@ -356,7 +324,6 @@ class AccountMoveLine(models.Model):
         else:
             sign = 1
         amount_currency *= sign
-
         # Avoid rounding issue when dealing with price included taxes. For example, when the price_unit is 2300.0 and
         # a 5.5% price included tax is applied on it, a balance of 2300.0 / 1.055 = 2180.094 ~ 2180.09 is computed.
         # However, when triggering the inverse, 2180.09 + (2180.09 * 0.055) = 2180.09 + 119.90 = 2299.99 is computed.
