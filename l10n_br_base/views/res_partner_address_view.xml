@@ -9,6 +9,7 @@
         <field name="arch" type="xml">
             <xpath expr="//div[hasclass('o_address_format')]" position="replace">
                 <div class="o_address_format">
+                    <field name="street" invisible="1" />
                     <field name="zip" placeholder="Zip code..." style="width: 70%" class="o_address_zip" />
                     <field name="street_name" placeholder="Street..." class="o_address_street" />
                     <field name="street_number" placeholder="Street number..." class="o_address_street" />
