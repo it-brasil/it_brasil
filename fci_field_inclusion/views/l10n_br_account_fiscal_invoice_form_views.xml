@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<record id="fci_field_inclusion_fiscal_invoice_form" model="ir.ui.view">
+		<field name="name">fci_field_inclusion.fiscal.invoice.form</field>
+		<field name="model">account.move</field>
+		<field name="inherit_id" ref="l10n_br_account.fiscal_invoice_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="." position="inside">
+				<xpath expr="//field[@name='invoice_line_ids']/tree[1]" position="inside">
+					<field name="nfe40_nFCI" optional="hide"/> 
+				</xpath>
+			</xpath>
+		</field>
+	</record>
+
+</odoo>

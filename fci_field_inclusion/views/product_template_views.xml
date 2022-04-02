@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<record id="fci_field_inclusion_product_template_form" model="ir.ui.view">
+		<field name="name">fci_field_inclusion.product.template.form</field>
+		<field name="model">product.template</field>
+		<field name="inherit_id" ref="l10n_br_fiscal.product_template_form" />
+		<field name="arch" type="xml">
+			<xpath expr="//page[@name='fiscal']/group[1]/group[2]/field[@name='nbs_id']" position="after">
+				<field name="fci" />
+			</xpath>
+		</field>
+	</record>
+
+	
+
+</odoo>

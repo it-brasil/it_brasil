@@ -10,7 +10,6 @@ class AccountMove(models.Model):
 
     @api.onchange("purchase_vendor_bill_id", "purchase_id")
     def _onchange_purchase_auto_complete(self):
-        import pudb;pu.db
         if self.purchase_id:
             self.fiscal_operation_id = self.purchase_id.fiscal_operation_id
             if not self.document_type_id:
