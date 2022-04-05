@@ -12,6 +12,7 @@
         "l10n_br_coa",
         "l10n_br_fiscal",
         "l10n_br_account_due_list",
+        "l10n_br_account_payment_order"
     ],
     "data": [
         # security
