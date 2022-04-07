@@ -31,7 +31,7 @@ class NFe(spec_models.StackedModel):
 				if not partner.cnpj_cpf:
 					msg += '\n    - CNPJ;'
 					count += 1
-				if not partner.inscr_est:
+				if not partner.inscr_est and partner.ind_ie_dest == '1':
 					msg += '\n    - Inscrição Estadual;'
 					count += 1
 			if not partner.zip:
