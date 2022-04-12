@@ -186,6 +186,7 @@ class SaleOrder(models.Model):
     def _onchange_partner_id(self):
         if self.partner_id.fiscal_operation_id:
             self.fiscal_operation_id = self.partner_id.fiscal_operation_id
+        self.ind_final = self.partner_id.ind_final
 
     @api.onchange('fiscal_operation_id')
     def _onchange_fiscal_operation_id(self):
