@@ -291,7 +291,10 @@ class DocumentWorkflow(models.AbstractModel):
 
             if not self.operation_name:
                 self.operation_name = ", ".join(
-                    [line.name for line in self.fiscal_line_ids.mapped("fiscal_operation_id")]
+                    [
+                        line.name
+                        for line in self.fiscal_line_ids.mapped("fiscal_operation_id")
+                    ]
                 )
 
             if self.document_electronic and not self.document_key:
@@ -299,6 +302,12 @@ class DocumentWorkflow(models.AbstractModel):
 
     def _document_confirm(self):
         if self.issuer == DOCUMENT_ISSUER_COMPANY:
+            if not self.comment_ids and self.fiscal_operation_id.comment_ids:
+                self.comment_ids |= self.fiscal_operation_id.comment_ids
+
+            for line in self.fiscal_line_ids:
+                if not line.comment_ids and line.fiscal_operation_line_id.comment_ids:
+                    line.comment_ids |= line.fiscal_operation_line_id.comment_ids
             self._change_state(SITUACAO_EDOC_A_ENVIAR)
 
     def action_document_confirm(self):

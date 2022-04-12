@@ -2464,8 +2464,8 @@ msgstr "Contribuinte do ICMS"
 
 #. module: l10n_br_fiscal
 #: model:ir.model.fields,field_description:l10n_br_fiscal.field_l10n_br_fiscal_operation_line__company_tax_framework
-msgid "Copmpany Tax Framework"
-msgstr "Estrutura Tributária copmpany"
+msgid "Company Tax Framework"
+msgstr "Estrutura Tributária Empresa"
 
 #. module: l10n_br_fiscal
 #: model:ir.model.fields,field_description:l10n_br_fiscal.field_l10n_br_fiscal_document__correction_event_ids
