@@ -508,7 +508,7 @@ class NFe(spec_models.StackedModel):
         duplicatas = self.env["nfe.40.dup"]
         count = 1
         for mov in inv.financial_move_line_ids:
-            if mov.debit > 0:
+            if mov.debit > 0 and mov.account_id.user_type_id.type in ['receivable', 'payable']:
                 duplicatas += duplicatas.create(
                     {
                         "nfe40_nDup": str(count).zfill(3),
