@@ -334,6 +334,8 @@ class DocumentWorkflow(models.AbstractModel):
             to_send._document_send()
 
     def action_document_back2draft(self):
+        self.xml_error_message = False
+        self.file_report_id = False
         self._change_state(SITUACAO_EDOC_EM_DIGITACAO)
 
     def _document_cancel(self, justificative):
