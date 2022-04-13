@@ -2279,7 +2279,7 @@ msgstr ""
 
 #. module: l10n_br_fiscal
 #: model:ir.model.fields,field_description:l10n_br_fiscal.field_l10n_br_fiscal_operation_line__company_tax_framework
-msgid "Copmpany Tax Framework"
+msgid "Company Tax Framework"
 msgstr ""
 
 #. module: l10n_br_fiscal

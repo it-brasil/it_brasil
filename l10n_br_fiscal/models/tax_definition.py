@@ -18,6 +18,28 @@ class TaxDefinition(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _description = "Tax Definition"
 
+    def _get_complete_name(self):
+        return "{tax_group}-{tax}-{cst_code}".format(
+            tax_group=self.tax_group_id.name,
+            tax=self.tax_id.name,
+            cst_code=self.cst_code,
+        )
+
+    @api.depends("tax_group_id", "tax_id", "cst_code")
+    def _compute_display_name(self):
+        for record in self:
+            record.display_name = record._get_complete_name()
+
+    @api.depends("tax_group_id", "tax_id", "cst_code")
+    def name_get(self):
+        result = []
+        for record in self:
+            name = record._get_complete_name()
+            result.append((record.id, name))
+        return result
+
+    display_name = fields.Char(compute="_compute_display_name", store=True)
+
     type_in_out = fields.Selection(
         selection=FISCAL_IN_OUT,
         string="Type",
@@ -30,7 +52,6 @@ class TaxDefinition(models.Model):
     tax_group_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.tax.group",
         string="Tax Group",
-        index=True,
         required=True,
         readonly=True,
         states={"draft": [("readonly", False)]},
@@ -45,7 +66,6 @@ class TaxDefinition(models.Model):
     tax_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.tax",
         string="Tax",
-        index=True,
         readonly=True,
         states={"draft": [("readonly", False)]},
         domain="[('tax_group_id', '=', tax_group_id)]",
@@ -54,9 +74,7 @@ class TaxDefinition(models.Model):
     cst_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.cst",
         string="CST",
-        index=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         domain="[('cst_type', 'in', (type_in_out, 'all')), "
         "('tax_domain', '=', tax_domain)]",
     )
@@ -65,7 +83,6 @@ class TaxDefinition(models.Model):
         string="CST Code",
         related="cst_id.code",
         readonly=True,
-        states={"draft": [("readonly", False)]},
     )
 
     tax_domain = fields.Selection(
@@ -91,7 +108,6 @@ class TaxDefinition(models.Model):
     company_id = fields.Many2one(
         comodel_name="res.company",
         string="Company",
-        index=True,
         readonly=True,
         states={"draft": [("readonly", False)]},
     )
@@ -99,7 +115,6 @@ class TaxDefinition(models.Model):
     state_from_id = fields.Many2one(
         comodel_name="res.country.state",
         string="From State",
-        index=True,
         domain=[("country_id.code", "=", "BR")],
     )
 
@@ -369,8 +384,3 @@ class TaxDefinition(models.Model):
                 self.cst_id = self.tax_id.cst_out_id
             else:
                 self.cst_id = self.tax_id.cst_in_id
-
-    @api.onchange("tax_group_id")
-    def _onchange_tax_group_id(self):
-        if self.tax_group_id and self.fiscal_operation_line_id:
-            self.type_in_out = self.fiscal_operation_line_id.fiscal_operation_type
