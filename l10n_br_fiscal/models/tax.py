@@ -206,6 +206,11 @@ class Tax(models.Model):
             base = round(fiscal_price * fiscal_quantity, precision)
 
         # Update Base Value
+        # Coloquei isso pq nao estava reduzindo da BASE
+        if tax.tax_group_id.base_without_icms:
+            for tx in self:
+                if 'ICMS' in tx.name:
+                    remove_from_base = round(fiscal_price * fiscal_quantity * (tx.percent_amount/100), precision)
         base_amount = (base + add_to_base) - remove_from_base
 
         # Compute Tax Base Reduction
