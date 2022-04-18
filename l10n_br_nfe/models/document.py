@@ -2,9 +2,11 @@
 # Copyright 2019 KMEE INFORMATICA LTDA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+import pytz
 import base64
 import logging
 import re
+import io
 from datetime import datetime
 from io import StringIO
 from unicodedata import normalize
@@ -17,6 +19,9 @@ from erpbrasil.transmissao import TransmissaoSOAP
 from lxml import etree
 from nfelib.v4_00 import leiauteNFe_sub as nfe_sub, retEnviNFe as leiauteNFe
 from requests import Session
+
+from ..models.danfe import danfe
+from lxml import etree
 
 from odoo import _, api, fields
 from odoo.exceptions import UserError, ValidationError
@@ -729,23 +734,58 @@ class NFe(spec_models.StackedModel):
             xml_string = base64.b64decode(arquivo.datas).decode()
             xml_string = self.temp_xml_autorizacao(xml_string)
 
-        pdf = base.ImprimirXml.imprimir(
-            string_xml=xml_string, logo=self.company_id.logo
-            # output_dir=self.authorization_event_id.file_path
-        )
-        # TODO: Alterar a opção output_dir para devolter também o arquivo do XML
-        # no retorno, evitando a releitura do arquivo.
-        #"datas_fname": self.document_key + ".pdf",
+        # pdf = base.ImprimirXml.imprimir(
+        #     string_xml=xml_string, logo=self.company_id.logo
+        #     # output_dir=self.authorization_event_id.file_path
+        # )
+
+        # Teste Usando impressao via ReportLab Pytrustnfe
+        
+        logo = base64.b64decode(self.company_id.logo)
+
+        tmpLogo = io.BytesIO()
+        tmpLogo.write(logo)
+        tmpLogo.seek(0)
+
+        timezone = pytz.timezone(self.env.context.get('tz') or 'UTC')
+        xml_element = etree.fromstring(xml_string)
+        oDanfe = danfe(list_xml=[xml_element], logo=tmpLogo, timezone=timezone)         
+        tmpDanfe = io.BytesIO()
+        oDanfe.writeto_pdf(tmpDanfe)        
+        danfe_file = tmpDanfe.getvalue()
+        tmpDanfe.close()
+
+        # base64.b64encode(bytes(tmpDanfe)),
+
         self.file_report_id = self.env["ir.attachment"].create(
             {
                 "name": self.document_key + ".pdf",
                 "res_model": self._name,
                 "res_id": self.id,
-                "datas": base64.b64encode(pdf),
+                "datas": base64.b64encode(danfe_file),
                 "mimetype": "application/pdf",
                 "type": "binary",
             }
         )
+
+
+
+        # TODO: Alterar a opção output_dir para devolter também o arquivo do XML
+        # no retorno, evitando a releitura do arquivo.
+        #"datas_fname": self.document_key + ".pdf",
+
+        # comentei aqui pra teste com a TrusT 
+
+        # self.file_report_id = self.env["ir.attachment"].create(
+        #     {
+        #         "name": self.document_key + ".pdf",
+        #         "res_model": self._name,
+        #         "res_id": self.id,
+        #         "datas": base64.b64encode(pdf),
+        #         "mimetype": "application/pdf",
+        #         "type": "binary",
+        #     }
+        # )
 
     def temp_xml_autorizacao(self, xml_string):
         """ TODO: Migrate-me to erpbrasil.edoc.pdf ASAP"""
