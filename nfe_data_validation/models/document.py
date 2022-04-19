@@ -13,8 +13,11 @@ class NFe(spec_models.StackedModel):
 	_inherit = "l10n_br_fiscal.document" # l10n_br_nfe
 
 	def valida_dados_destinatario(self):
+		import pdb;pdb.set_trace()
 		partner = self.partner_id
 		if partner:
+			if not partner.country_id:
+				raise ValidationError('Informe o país no cadastro do parceiro!')
 			msg = 'Os dados cadastrais do destinário estão incompletos. Favor preencher os seguintes campos:\n'
 			count = 0
 			if partner.company_type == 'person':
@@ -22,18 +25,21 @@ class NFe(spec_models.StackedModel):
 					msg += '\n    - Nome Completo;'
 					count += 1
 				if not partner.cnpj_cpf:
-					msg += '\n    - CPF;'
-					count += 1
+					if partner.country_id.id == 31: 
+						msg += '\n    - CPF;'	
+						count += 1
 			if partner.company_type == 'company':
 				if not partner.legal_name:
 					msg += '\n    - Razão Social;'
 					count += 1
 				if not partner.cnpj_cpf:
-					msg += '\n    - CNPJ;'
-					count += 1
+					if partner.country_id.id == 31:
+						msg += '\n    - CNPJ;'
+						count += 1
 				if not partner.inscr_est and partner.ind_ie_dest == '1':
-					msg += '\n    - Inscrição Estadual;'
-					count += 1
+					if partner.country_id.id == 31:
+						msg += '\n    - Inscrição Estadual;'
+						count += 1
 			if not partner.zip:
 				msg += '\n    - CEP;'
 				count += 1
@@ -56,11 +62,12 @@ class NFe(spec_models.StackedModel):
 				msg += '\n    - País;'
 				count += 1
 			if not partner.phone:
-				if partner.mobile:
-					partner.phone = partner.mobile
-				else:
-					msg += '\n    - Telefone;'
-					count += 1
+				if partner.country_id.id == 31:
+					if partner.mobile:
+						partner.phone = partner.mobile
+					else:
+						msg += '\n    - Telefone;'
+						count += 1
 			if count > 0:
 				raise ValidationError(msg)		
 		else: 
