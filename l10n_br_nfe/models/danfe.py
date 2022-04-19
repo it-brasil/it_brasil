@@ -943,13 +943,26 @@ obsCont[@xCampo='NomeVendedor']"
             self.stringcenter(nMr - 112.5, nLin, tagtext(oNode=el_prod, cTag="NCM"))
             self.stringcenter(nMr - 105, nLin, cCST)
             self.stringcenter(nMr - 99, nLin, tagtext(oNode=el_prod, cTag="CFOP"))
-            self.stringcenter(nMr - 93, nLin, tagtext(oNode=el_prod, cTag="uCom"))
+            uCom = tagtext(oNode=el_prod, cTag="uCom")
+            uTrib = tagtext(oNode=el_prod, cTag="uTrib")
+            self.stringcenter(nMr - 93, nLin, uCom)
             self.stringRight(
                 nMr - 78.5, nLin, format_number(tagtext(oNode=el_prod, cTag="qCom"))
             )
             self.stringRight(
                 nMr - 64.5, nLin, format_number(tagtext(oNode=el_prod, cTag="vUnCom"))
             )
+            # import pudb;pu.db
+            if uCom != uTrib:
+                line_u = nLin + nStep
+                self.stringcenter(nMr - 93, line_u, uTrib)
+                self.stringRight(
+                    nMr - 78.5, line_u, format_number(tagtext(oNode=el_prod, cTag="qTrib"))
+                )
+                self.stringRight(
+                    nMr - 64.5, line_u, format_number(tagtext(oNode=el_prod, cTag="vUnTrib"))
+                )
+                
             self.stringRight(
                 nMr - 50.5, nLin, format_number(tagtext(oNode=el_prod, cTag="vProd"))
             )
