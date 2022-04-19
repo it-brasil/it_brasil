@@ -133,6 +133,16 @@ class SaleOrderLine(models.Model):
 
         return values
 
+    def _prepare_invoice_line(self, **optional_values):
+        self.ensure_one()
+        result = self._prepare_br_fiscal_dict()
+        vals = super()._prepare_invoice_line(**optional_values)
+        if self.product_id and self.product_id.invoice_policy == "delivery":
+            vals["fiscal_quantity"] = self.fiscal_qty_delivered
+            vals["quantity"] = self.qty_delivered
+            result.update(vals)
+        return vals
+
     @api.onchange('product_uom', 'product_uom_qty')
     def _onchange_product_uom(self):
         """To call the method in the mixin to update
