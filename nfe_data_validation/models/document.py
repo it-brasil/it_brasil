@@ -13,7 +13,6 @@ class NFe(spec_models.StackedModel):
 	_inherit = "l10n_br_fiscal.document" # l10n_br_nfe
 
 	def valida_dados_destinatario(self):
-		import pdb;pdb.set_trace()
 		partner = self.partner_id
 		if partner:
 			if not partner.country_id:
