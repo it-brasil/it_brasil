@@ -225,7 +225,7 @@ class AccountMoveLine(models.Model):
                 self._update_fiscal_quantity(
                     values.get("product_id"),
                     price,
-                    values.get("quantity"),
+                    values.get("fiscal_quantity"),
                     values.get("uom_id"),
                     values.get("uot_id"),
                 )
