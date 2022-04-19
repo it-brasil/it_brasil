@@ -24,7 +24,7 @@ class NFe(spec_models.StackedModel):
 					msg += '\n    - Nome Completo;'
 					count += 1
 				if not partner.cnpj_cpf:
-					if partner.country_id.id == 31: 
+					if partner.country_id.code == 'BR': 
 						msg += '\n    - CPF;'	
 						count += 1
 			if partner.company_type == 'company':
@@ -32,21 +32,22 @@ class NFe(spec_models.StackedModel):
 					msg += '\n    - Razão Social;'
 					count += 1
 				if not partner.cnpj_cpf:
-					if partner.country_id.id == 31:
+					if partner.country_id.code == 'BR':
 						msg += '\n    - CNPJ;'
 						count += 1
 				if not partner.inscr_est and partner.ind_ie_dest == '1':
-					if partner.country_id.id == 31:
+					if partner.country_id.code == 'BR':
 						msg += '\n    - Inscrição Estadual;'
 						count += 1
 			if not partner.zip:
-				msg += '\n    - CEP;'
-				count += 1
+				if partner.country_id.code == 'BR':
+					msg += '\n    - CEP;'
+					count += 1
 			if not partner.street_name:
 				msg += '\n    - Nome da Rua (Logradouro);'
 				count += 1
 			if not partner.street_number:
-				msg += '\n    - Casa (Número da rua);'
+				msg += '\n    - Número da rua;'
 				count += 1
 			if not partner.district:
 				msg += '\n    - Bairro;'
@@ -57,11 +58,8 @@ class NFe(spec_models.StackedModel):
 			if not partner.state_id:
 				msg += '\n    - Estado;'
 				count += 1
-			if not partner.country_id:
-				msg += '\n    - País;'
-				count += 1
 			if not partner.phone:
-				if partner.country_id.id == 31:
+				if partner.country_id.code == 'BR':
 					if partner.mobile:
 						partner.phone = partner.mobile
 					else:
