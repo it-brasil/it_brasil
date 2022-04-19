@@ -195,6 +195,7 @@ class AccountMoveLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        move = ""
         if len(vals_list):
             move = self.env['account.move'].browse(vals_list[0].get('move_id'))
             if move.is_invoice(include_receipts=True):
@@ -209,10 +210,21 @@ class AccountMoveLine(models.Model):
             if dummy_doc.id == fiscal_doc_id or values.get("exclude_from_invoice_tab"):
                 values["fiscal_document_line_id"] = fields.first(dummy_doc.fiscal_line_ids).id
 
+            price = values.get("price_unit")
+            if move and values.get("currency_id") != move.company_id.currency_id.id:
+                values.update({"currency_id": move.company_id.currency_id.id})
+                if price:
+                    price = move.currency_id._convert(
+                        price,
+                        move.company_id.currency_id,
+                        move.company_id or self.env.company,
+                        move.date or fields.Date.today(),
+                    )
+
             values.update(
                 self._update_fiscal_quantity(
                     values.get("product_id"),
-                    values.get("price_unit"),
+                    price,
                     values.get("quantity"),
                     values.get("uom_id"),
                     values.get("uot_id"),
