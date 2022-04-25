@@ -11,3 +11,4 @@ pyOpenSSL
 workalendar
 xmldiff
 lxml==4.6.5
+git+https://github.com/it-brasil/PyTrustNFe.git@itbrasil#egg=pytrustnfe3
