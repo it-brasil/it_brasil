@@ -12,3 +12,4 @@ workalendar
 xmldiff
 lxml==4.6.5
 git+https://github.com/it-brasil/PyTrustNFe.git@itbrasil#egg=pytrustnfe3
+git+https://github.com/it-brasil/erpbrasil.edoc.pdf.git@itbrasil#egg=erpbrasil.edoc.pdf
