@@ -43,6 +43,8 @@ class NFe(spec_models.StackedModel):
 				if partner.country_id.code == 'BR':
 					msg += '\n    - CEP;'
 					count += 1
+				else:
+					partner.zip = '99999999'
 			if not partner.street_name:
 				msg += '\n    - Nome da Rua (Logradouro);'
 				count += 1
@@ -53,8 +55,11 @@ class NFe(spec_models.StackedModel):
 				msg += '\n    - Bairro;'
 				count += 1
 			if not partner.city:
-				msg += '\n    - Cidade;'
-				count += 1
+				if partner.country_id.code == 'BR':
+					msg += '\n    - Cidade;'
+					count += 1
+				else:
+					partner.city = '9999999'
 			if not partner.state_id:
 				msg += '\n    - Estado;'
 				count += 1
