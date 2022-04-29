@@ -952,17 +952,6 @@ obsCont[@xCampo='NomeVendedor']"
             self.stringRight(
                 nMr - 64.5, nLin, format_number(tagtext(oNode=el_prod, cTag="vUnCom"))
             )
-            # import pudb;pu.db
-            if uCom != uTrib:
-                line_u = nLin + nStep
-                self.stringcenter(nMr - 93, line_u, uTrib)
-                self.stringRight(
-                    nMr - 78.5, line_u, format_number(tagtext(oNode=el_prod, cTag="qTrib"))
-                )
-                self.stringRight(
-                    nMr - 64.5, line_u, format_number(tagtext(oNode=el_prod, cTag="vUnTrib"))
-                )
-                
             self.stringRight(
                 nMr - 50.5, nLin, format_number(tagtext(oNode=el_prod, cTag="vProd"))
             )
@@ -985,7 +974,20 @@ obsCont[@xCampo='NomeVendedor']"
                 self.string(self.nLeft + 15.5, line_desc, des)
                 line_desc += nStep
 
-            nLin = max(line_cod, line_desc)
+            line_u = nLin
+            if uCom != uTrib:
+                line_u += nStep
+                self.stringcenter(nMr - 93, line_u, uTrib)
+                self.stringRight(
+                    nMr - 78.5, line_u, format_number(tagtext(oNode=el_prod, cTag="qTrib"))
+                )
+                self.stringRight(
+                    nMr - 64.5, line_u, format_number(tagtext(oNode=el_prod, cTag="vUnTrib"))
+                )
+                line_u += nStep # somo 2 Step pq na linha abaixo faz -2
+
+            nLin = max(line_cod, line_desc, line_u)
+
             self.canvas.setStrokeColor(gray)
             self.hline(self.nLeft, nLin - 2, self.width - self.nLeft)
             self.canvas.setStrokeColor(black)
