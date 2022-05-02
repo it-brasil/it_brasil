@@ -52,8 +52,9 @@ class NFe(spec_models.StackedModel):
 				msg += '\n    - Número da rua;'
 				count += 1
 			if not partner.district:
-				msg += '\n    - Bairro;'
-				count += 1
+				if partner.country_id.code == 'BR':
+					msg += '\n    - Bairro;'
+					count += 1
 			if not partner.city:
 				if partner.country_id.code == 'BR':
 					msg += '\n    - Cidade;'
