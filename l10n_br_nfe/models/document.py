@@ -491,10 +491,15 @@ class NFe(spec_models.StackedModel):
             modo = "90"
             for fin in self.move_ids.financial_move_line_ids:
                 if not fin.move_id.payment_mode_id:
-                    raise UserError(_("Favor preencher os dados do pagamento"))                
-                modo = fin.move_id.payment_mode_id.fiscal_type.payment_type
-                avista_aprazo = fin.move_id.payment_mode_id.fiscal_type.indPag
-                valor += fin.debit
+                    raise UserError(_("Favor preencher os dados do pagamento"))
+                if fin.account_id.user_type_id.type in ('receivable', 'payable'):
+                    modo = fin.move_id.payment_mode_id.fiscal_type.payment_type
+                    avista_aprazo = fin.move_id.payment_mode_id.fiscal_type.indPag
+                    if fin.account_id.user_type_id.type == 'receivable':
+                        valor += fin.debit
+                    if fin.account_id.user_type_id.type == 'payable':
+                        valor += fin.credit
+
             self.nfe40_detPag = [
                 (5, 0, 0),
                 (0, 0, self._prepare_amount_financial(avista_aprazo, modo, valor)),
