@@ -164,7 +164,7 @@ class Operation(models.Model):
             ("fiscal_operation_id.fiscal_type", "=", self.fiscal_type),
             ("fiscal_operation_id", "=", self.id),
         ]
-        if ctx.get("search_default_cancel"):
+        if ctx.get("search_default_cancelled"):
             action["domain"] += [("state_edoc", "in", EDOC_CANCELED)]
         elif ctx.get("search_default_authorized"):
             action["domain"] += [("state_edoc", "=", SITUACAO_EDOC_AUTORIZADA)]

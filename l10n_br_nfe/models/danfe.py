@@ -121,9 +121,13 @@ class danfe(object):
         recibo=True,
         orientation="portrait",
         logo=None,
-        cce_xml=None,
+        evento_xml=None,
         timezone=None,
     ):
+        tipo_evento = ''
+        for eXML in evento_xml:
+            elem_infNFe = eXML.find(".//{http://www.portalfiscal.inf.br/nfe}infEvento")
+            tipo_evento = tagtext(oNode=elem_infNFe, cTag="tpEvento")
 
         tamanho_ocupado = 0
         path = os.path.join(os.path.dirname(__file__), "fonts")
@@ -196,7 +200,7 @@ class danfe(object):
             if recibo:
                 self.recibo_entrega(oXML=oXML, timezone=timezone)
 
-            self.ide_emit(oXML=oXML, timezone=timezone)
+            self.ide_emit(oXML=oXML, tipo_evento=tipo_evento, timezone=timezone)
             self.destinatario(oXML=oXML, timezone=timezone)
             tamanho_ocupado += self.entrega_retirada(
                     oXML=oXML, timezone=timezone)
@@ -235,19 +239,18 @@ class danfe(object):
                 )
 
             self.newpage()
-        if cce_xml:
-            for xml in cce_xml:
+        if tipo_evento == '110110':
+            for xml in evento_xml:
                 self._generate_cce(cce_xml=xml, oXML=oXML, timezone=timezone)
                 self.newpage()
         self.canvas.save()
 
-    def ide_emit(self, oXML=None, timezone=None):
+    def ide_emit(self, oXML=None, tipo_evento=None, timezone=None):
         elem_infNFe = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}infNFe")
         elem_protNFe = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}protNFe")
         elem_emit = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}emit")
         elem_ide = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}ide")
-        elem_evento = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}infEvento")
-
+        # elem_evento = oXML.find(".//{http://www.portalfiscal.inf.br/nfe}infEvento")
         cChave = elem_infNFe.attrib.get("Id")[3:]
         barcode128 = code128.Code128(cChave, barHeight=10 * mm, barWidth=0.25 * mm)
 
@@ -415,7 +418,7 @@ class danfe(object):
             self.canvas.restoreState()
 
         # Cancelado
-        if tagtext(oNode=elem_evento, cTag="cStat") in ("135", "155"):
+        if tipo_evento == '110111':
             self.canvas.saveState()
             self.canvas.rotate(45)
             self.canvas.setFont("NimbusSanL-Bold", 60)
