@@ -722,6 +722,9 @@ class NFe(spec_models.StackedModel):
             super(NFe, self)._build_many2one(comodel, vals, new_value, key, value, path)
 
     def view_pdf(self):
+        # TODO  ver se teve evendo de Cancelamento ou Carta de correção
+        if self.correction_event_ids or self.event_ids:
+            self.make_pdf()
         if not self.filtered(filter_processador_edoc_nfe):
             return super().view_pdf()
         if not self.authorization_file_id or not self.file_report_id:
@@ -750,7 +753,17 @@ class NFe(spec_models.StackedModel):
         # )
 
         # Teste Usando impressao via ReportLab Pytrustnfe
-        
+        evento_xml = []
+        cce_list = self.env['l10n_br_fiscal.event'].search([
+            ('type', '=', '14'),
+            ('document_id', '=', self.id),
+        ])
+
+        if cce_list:
+            for cce in cce_list:
+                cce_xml = base64.b64decode(cce.file_request_id.datas)
+                evento_xml.append(etree.fromstring(cce_xml))
+
         logo = base64.b64decode(self.company_id.logo)
 
         tmpLogo = io.BytesIO()
@@ -759,7 +772,17 @@ class NFe(spec_models.StackedModel):
 
         timezone = pytz.timezone(self.env.context.get('tz') or 'UTC')
         xml_element = etree.fromstring(xml_string)
-        oDanfe = danfe(list_xml=[xml_element], logo=tmpLogo, timezone=timezone)         
+
+        cancel_list = self.env['l10n_br_fiscal.event'].search([
+            ('type', '=', '2'),
+            ('document_id', '=', self.id),
+        ])
+        if cancel_list:
+            cancel_xml = base64.b64decode(cancel_list.file_request_id.datas).decode()
+            evento_xml.append(etree.fromstring(cancel_xml))
+
+        oDanfe = danfe(list_xml=[xml_element], logo=tmpLogo,
+            evento_xml=evento_xml, timezone=timezone)
         tmpDanfe = io.BytesIO()
         oDanfe.writeto_pdf(tmpDanfe)        
         danfe_file = tmpDanfe.getvalue()
