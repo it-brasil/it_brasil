@@ -45,12 +45,16 @@ class NFe(spec_models.StackedModel):
 					count += 1
 				else:
 					partner.zip = '99999999'
+			if partner.zip == '-':
+				partner.zip = '99999999'
 			if not partner.street_name:
 				msg += '\n    - Nome da Rua (Logradouro);'
 				count += 1
 			if not partner.street_number:
 				msg += '\n    - Número da rua;'
 				count += 1
+			if not self.company_number:
+				self.company_id.partner_id.action_check_sefaz()
 			if not partner.district:
 				if partner.country_id.code == 'BR':
 					msg += '\n    - Bairro;'
@@ -62,8 +66,9 @@ class NFe(spec_models.StackedModel):
 				else:
 					partner.city = '9999999'
 			if not partner.state_id:
-				msg += '\n    - Estado;'
-				count += 1
+				if partner.country_id.code == 'BR':
+					msg += '\n    - Estado;'
+					count += 1
 			if not partner.phone:
 				if partner.country_id.code == 'BR':
 					if partner.mobile:
@@ -114,10 +119,10 @@ class NFe(spec_models.StackedModel):
 			raise ValidationError('Não há Produto vinculado ao documento fiscal!')
 
 
-	def _valida_xml(self, xml_file):
-		self.ensure_one()
-		self.valida_dados_destinatario()
-		self.valida_dados_produtos()
-		erros = nfe_sub.schema_validation(StringIO(xml_file))
-		erros = "\n".join(erros)
-		self.write({"xml_error_message": erros or False})
+	#def _valida_xml(self, xml_file):
+	#	self.ensure_one()
+	#	self.valida_dados_destinatario()
+	#	self.valida_dados_produtos()
+	#	erros = nfe_sub.schema_validation(StringIO(xml_file))
+	#	erros = "\n".join(erros)
+	#	self.write({"xml_error_message": erros or False})
