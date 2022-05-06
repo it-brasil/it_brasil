@@ -11,10 +11,12 @@ class Picking(models.Model):
 
     def button_validate(self):
         # TODO validar se o usuario é gerente se for executar somente o return ultima linha
+        import pdb;pdb.set_trace()
+        self.ensure_one()
         if self.partner_id:
-            gerente = self.env.user.has_group("sales_team.group_sale_manager")
-            limite_disponivel = self.partner_id._check_limit()
-            bool_credit_limit = self.partner_id.enable_credit_limit
+            gerente = self.env.user.has_group("partner_credit_limit_stock.group_credit_limit_manager")
+            limite_disponivel = self.partner_id.parent_id._check_limit()
+            bool_credit_limit = self.partner_id.parent_id.enable_credit_limit
             if bool_credit_limit:
                 if limite_disponivel == 0:
                     if not gerente:
@@ -22,6 +24,6 @@ class Picking(models.Model):
                             ' Amount = %s \nCheck "%s" Accounts or Credit ' \
                             'Limits.' % (limite_disponivel,
                             self.partner_id.name)
-                        raise UserError(_('You can not confirm Sale '
+                        raise UserError(_('You can not confirm Delivery Order (PICK and OUT)'
                                             'Order. \n' + msg))
         return super(Picking, self).button_validate()

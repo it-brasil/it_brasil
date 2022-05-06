@@ -12,6 +12,9 @@
         'stock',
     ],
     'data': [
+        #security
+        'security/res_groups_data.xml',
+        #views
         'views/partner_view.xml',
     ],
     'installable': True,
