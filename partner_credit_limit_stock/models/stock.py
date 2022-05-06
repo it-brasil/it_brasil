@@ -11,7 +11,6 @@ class Picking(models.Model):
 
     def button_validate(self):
         # TODO validar se o usuario é gerente se for executar somente o return ultima linha
-        import pdb;pdb.set_trace()
         self.ensure_one()
         if self.partner_id:
             gerente = self.env.user.has_group("partner_credit_limit_stock.group_credit_limit_manager")
