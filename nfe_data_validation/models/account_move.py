@@ -13,4 +13,4 @@ class AccountMove(models.Model):
 		document = self.fiscal_document_id
 		document.valida_dados_destinatario()
 		document.valida_dados_produtos()
-		return super().action_post()
+		return super().action_post() 
