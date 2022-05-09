@@ -1,19 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <record id="res_partner_view_form_sefaz" model="ir.ui.view">
-    <field name="name">res.partner.form.sefaz</field>
-    <field name="model">res.partner</field>
-    <field name="inherit_id" ref="base.view_partner_form" />
-    <field name="arch" type="xml">
-      <xpath expr="//div[@name='button_box']" position="inside">
-        <button
-          name="action_check_sefaz"
-          type="object"
-          class="oe_stat_button"
-          icon="fa-search"
-          string="Consultar CNPJ com IE"
-          attrs="{'invisible': ['|', ('company_type', '=', 'person'), ('country_id', '!=', %(base.br)d)]}"></button>
-      </xpath>
-    </field>
-  </record>
+    <record id="res_partner_view_form_cnpjws" model="ir.ui.view">
+        <field name="name">res.partner.form.cnpjws</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button
+                    name="action_consult_cnpj"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-search"
+                    string="Consultar CNPJ"
+                    attrs="{'invisible': [('company_type', '=', 'person')]}"></button>
+            </xpath>
+            <page name="sales_purchases" position="after">
+                <page name="cnpjws" string="Informações do CNPJ">
+                    <group name="cnpjws_info" string="Dados de consulta">
+                        <field name="cnpjws_atualizadoem" />
+                        <field name="cnpjws_nome_fantasia" />
+                        <field name="cnpjws_tipo" />
+                        <field name="cnpjws_situacao_cadastral" />
+                        <field name="cnpjws_porte" />
+                        <field name="cnpjws_atualizado_odoo" />
+                    </group>
+                </page>
+            </page>
+        </field>
+    </record>
 </odoo>
