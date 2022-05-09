@@ -1,6 +1,6 @@
 # Consulta CNPJ
 
-Esse módulo realizada a consulta de CNPJ na base do SEFAZ para cadastros que possuem Inscrição Estadual
+Esse módulo consulta o CNPJ em uma API pública e completa o cadastro do contato.
 
 ## Recursos
 
@@ -10,19 +10,12 @@ Esse módulo realizada a consulta de CNPJ na base do SEFAZ para cadastros que po
 
 ## Instalação
 
-Este módulo usa a depêndencia [PyTrustNFe](https://github.com/it-brasil/PyTrustNFe/tree/itbrasil) por enquanto.
-
-```sh
-pip3 install git+https://github.com/it-brasil/PyTrustNFe.git@itbrasil#egg=pytrustnfe3
-```
+- Esse módulo depende do [l10n_br_base](https://github.com/it-brasil/it_brasil)
 
 ## TODO
-[ ] Integração com API Pública unificada - [CNPJS.ws](https://www.cnpj.ws)
+
+[x] Integração com API Pública unificada - [CNPJS.ws](https://www.cnpj.ws)
 [ ] Criação de um pacote Python
-
-## Restrições
-
-- Nesse momento, o módulo só realizada consultas em algumas bases do SEFAZ (Cadastros com Inscrição Estadual)
 
 ## License
 
