@@ -1,10 +1,11 @@
+from datetime import datetime
 import json
 import re
 import logging
 
 import requests
 
-from odoo import models, _
+from odoo import models, _, fields
 from odoo.exceptions import ValidationError, UserError
 
 
@@ -14,6 +15,41 @@ _logger = logging.getLogger(__name__)
 class Partner(models.Model):
     _name = "res.partner"
     _inherit = [_name, "l10n_br_base.party.mixin"]
+
+    cnpjws_atualizadoem = fields.Datetime(
+        string="Atualizado na base pública em",
+        help="Data da última atualização das informações",
+        readonly=True,
+        copy=False
+    )
+    cnpjws_nome_fantasia = fields.Char(
+        string="Nome Fantasia",
+        readonly=True,
+        copy=False
+    )
+    cnpjws_situacao_cadastral = fields.Char(
+        string="Situação Cadastral",
+        readonly=True,
+        copy=False
+    )
+    cnpjws_tipo = fields.Char(
+        string="Tipo de Empresa",
+        readonly=True,
+        copy=False
+    )
+
+    cnpjws_porte = fields.Char(
+        string="Porte",
+        readonly=True,
+        copy=False
+    )
+
+    cnpjws_atualizado_odoo = fields.Datetime(
+        string="Atualizado no Odoo em",
+        help="Data da última atualização das informações no Odoo",
+        readonly=True,
+        copy=False
+    )
 
     def action_consult_cnpj(self):
         cnpjws_url = 'https://publica.cnpj.ws/cnpj/'
@@ -72,6 +108,12 @@ class Partner(models.Model):
                     fiscal_info.append(cnpjws_cnae)
 
                     self.define_fiscal_profile_id(fiscal_info)
+                    self.cnpjws_atualizadoem = datetime.strptime(cnpjws_result['atualizado_em'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    self.cnpjws_nome_fantasia = cnpjws_estabelecimento['nome_fantasia']
+                    self.cnpjws_tipo = cnpjws_estabelecimento['tipo']
+                    self.cnpjws_situacao_cadastral = cnpjws_estabelecimento['situacao_cadastral']
+                    self.cnpjws_porte = cnpjws_result['porte']['descricao']
+                    self.cnpjws_atualizado_odoo = datetime.now()
                 else:
                     raise ValidationError(
                         "Erro: " + cnpjws_result['titulo'] + '\n' + cnpjws_result['detalhes'] + '\n' 'Se a empresa for do Brasil, informe o CNPJ correto. Caso contrário, complete o cadastro manualmente.')
