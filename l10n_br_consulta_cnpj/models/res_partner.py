@@ -72,7 +72,7 @@ class Partner(models.Model):
                     self.define_fiscal_profile_id(fiscal_info)
                 else:
                     raise ValidationError(
-                        "Erro: " + cnpjws_result['titulo'] + '\n' + cnpjws_result['detalhes'])
+                        "Erro: " + cnpjws_result['titulo'] + '\n' + cnpjws_result['detalhes'] + '\n' 'Se a empresa for do Brasil, informe o CNPJ correto. Caso contrário, complete o cadastro manualmente.')
             else:
                 raise UserError("Por favor, informe o CNPJ da empresa.")
         else:
@@ -153,12 +153,41 @@ class Partner(models.Model):
         result_simples = fiscal_info[0]
 
         if module_l10n_br_fiscal:
-            _logger.warning(">>>>> Módulo fiscal instalado")
+            # SNC - Contribuinte Simples Nacional
+            # SNN - Simples Nacional Não Contribuinte
+            # CNT - Contribuinte
+            # NCN - Não Contribuinte
+            search_fiscal_profile_id = self.env["l10n_br_fiscal.partner.profile"]
+
+            profile_snc = search_fiscal_profile_id.search([('code', '=', 'SNC')]).id
+            profile_snn = search_fiscal_profile_id.search([('code', '=', 'SNN')]).id
+            profile_cnt = search_fiscal_profile_id.search([('code', '=', 'CNT')]).id
+            profile_ncn = search_fiscal_profile_id.search([('code', '=', 'NCN')]).id
+
+            self.define_inscricao_estadual(fiscal_info)
+            contribuinte_icms = False
+            if self.inscr_est and self.inscr_est != 'ISENTO':
+                contribuinte_icms = True
+
+            simples_nacional = False
+            if result_simples:
+                if result_simples['simples'] == 'Sim' or result_simples['mei'] == 'Sim':
+                    simples_nacional = True
+
+            if contribuinte_icms and result_simples:
+                if simples_nacional:
+                    self.fiscal_profile_id = profile_snc
+                else:
+                    self.fiscal_profile_id = profile_cnt
+            elif not contribuinte_icms and result_simples:
+                if simples_nacional:
+                    self.fiscal_profile_id = profile_snn
+                else:
+                    self.fiscal_profile_id = profile_ncn
+            elif contribuinte_icms and not result_simples:
+                self.fiscal_profile_id = profile_cnt
+            elif not contribuinte_icms and not result_simples:
+                self.fiscal_profile_id = profile_ncn
+
         else:
             self.define_inscricao_estadual(fiscal_info)
-            # Define se é do Simples Nacional
-            if result_simples == None:
-                _logger.warning("NÃO É DO SIMPLES >>>>")
-            else:
-                _logger.warning("É DO SIMPLES >>>>")
-            _logger.warning(">>>>> Módulo fiscal NÃO instalado")
