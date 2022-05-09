@@ -24,8 +24,8 @@ class NFe(spec_models.StackedModel):
 					msg += '\n    - Nome Completo;'
 					count += 1
 				if not partner.cnpj_cpf:
-					if partner.country_id.code == 'BR': 
-						msg += '\n    - CPF;'	
+					if partner.country_id.code == 'BR':
+						msg += '\n    - CPF;'
 						count += 1
 			if partner.company_type == 'company':
 				if not partner.legal_name:
@@ -54,7 +54,7 @@ class NFe(spec_models.StackedModel):
 				msg += '\n    - Número da rua;'
 				count += 1
 			if not self.company_number:
-				self.company_id.partner_id.action_check_sefaz()
+				self.company_id.partner_id.action_consult_cnpj()
 			if not partner.district:
 				if partner.country_id.code == 'BR':
 					msg += '\n    - Bairro;'
@@ -77,8 +77,8 @@ class NFe(spec_models.StackedModel):
 						msg += '\n    - Telefone;'
 						count += 1
 			if count > 0:
-				raise ValidationError(msg)		
-		else: 
+				raise ValidationError(msg)
+		else:
 			raise ValidationError('Não há Parceiro vinculado ao documento fiscal!')
 
 
@@ -92,11 +92,11 @@ class NFe(spec_models.StackedModel):
 				if product.name:
 					msg += 'Os dados cadastrais do produto %s estão incompletos. Favor preencher os seguintes campos:\n - ' %(product.name)
 					if not product.ncm_id:
-						msg += 'Ncm, ' 
+						msg += 'Ncm, '
 						count += 1
 					if not product.icms_origin:
 						msg += 'Origem do ICMS'
-						count += 1 
+						count += 1
 					if msg.endswith(','):
 						msg = msg.rstrip(',')
 					msg += '\n\n'
@@ -106,7 +106,7 @@ class NFe(spec_models.StackedModel):
 					count += 1
 					msg += 'Os dados cadastrais do produto com id %d estão incompletos. Favor preencher os seguintes campos:\n - Nome do Produto, ' %(product.product_id.product_tmpl_id.id)
 					if not product.ncm_id:
-						msg += 'Ncm, ' 
+						msg += 'Ncm, '
 					if not product.icms_origin:
 						msg += 'Origem do ICMS'
 					if msg.endswith(','):
