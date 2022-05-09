@@ -63,11 +63,13 @@ class Partner(models.Model):
 
                     cnpjws_simples = cnpjws_result['simples']
                     cnpjws_ie = cnpjws_estabelecimento['inscricoes_estaduais']
+                    cnpjws_cnae = cnpjws_estabelecimento['atividade_principal']
 
                     fiscal_info = []
 
                     fiscal_info.append(cnpjws_simples)
                     fiscal_info.append(cnpjws_ie)
+                    fiscal_info.append(cnpjws_cnae)
 
                     self.define_fiscal_profile_id(fiscal_info)
                 else:
@@ -188,6 +190,20 @@ class Partner(models.Model):
                 self.fiscal_profile_id = profile_cnt
             elif not contribuinte_icms and not result_simples:
                 self.fiscal_profile_id = profile_ncn
+
+            if fiscal_info[2]:
+                search_cnae = self.env["l10n_br_fiscal.cnae"].search(
+                    [('code', '=', fiscal_info[2]['subclasse'])])
+
+                if search_cnae:
+                    try:
+                        incluir_cnae_principal = self.write(
+                            {"cnae_main_id": search_cnae.id})
+                        _logger.warning(incluir_cnae_principal)
+                    except Exception:
+                        incluir_cnae_principal = False
+                        raise ValidationError(
+                            "Erro ao incluir cnae: %s", fiscal_info[2]['subclasse'])
 
         else:
             self.define_inscricao_estadual(fiscal_info)
