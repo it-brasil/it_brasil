@@ -107,6 +107,8 @@
                           <field name="freight_value"/>
                           <field name="insurance_value"/>
                           <field name="other_costs_value"/>
+                          <field name="partner_order"/>
+                          <field name="partner_order_line"/>
                       </group>
                   </page>
                 </notebook>
