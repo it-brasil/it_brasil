@@ -10,19 +10,34 @@ class Picking(models.Model):
 
 
     def button_validate(self):
-        # TODO validar se o usuario é gerente se for executar somente o return ultima linha
         self.ensure_one()
-        if self.partner_id:
-            gerente = self.env.user.has_group("partner_credit_limit_stock.group_credit_limit_manager")
-            limite_disponivel = self.partner_id.parent_id._check_limit()
-            bool_credit_limit = self.partner_id.parent_id.enable_credit_limit
-            if bool_credit_limit:
-                if limite_disponivel == 0:
-                    if not gerente:
-                        msg = 'Your available credit limit' \
-                            ' Amount = %s \nCheck "%s" Accounts or Credit ' \
-                            'Limits.' % (limite_disponivel,
-                            self.partner_id.name)
-                        raise UserError(_('You can not confirm Delivery Order (PICK and OUT)'
-                                            'Order. \n' + msg))
+
+        # Verifica se o stock.picking é OUT ou PICK
+        if (self.picking_type_code == 'outgoing') or ((self.picking_type_code == 'internal') and self.sale_id):
+
+            if self.partner_id:
+                gerente = self.env.user.has_group("partner_credit_limit_stock.group_credit_limit_manager")
+                limite_disponivel = 0
+                bool_credit_limit = False
+
+                # Verifica se partner de entrega tem parent_id.
+                # caso positivo: calculo do limite de crédito será baseado em parent_id
+                # caso contrario: calculo do limite de crédito será baseado no partner_id
+                if self.partner_id.parent_id:
+                    limite_disponivel = self.partner_id.parent_id._check_limit()
+                    bool_credit_limit = self.partner_id.parent_id.enable_credit_limit
+                else:
+                    limite_disponivel = self.partner_id._check_limit()
+                    bool_credit_limit = self.partner_id.enable_credit_limit
+
+                #Verificação de requisitos para a aprovação do OUT ou do PICK    
+                if bool_credit_limit:
+                    if limite_disponivel == 0:
+                        if not gerente:
+                            msg = 'Your available credit limit' \
+                                ' Amount = %s \nCheck "%s" Accounts or Credit ' \
+                                'Limits.' % (limite_disponivel,
+                                self.partner_id.name)
+                            raise UserError(_('You can not confirm Delivery Order (PICK and OUT)'
+                                                ' \n' + msg))
         return super(Picking, self).button_validate()
