@@ -127,13 +127,13 @@ class Partner(models.Model):
         result_ie = fiscal_info[1]
 
         if result_ie == []:
-            self.inscr_est = 'ISENTO'
+            self.inscr_est = ''
         else:
             if len(result_ie) == 1:
                 if result_ie[0]['ativo'] == True:
                     self.inscr_est = result_ie[0]['inscricao_estadual']
                 else:
-                    self.inscr_est = 'ISENTO'
+                    self.inscr_est = ''
             elif len(result_ie) == 2:
                 if result_ie[0]['ativo'] == True:
                     if self.state_id.code == result_ie[0]['estado']['sigla']:
@@ -210,7 +210,7 @@ class Partner(models.Model):
 
             self.define_inscricao_estadual(fiscal_info)
             contribuinte_icms = False
-            if self.inscr_est and self.inscr_est != 'ISENTO':
+            if self.inscr_est:
                 contribuinte_icms = True
 
             simples_nacional = False
