@@ -135,6 +135,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     fiscal_operation_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.operation",
         string="Operation",
+        index=True,
         domain=lambda self: self._operation_domain(),
         default=_default_operation,
     )
@@ -148,6 +149,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     fiscal_operation_line_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.operation.line",
         string="Operation Line",
+        index=True,
         domain="[('fiscal_operation_id', '=', fiscal_operation_id), "
         "('state', '=', 'approved')]",
     )
@@ -155,6 +157,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
     cfop_id = fields.Many2one(
         comodel_name="l10n_br_fiscal.cfop",
         string="CFOP",
+        index=True,
         domain="[('type_in_out', '=', fiscal_operation_type)]",
     )
 
@@ -171,7 +174,7 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         string="Fiscal Quantity", digits="Product Unit of Measure"
     )
 
-    discount_value = fields.Monetary(string="Discount Value")
+    discount_value = fields.Monetary(string="Discount Value", default=0.0)
 
     insurance_value = fields.Monetary(string="Insurance Value")
 

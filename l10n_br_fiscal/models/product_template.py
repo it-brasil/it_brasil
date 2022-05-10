@@ -32,7 +32,7 @@ class ProductTemplate(models.Model):
         selection=ICMS_ORIGIN,
         string="ICMS Origin",
         company_dependent=True,
-        default=ICMS_ORIGIN_DEFAULT,
+        default=ICMS_ORIGIN_DEFAULT
     )
 
     ncm_id = fields.Many2one(
@@ -94,11 +94,11 @@ class ProductTemplate(models.Model):
         comodel_name="uom.uom", related="ncm_id.uoe_id", store=True, string="Export UoM"
     )
 
-    uoe_factor = fields.Float(string="Export UoM Factor", default=1.00)
+    uoe_factor = fields.Float(string="Export UoM Factor", default=1.00, digits="Product Unit of Measure")
 
     uot_id = fields.Many2one(comodel_name="uom.uom", string="Tax UoM")
 
-    uot_factor = fields.Float(string="Tax UoM Factor")
+    uot_factor = fields.Float(string="Tax UoM Factor", digits="Product Unit of Measure")
 
     tax_definition_ids = fields.Many2many(
         comodel_name="l10n_br_fiscal.tax.definition",

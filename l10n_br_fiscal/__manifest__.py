@@ -7,10 +7,10 @@
     "category": "Localisation",
     "license": "AGPL-3",
     "author": "Akretion, Odoo Community Association (OCA)",
-    "maintainers": ["renatonlima"],
-    "website": "https://github.com/OCA/l10n-brazil",
+    "maintainers": ["crsilveira"],
+    "website": "https://github.com/it-brasil/it_brasil",
     "development_status": "Production/Stable",
-    "version": "14.0.5.1.1",
+    "version": "14.0.4.6.0",
     "depends": [
         "uom",
         "product",
@@ -35,6 +35,7 @@
         "data/l10n_br_fiscal.cst.csv",
         "data/l10n_br_fiscal.tax.csv",
         "data/l10n_br_fiscal.tax.pis.cofins.csv",
+        "data/l10n_br_fiscal.ncm.csv",
         "data/l10n_br_fiscal_server_action.xml",
         "data/ir_cron.xml",
         "data/l10n_br_fiscal_comment_data.xml",
@@ -110,6 +111,7 @@
         "python": [
             "erpbrasil.base",
             "erpbrasil.assinatura",
+            "OpenSSL",
         ]
     },
 }

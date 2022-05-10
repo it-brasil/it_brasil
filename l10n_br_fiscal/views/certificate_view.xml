@@ -54,8 +54,7 @@
                     </group>
                     <group>
                         <group string="File">
-                            <field name="file_name" invisible="1" />
-                            <field name="file" filename="file_name" />
+                            <field name="file" />
                         </group>
                         <group string="Password">
                             <field name="password" password="True" />

@@ -136,7 +136,7 @@
                                 </form>
                             </field>
                         </page>
-                        <page name="subsequent_operation" string="Operations">
+                        <page name="subsequent_operation" string="Subsequent Operations">
                             <group>
                                 <field name="return_fiscal_operation_id" />
                                 <field name="inverse_fiscal_operation_id" />

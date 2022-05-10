@@ -189,7 +189,6 @@ class TestPaymentOrderInbound(SavepointCase):
         payment_order = self.env["account.payment.order"].search(
             [("payment_mode_id", "=", self.invoice_unicred.payment_mode_id.id)]
         )
-
         # Open payment order
         payment_order.draft2open()
         self.assertEqual(payment_order.state, "open")

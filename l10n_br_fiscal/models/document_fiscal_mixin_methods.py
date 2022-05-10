@@ -26,7 +26,10 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
 
     def _get_amount_lines(self):
         """Get object lines instaces used to compute fields"""
-        return self.mapped("fiscal_line_ids")
+        if self._name == 'sale.order':
+            return self.mapped("order_line")
+        else:
+            return self.mapped("fiscal_line_ids")
 
     @api.model
     def _get_amount_fields(self):
