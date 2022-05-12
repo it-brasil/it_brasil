@@ -1,17 +1,18 @@
 # See LICENSE file for full copyright and licensing details.
 
 
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
 class Picking(models.Model):
     _inherit = "stock.picking"
 
+    msg_error = fields.Char()
 
     def button_validate(self):
         self.ensure_one()
-
+        self.msg_error = False
         # Verifica se o stock.picking é OUT ou PICK
         if (self.picking_type_code == 'outgoing') or ((self.picking_type_code == 'internal') and self.sale_id):
 
@@ -34,10 +35,10 @@ class Picking(models.Model):
                 if bool_credit_limit:
                     if limite_disponivel == 0:
                         if not gerente:
-                            msg = 'Your available credit limit' \
-                                ' Amount = %s \nCheck "%s" Accounts or Credit ' \
-                                'Limits.' % (limite_disponivel,
-                                self.partner_id.name)
-                            raise UserError(_('You can not confirm Delivery Order (PICK and OUT)'
-                                                ' \n' + msg))
+                            self.sale_id.status_bloqueio = 'credit'
+                            self.msg_error = 'O Cliente não possui crédito disponivel para a confirmação de ambas as etapas da ordem de entrega (Pick e Out). Necessária aprovação de Usuário com acesso financeiro correspondente (Gerente de Limite de Crédito).'
+                            return None 
+                        else:
+                            self.sale_id.status_bloqueio = 'unblocked'
+
         return super(Picking, self).button_validate()
