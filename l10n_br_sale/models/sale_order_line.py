@@ -3,6 +3,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import api, fields, models
+
 from ...l10n_br_fiscal.constants.fiscal import TAX_FRAMEWORK
 
 
@@ -22,7 +23,16 @@ class SaleOrderLine(models.Model):
     fiscal_operation_id = fields.Many2one(
         comodel_name='l10n_br_fiscal.operation',
         default=_default_fiscal_operation,
-        domain=lambda self: self._fiscal_operation_domain())
+        domain=lambda self: self._fiscal_operation_domain(),
+    )
+
+    # This redundancy is necessary for the system to be able to load the report
+    fiscal_operation_line_id = fields.Many2one(
+        comodel_name="l10n_br_fiscal.operation.line",
+        string="Operation Line",
+        domain="[('fiscal_operation_id', '=', fiscal_operation_id), "
+        "('state', '=', 'approved')]",
+    )
 
     # Adapt Mixin's fields
     fiscal_tax_ids = fields.Many2many(
@@ -66,14 +76,7 @@ class SaleOrderLine(models.Model):
 
     # Add Fields in model sale.order.line
     price_gross = fields.Monetary(
-        compute='_compute_amount',
-        string='Gross Amount',
-        default=0.00,
-    )
-
-    other_costs_value = fields.Monetary(
-        string='Other Costs',
-        default=0.00,
+        compute='_compute_amount', string='Gross Amount', compute_sudo=True
     )
 
     comment_ids = fields.Many2many(
@@ -84,18 +87,49 @@ class SaleOrderLine(models.Model):
         string='Comments',
     )
 
+    discount_fixed = fields.Boolean(string="Fixed Discount?")
+
     ind_final = fields.Selection(related="order_id.ind_final")
+
+    # Usado para tornar Somente Leitura os campos dos custos
+    # de entrega quando a definição for por Total
+    delivery_costs = fields.Selection(
+        related="company_id.delivery_costs",
+    )
+
+    # Fields compute need parameter compute_sudo
+    price_subtotal = fields.Monetary(compute_sudo=True)
+    price_tax = fields.Monetary(compute_sudo=True)
+    price_total = fields.Monetary(compute_sudo=True)
+
+    @api.model
+    def _cnae_domain(self):
+        company = self.env.company
+        domain = []
+        if company.cnae_main_id and company.cnae_secondary_ids:
+            cnae_main_id = company.cnae_main_id.id,
+            cnae_secondary_ids = company.cnae_secondary_ids.ids
+            domain = ['|', ('id', 'in', cnae_secondary_ids), ('id', '=', cnae_main_id)]
+        return domain
+
+    cnae_id = fields.Many2one(
+        comodel_name="l10n_br_fiscal.cnae",
+        string="CNAE Code",
+        domain=lambda self: self._cnae_domain(),
+    )
 
     def _get_protected_fields(self):
         protected_fields = super()._get_protected_fields()
         return protected_fields + [
-            'fiscal_tax_ids', 'fiscal_operation_id',
+            'fiscal_tax_ids', 
+            'fiscal_operation_id',
             'fiscal_operation_line_id',
         ]
 
     @api.depends(
         "product_uom_qty",
         "price_unit",
+        "discount",
         "fiscal_price",
         "fiscal_quantity",
         "discount_value",
@@ -117,21 +151,18 @@ class SaleOrderLine(models.Model):
                 {
                     "price_subtotal": line.amount_untaxed,
                     "price_tax": line.amount_tax,
+                    "price_gross": line.amount_untaxed + line.discount_value,
                     "price_total": line.amount_total,
                 }
             )
 
-    def _prepare_account_move_line(self, move=False):
-        values = super()._prepare_account_move_line(move)
-        if values.get("sale_line_id"):
-            line = self.env["sale.order.line"].browse(
-                values.get("sale_line_id")
-            )
-            fiscal_values = line._prepare_br_fiscal_dict()
-            fiscal_values.update(values)
-            values.update(fiscal_values)
-
-        return values
+    def _prepare_invoice_line(self, **optional_values):
+        self.ensure_one()
+        result = self._prepare_br_fiscal_dict()        
+        if self.product_id and self.product_id.invoice_policy == "delivery":
+            result["fiscal_quantity"] = self.fiscal_qty_delivered
+        result.update(super()._prepare_invoice_line(**optional_values))
+        return result
 
     @api.onchange('product_uom', 'product_uom_qty')
     def _onchange_product_uom(self):
@@ -162,35 +193,25 @@ class SaleOrderLine(models.Model):
     @api.onchange('discount')
     def _onchange_discount_percent(self):
         """Update discount value"""
-        if not self.env.user.has_group('l10n_br_sale.group_discount_per_value'):
-            if self.discount:
-                self.discount_value = (
-                    (self.product_uom_qty * self.price_unit)
-                    * (self.discount / 100)
-                )
+        if not self.env.user.has_group("l10n_br_sale.group_discount_per_value"):
+            self.discount_value = (self.product_uom_qty * self.price_unit) * (
+                self.discount / 100
+            )
 
     @api.onchange('discount_value')
     def _onchange_discount_value(self):
         """Update discount percent"""
         if self.env.user.has_group('l10n_br_sale.group_discount_per_value'):
-            if self.discount_value:
-                self.discount = ((self.discount_value * 100) /
-                                 (self.product_uom_qty * self.price_unit))
-
-    def _compute_tax_id(self):
-        super()._compute_tax_id()
-        for line in self:
-            line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale")
-            if line.order_id.fiscal_operation_id.deductible_taxes:
-                line.tax_id |= line.fiscal_tax_ids.account_taxes(user_type="sale", deductible=True)            
+            self.discount = (self.discount_value * 100) / (
+                self.product_uom_qty * self.price_unit or 1
+            )
 
     @api.onchange("fiscal_tax_ids")
     def _onchange_fiscal_tax_ids(self):
         super()._onchange_fiscal_tax_ids()
+        self._compute_tax_id()
         self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale")
         if self.order_id.fiscal_operation_id.deductible_taxes:
-            self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale",deductible=True)
-
-    @api.onchange("fiscal_operation_line_id")
-    def _onchange_fiscal_operation_line_id(self):
-        super()._onchange_fiscal_operation_line_id()
+            self.tax_id |= self.fiscal_tax_ids.account_taxes(
+                user_type="sale", deductible=True
+            )
