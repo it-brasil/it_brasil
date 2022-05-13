@@ -5,7 +5,7 @@
     'version': '14.0.1.0.0',
     'category': 'Partner',
     'license': 'AGPL-3',
-    'author': 'Carlos, ATSTi Soluções',
+    'author': 'Carlos, ATSTi Soluções e João Bernardes (IT Brasil)',
     'website': 'http://www.atsti.com.br',
     'summary': 'Estabelece limite de crédito para aprovar Entregas',
     'depends': [

@@ -31,13 +31,16 @@ class Picking(models.Model):
                     limite_disponivel = self.partner_id._check_limit()
                     bool_credit_limit = self.partner_id.enable_credit_limit
 
+                status_bloqueio = self.sale_id.status_bloqueio
                 #Verificação de requisitos para a aprovação do OUT ou do PICK    
                 if bool_credit_limit:
                     if limite_disponivel == 0:
                         if not gerente:
-                            self.sale_id.status_bloqueio = 'credit'
-                            self.msg_error = 'O Cliente não possui crédito disponivel para a confirmação de ambas as etapas da ordem de entrega (Pick e Out). Necessária aprovação de Usuário com acesso financeiro correspondente (Gerente de Limite de Crédito).'
-                            return None 
+                            if (status_bloqueio != 'unblocked') and (status_bloqueio != 'cleared'):
+                                self.sale_id.status_bloqueio = 'credit'
+                                self.sale_id.passou_limite = True
+                                self.msg_error = 'O Cliente não possui crédito disponivel para a confirmação de ambas as etapas da ordem de entrega (Pick e Out). Necessária aprovação de Usuário com acesso financeiro correspondente (Gerente de Limite de Crédito).'
+                                return None 
                         else:
                             self.sale_id.status_bloqueio = 'unblocked'
 

@@ -13,10 +13,23 @@ class SaleOrder(models.Model):
 		('cleared','Liberado'),
 		('unblocked','Desbloqueado')],
 		string = 'Status de Bloqueio',
-		default = 'no_block'
+		default = 'no_block',
+		tracking = True
 	)
 
+	passou_limite = fields.Boolean()
 	msg_error = fields.Char()
+
+	def action_liberar_entrega(self):
+		self.status_bloqueio = 'unblocked'
+		self.msg_error = False
+		self.picking_ids.msg_error = False
+		self.passou_limite = False
+
+	def action_cancel(self):
+		super().action_cancel()
+		if self.state == 'cancel':
+			self.status_bloqueio = 'no_block'
 
 	def action_confirm(self):
 		self.ensure_one()
@@ -36,7 +49,7 @@ class SaleOrder(models.Model):
 				self.status_bloqueio = 'defaulter'
 				if permissao_confirmacao: 
 					if modo_pagamento.name == 'A VISTA':
-						if self.status_bloqueio != 'no_block':
+						if (self.status_bloqueio != 'no_block') and (self.status_bloqueio != 'cleared'):
 							self.status_bloqueio = 'unblocked'
 					else:
 						self.msg_error = 'Devido a inadimplência do Cliente, essa Cotação só pode ser confirmada caso a condição de pagamento seja \'À VISTA\'.'
@@ -47,5 +60,13 @@ class SaleOrder(models.Model):
 					return None			
 		else:
 			self.status_bloqueio = 'cleared'
+		
+		limite_disponivel = self.partner_id._check_limit()
+		bool_credit_limit = self.partner_id.enable_credit_limit
+		if bool_credit_limit:
+			if limite_disponivel == 0: 
+				self.status_bloqueio = 'credit'
+				self.passou_limite = True
+				self.msg_error = 'O Cliente não possui crédito suficiente para que outros usuários possam validar as ordens de entrega (PICK e OUT). É necessário liberação da entrega por parte de um usuário com acesso financeiro correspondente (gerente de limite de crédito).'
 
 		return super().action_confirm() 

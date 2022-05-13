@@ -28,6 +28,10 @@
 		<field name="model">sale.order</field>
 		<field name="inherit_id" ref="sale.view_order_form"/>
 		<field name="arch" type="xml">
+			<xpath expr="//header" position="inside">
+				<field name="passou_limite" invisible="1"/>
+				<button string="Liberar Entrega" name="action_liberar_entrega" type="object" groups="partner_credit_limit_stock.group_credit_limit_manager" class="btn-primary" attrs="{'invisible': [('passou_limite','=', False)]}"/>
+			</xpath>
 			<xpath expr="//header" position="after">
 				<div class="alert alert-danger" role="alert" attrs="{'invisible': [('msg_error','=', False)]}">
             		Aviso: <field name="msg_error" readonly="1" /> 
