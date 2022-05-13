@@ -6,6 +6,8 @@
 
 
 from odoo import _, api, fields, models
+from odoo.tools import float_is_zero
+
 from odoo.exceptions import UserError
 
 from odoo.addons.l10n_br_fiscal.constants.fiscal import (
@@ -214,6 +216,44 @@ class AccountMove(models.Model):
             defaults["issuer"] = DOCUMENT_ISSUER_PARTNER
         return defaults
 
+    def recalcula(self, invoice):
+        for order in invoice:
+            # if order.amount_financial_total == order.amount_total:
+            #     continue
+            res = {}
+            for line in order.invoice_line_ids:
+                taxes = line._compute_taxes(line.fiscal_tax_ids)["taxes"]
+                for tax in line.fiscal_tax_ids:
+                    computed_tax = taxes.get(tax.tax_domain)
+                    pr = order.currency_id.rounding
+                    if computed_tax and not float_is_zero(
+                        computed_tax.get("tax_value", 0.0), precision_rounding=pr
+                    ):
+                        group = tax.tax_group_id
+                        res.setdefault(group, {"amount": 0.0, "base": 0.0})
+                        res[group]["amount"] += computed_tax.get("tax_value", 0.0)
+                        res[group]["base"] += computed_tax.get("base", 0.0)
+                if taxes.get('icms')['base']:
+                    line.icms_base = taxes.get('icms')['base']
+                    line.icms_value = taxes.get('icms')['tax_value']
+                if taxes.get('ipi')['base']:
+                    line.ipi_base = taxes.get('ipi')['base']
+                    line.ipi_value = taxes.get('ipi')['tax_value']
+                if taxes.get('pis')['base']:
+                    line.pis_base = taxes.get('pis')['base']
+                    line.pis_value = taxes.get('pis')['tax_value']
+                if taxes.get('cofins')['base']:
+                    line.cofins_base = taxes.get('cofins')['base']
+                    line.cofins_value = taxes.get('cofins')['tax_value']
+
+                compute_result = line._compute_taxes(line.fiscal_tax_ids)
+                line.amount_tax_included = compute_result.get("amount_included", 0.0)
+                line.amount_tax_not_included = compute_result.get(
+                    "amount_not_included", 0.0
+                )
+                line.amount_tax_withholding = compute_result.get("amount_withholding", 0.0)
+                line.estimate_tax = compute_result.get("estimate_tax", 0.0)
+
     @api.model_create_multi
     def create(self, values):
         for vals in values:
@@ -221,30 +261,9 @@ class AccountMove(models.Model):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
 
-        # quando cria uma fatura diretamente em faturamento 
-        # nao esta gravando os campos abaixo
-        # for ln in invoice.invoice_line_ids:
-        #     if not ln.icms_cst_id:
-        #         if 'invoice_line_ids' in values:
-        #             for lnv in values['invoice_line_ids']:
-        #                 if 'icms_cst_id' in lnv[2] and lnv[2]['icms_cst_id'] and \
-        #                     lnv[2]['product_id'] == ln.product_id.id:
-        #                     ln.update({
-        #                         'icms_cst_id': lnv[2]['icms_cst_id'],
-        #                         'ipi_cst_id': lnv[2]['ipi_cst_id'],
-        #                         'pis_cst_id': lnv[2]['pis_cst_id'],
-        #                         'cofins_cst_id': lnv[2]['cofins_cst_id'],
-        #                     })
-        #     if not ln.ncm_id:
-        #         if 'invoice_line_ids' in values:
-        #             for lnv in values['invoice_line_ids']:
-        #                 if 'ncm_id' in lnv[2] and lnv[2]['ncm_id'] and \
-        #                     lnv[2]['product_id'] == ln.product_id.id:
-        #                     ln.update({
-        #                         'ncm_id': lnv[2]['ncm_id'],
-        #                         'cest_id': lnv[2]['cest_id'],
-        #                     })
-
+        if invoice.document_type:
+            self.recalcula(invoice)
+        
         invoice._write_shadowed_fields()
         return invoice
 
@@ -483,6 +502,61 @@ class AccountMove(models.Model):
 
             if in_draft_mode:
                 taxes_map_entry['tax_line'].update(taxes_map_entry['tax_line']._get_fields_onchange_balance(force_computation=True))   
+
+    def action_export_xml(self):
+        return True
+
+    # @api.depends(
+    #     "invoice_line_ids",
+    #     "currency_id",
+    #     "company_id",
+    #     "invoice_date",
+    #     "move_type",
+    # )
+    # def _compute_amount(self):
+    #     inv_lines = self.invoice_line_ids.filtered(
+    #         lambda l: not l.fiscal_operation_line_id
+    #         or l.fiscal_operation_line_id.add_to_amount
+    #     )
+    #     for inv_line in inv_lines:
+    #         if inv_line.cfop_id:
+    #             if inv_line.cfop_id.finance_move:
+    #                 self.amount_untaxed += inv_line.price_subtotal
+    #                 self.amount_tax += inv_line.price_tax
+    #                 self.amount_total += inv_line.price_total
+    #         else:
+    #             self.amount_untaxed += inv_line.price_subtotal
+    #             self.amount_tax += inv_line.price_tax
+    #             self.amount_total += inv_line.price_total
+
+    #     self.amount_total -= self.amount_tax_withholding
+
+    #     amount_total_company_signed = self.amount_total
+    #     amount_untaxed_signed = self.amount_untaxed
+    #     if (
+    #         self.currency_id
+    #         and self.company_id
+    #         and self.currency_id != self.company_id.currency_id
+    #     ):
+    #         currency_id = self.currency_id
+    #         amount_total_company_signed = currency_id._convert(
+    #             self.amount_total,
+    #             self.company_id.currency_id,
+    #             self.company_id,
+    #             self.invoice_date or fields.Date.today(),
+    #         )
+    #         amount_untaxed_signed = currency_id._convert(
+    #             self.amount_untaxed,
+    #             self.company_id.currency_id,
+    #             self.company_id,
+    #             self.invoice_date or fields.Date.today(),
+    #         )
+    #     sign = self.move_type in ["in_refund", "out_refund"] and -1 or 1
+    #     # self.amount_total_company_signed = amount_total_company_signed * sign
+    #     self.amount_residual = amount_total_company_signed * sign
+    #     self.amount_total_signed = self.amount_total * sign
+    #     self.amount_tax_withholding = self.amount_total * sign
+    #     self.amount_untaxed_signed = amount_untaxed_signed * sign
 
     @api.model
     def invoice_line_move_line_get(self):
