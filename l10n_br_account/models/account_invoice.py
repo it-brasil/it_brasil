@@ -221,6 +221,15 @@ class AccountMove(models.Model):
             # if order.amount_financial_total == order.amount_total:
             #     continue
             res = {}
+            icms_base = 0.0
+            icms_value = 0.0
+            ipi_base = 0.0
+            ipi_value = 0.0
+            pis_base = 0.0
+            pis_value = 0.0
+            cofins_base = 0.0
+            cofins_value = 0.0
+
             for line in order.invoice_line_ids:
                 taxes = line._compute_taxes(line.fiscal_tax_ids)["taxes"]
                 for tax in line.fiscal_tax_ids:
@@ -236,15 +245,25 @@ class AccountMove(models.Model):
                 if taxes.get('icms')['base']:
                     line.icms_base = taxes.get('icms')['base']
                     line.icms_value = taxes.get('icms')['tax_value']
+                    icms_base += line.icms_base
+                    icms_value += line.icms_value
                 if taxes.get('ipi')['base']:
                     line.ipi_base = taxes.get('ipi')['base']
                     line.ipi_value = taxes.get('ipi')['tax_value']
+                    ipi_base += line.ipi_base
+                    ipi_value += line.ipi_value
+
                 if taxes.get('pis')['base']:
                     line.pis_base = taxes.get('pis')['base']
                     line.pis_value = taxes.get('pis')['tax_value']
+                    pis_base += line.pis_base
+                    pis_value += line.pis_value
+
                 if taxes.get('cofins')['base']:
                     line.cofins_base = taxes.get('cofins')['base']
                     line.cofins_value = taxes.get('cofins')['tax_value']
+                    cofins_base += line.cofins_base
+                    cofins_value += line.cofins_value
 
                 compute_result = line._compute_taxes(line.fiscal_tax_ids)
                 line.amount_tax_included = compute_result.get("amount_included", 0.0)
@@ -253,6 +272,16 @@ class AccountMove(models.Model):
                 )
                 line.amount_tax_withholding = compute_result.get("amount_withholding", 0.0)
                 line.estimate_tax = compute_result.get("estimate_tax", 0.0)
+                # total += line.amount_tax_included
+            # order.amount_total = total
+            order.amount_icms_base = icms_base
+            order.amount_icms_value = icms_value
+            order.amount_ipi_base = ipi_base
+            order.amount_ipi_value = ipi_value
+            order.amount_cofins_base = cofins_base
+            order.amount_cofins_value = cofins_value
+            order.amount_pis_base = pis_base
+            order.amount_pis_value = pis_value
 
     @api.model_create_multi
     def create(self, values):
