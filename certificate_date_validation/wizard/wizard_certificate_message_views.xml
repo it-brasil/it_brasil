@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright © 2021–; Brasil; IT Brasil; Todos os direitos reservados
+     Copyright © 2021–; Brazil; IT Brasil; All rights reserved
+-->
+<odoo>
+    <record id="wizard_certificate_message_view_form" model="ir.ui.view">
+        <field name="name">wizard.certificate.message.form</field>
+        <field name="model">wizard.certificate.message</field>
+        <field name="arch" type="xml">
+            <form name="Aviso Certificado A1">
+				<field name="account_move_id" invisible="1"/>
+                <div>
+                    Aviso: O Certificado A1 expirará em <field name="dias_restantes" readonly="1"/> dia(s)!
+                </div>
+                <footer>
+                    <button string="Ok" class="btn btn-primary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
