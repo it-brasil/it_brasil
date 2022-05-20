@@ -40,7 +40,7 @@ class AccountPaymentMode(models.Model):
     cnab_sequence_id = fields.Many2one(
         comodel_name="ir.sequence",
         string="Sequencia do Arquivo CNAB",
-        track_visibility="always",
+        tracking=True,
     )
 
     # Fields used to make invisible banks specifics fields
@@ -77,7 +77,7 @@ class AccountPaymentMode(models.Model):
         column1="cnab_liq_return_move_code_id",
         column2="payment_mode_id",
         string="CNAB Liquidity Return Move Code",
-        track_visibility="always",
+        tracking=True,
     )
 
     @api.constrains(
@@ -112,11 +112,6 @@ class AccountPaymentMode(models.Model):
 
             if self.bank_code_bc == "341" and not self.boleto_wallet:
                 raise ValidationError(_("Carteira no banco Itaú é obrigatória"))
-
-    @api.onchange("product_tax_id")
-    def _onchange_product_tax_id(self):
-        if not self.product_tax_id:
-            self.tax_account_id = False
 
     def get_own_number_sequence(self, inv, numero_documento):
         if inv.company_id.own_number_type == "0":
@@ -158,33 +153,33 @@ class AccountPaymentMode(models.Model):
                 # Selecionavel na Ordem de Pagamento
                 record.payment_order_ok = True
 
-    @api.constrains("own_number_sequence_id")
-    def _check_own_number_sequence_id(self):
+    @api.constrains("own_number_sequence_id", "cnab_sequence_id")
+    def _check_sequences(self):
         for record in self:
-            already_in_use = record.search(
+            already_in_use = self.search(
                 [
                     ("id", "!=", record.id),
+                    "|",
                     ("own_number_sequence_id", "=", record.own_number_sequence_id.id),
+                    ("cnab_sequence_id", "=", record.cnab_sequence_id.id),
                 ],
                 limit=1,
             )
-            if already_in_use:
+
+            if already_in_use.own_number_sequence_id:
                 raise ValidationError(
-                    _("Sequence Own Number already in use by %s.") % already_in_use.name
+                    _(
+                        "Sequence Own Number already in use by {}!".format(
+                            already_in_use.name
+                        )
+                    )
                 )
 
-    @api.constrains("cnab_sequence_id")
-    def _check_cnab_sequence_id(self):
-        for record in self:
-            already_in_use = record.search(
-                [
-                    ("id", "!=", record.id),
-                    ("cnab_sequence_id", "=", record.cnab_sequence_id.id),
-                ]
-            )
-
-            if already_in_use:
+            if already_in_use.cnab_sequence_id:
                 raise ValidationError(
-                    _("Sequence CNAB Sequence already in use by %s.")
-                    % already_in_use.name
+                    _(
+                        "Sequence CNAB Sequence already in use by {}!".format(
+                            already_in_use.name
+                        )
+                    )
                 )

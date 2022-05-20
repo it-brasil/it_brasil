@@ -14,17 +14,7 @@
                 <separator />
                 <field name="auto_create_payment_order" />
             </field>
-            <group name="main" position="after">
-                 <group name="l10n_br_account_payment_taxes" string="Taxas">
-                    <field name="product_tax_id" />
-                    <field
-                        name="product_tax_account_id"
-                        attrs="{'invisible': [('product_tax_id', '=', False)], 'required': [('product_tax_id', '!=', False)]}"
-                    />
-                    <field name="payment_type" />
-                </group>
-            </group>
-            <xpath expr="//form/group[@name='note']" position="before">
+            <xpath expr="//form/sheet/group[@name='note']" position="before">
                 <group
                     string="Configurações Brasileiras - CNAB"
                     name='l10n-br-config'
@@ -194,7 +184,7 @@
             </xpath>
             <group name="note" position="after">
                 <div class="oe_chatter">
-                    <field name="message_ids" widget="mail_thread" />
+                    <field name="message_ids" />
                 </div>
             </group>
 

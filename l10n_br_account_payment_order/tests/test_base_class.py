@@ -2,9 +2,8 @@
 #   Luis Felipe Mileo <mileo@kmee.com.br>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html)
 
-from datetime import datetime
-
 from odoo.exceptions import UserError
+from odoo.fields import Date
 from odoo.tests import SavepointCase, tagged
 
 
@@ -21,14 +20,13 @@ class TestL10nBrAccountPaymentOder(SavepointCase):
         )
 
     def _payment_order_all_workflow(self, payment_order_id):
-        """ Run all Payment Order Workflow"""
+        """Run all Payment Order Workflow"""
         payment_order_id.draft2open()
         payment_order_id.open2generated()
         payment_order_id.generated2uploaded()
-        payment_order_id.action_done()
 
     def _invoice_payment_order_all_workflow(self, invoice):
-        """ Search for the payment order related to the invoice"""
+        """Search for the payment order related to the invoice"""
         payment_order_id = self.env["account.payment.order"].search(
             [
                 ("state", "=", "draft"),
@@ -40,7 +38,7 @@ class TestL10nBrAccountPaymentOder(SavepointCase):
         return payment_order_id
 
     def _prepare_change_view(self, financial_move_line_ids):
-        """ Prepare context of the change view"""
+        """Prepare context of the change view"""
         ctx = dict(
             active_ids=financial_move_line_ids.ids, active_model="account.move.line"
         )
@@ -64,7 +62,9 @@ class TestL10nBrAccountPaymentOder(SavepointCase):
         line_create = (
             self.env["account.payment.line.create"]
             .with_context(active_model="account.payment.order", active_id=order.id)
-            .create({"date_type": "move", "move_date": datetime.now()})
+            .create(
+                {"date_type": "move", "move_date": Date.context_today(self.env.user)}
+            )
         )
         line_create.payment_mode = "same"
         line_create.move_line_filters_change()
@@ -74,12 +74,16 @@ class TestL10nBrAccountPaymentOder(SavepointCase):
             self.env["account.payment.line.create"]
             .with_context(active_model="account.payment.order", active_id=order.id)
             .create(
-                {"date_type": "due", "target_move": "all", "due_date": datetime.now()}
+                {
+                    "date_type": "due",
+                    "target_move": "all",
+                    "due_date": Date.context_today(self.env.user),
+                }
             )
         )
         line_created_due.populate()
         line_created_due.create_payment_lines()
         self.assertGreater(len(order.payment_line_ids), 0)
         self._payment_order_all_workflow(order)
-        self.assertEqual(order.state, "done")
+        self.assertEqual(order.state, "uploaded")
         return order
