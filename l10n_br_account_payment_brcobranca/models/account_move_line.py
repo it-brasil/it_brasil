@@ -4,7 +4,7 @@
 
 import logging
 
-from odoo import models
+from odoo import fields, models
 
 from ..constants.br_cobranca import DICT_BRCOBRANCA_CURRENCY, get_brcobranca_bank
 
@@ -13,6 +13,14 @@ _logger = logging.getLogger(__name__)
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
+
+    # Campo tecnico para ser usado na busca da account.move.line de
+    # reconciliação, no caso da Linha de Liquidação é preenchido com
+    # Nosso Número e nos outros casos é o campo Número do Documento
+    # TODO: Teria alguma forma de fazer sem esse campo? Ou outro campo
+    #  a ser usado sem a necessidade de criar um novo
+    cnab_returned_ref = fields.Char(string="CNAB Returned Reference", copy=False)
+
     # see the list of brcobranca boleto fields:
     # https://github.com/kivanio/brcobranca/blob/master/lib/
     # brcobranca/boleto/base.rb
@@ -61,9 +69,7 @@ class AccountMoveLine(models.Model):
                 ),
                 "documento_numero": move_line.document_number,
                 "data_vencimento": move_line.date_maturity.strftime("%Y/%m/%d"),
-                "data_documento": move_line.invoice_id.date_invoice.strftime(
-                    "%Y/%m/%d"
-                ),
+                "data_documento": move_line.move_id.invoice_date.strftime("%Y/%m/%d"),
                 "especie": move_line.payment_mode_id.boleto_species,
                 "moeda": DICT_BRCOBRANCA_CURRENCY["R$"],
                 "aceite": move_line.payment_mode_id.boleto_accept,
@@ -74,7 +80,7 @@ class AccountMoveLine(models.Model):
                 + (move_line.partner_id.city_id.name or "")
                 + " - "
                 + (move_line.partner_id.state_id.name or ""),
-                "data_processamento": move_line.invoice_id.date_invoice.strftime(
+                "data_processamento": move_line.move_id.invoice_date.strftime(
                     "%Y/%m/%d"
                 ),
                 "instrucao1": move_line.payment_mode_id.instructions or "",

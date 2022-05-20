@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 dict_brcobranca_bank = {
     "001": "banco_brasil",
     "041": "banrisul",
+    "085": "ailos",
     "237": "bradesco",
     "104": "caixa",
     "399": "hsbc",
@@ -159,7 +160,7 @@ class CNABFileParser(FileParser):
         # TODO: Deveria existir uma forma de mostrar o Valor de Juros/Multa na
         #  tela da Fatura/Invoice, e assim o usuário poder visualizar isso ?
         # Porque não vai existir um relacionamento direto de conciliação,
-        # apenas a referencia no campo name e invoice_id da account.move.line,
+        # apenas a referencia no bank_payment_line_id da account.move.line,
         # e caso se queira saber os detalhes será preciso olhar a Entrada de
         # Diário referente.
 
@@ -167,9 +168,17 @@ class CNABFileParser(FileParser):
         # na criação das account move line
         result_row_list = []
 
+        bank_name_brcobranca = dict_brcobranca_bank[self.bank.code_bc]
+
+        if bank_name_brcobranca == "ailos":
+            # No AILOS o código de registro onde ficam as linhas CNAB é o 3.
+            registration_code_allowed = 3
+        else:
+            registration_code_allowed = 1
+
         for linha_cnab in data:
 
-            if int(linha_cnab["codigo_registro"]) != 1:
+            if int(linha_cnab["codigo_registro"]) != registration_code_allowed:
                 # Bradesco
                 # Existe o codigo de registro 9 que eh um totalizador
                 # porem os campos estao colocados em outras posicoes
@@ -179,8 +188,6 @@ class CNABFileParser(FileParser):
                 # 4 e 5 - Registro de Detalhe (Opcional)
                 # continue
                 continue
-
-            bank_name_brcobranca = dict_brcobranca_bank[self.bank.code_bc]
 
             valor_titulo = self.cnab_str_to_float(linha_cnab["valor_titulo"])
 
@@ -215,6 +222,11 @@ class CNABFileParser(FileParser):
             # Com exceção no itaú(341) que já vem sem o dígito verificador.
             if self.bank.code_bc == "341":
                 nosso_numero_sem_dig = linha_cnab["nosso_numero"]
+            elif bank_name_brcobranca == "ailos":
+                # no AILOS o nosso número vem concatenado com o número da conta
+                # porém o que importa aqui é apenas os últimos 9 digitos que é
+                # de fato a sequência númerica.
+                nosso_numero_sem_dig = linha_cnab["nosso_numero"][-9:]
             else:
                 nosso_numero_sem_dig = linha_cnab["nosso_numero"][:-1]
 
@@ -275,6 +287,8 @@ class CNABFileParser(FileParser):
             # estamos referenciando apenas a referente a que iniciou
             # o CNAB
             # TODO: Deveria relacionar todas ?
+            # A partir da v13 vai relacionar não parece ter problema
+            # e é melhor para criar um vínculo
             bank_line = payment_line.bank_line_id.filtered(
                 lambda b: b.mov_instruction_code_id.id
                 == payment_line.payment_mode_id.cnab_sending_code_id.id
@@ -290,6 +304,18 @@ class CNABFileParser(FileParser):
             favored_bank_account = (
                 account_move_line.payment_mode_id.fixed_journal_id.bank_account_id
             )
+
+            if bank_name_brcobranca == "ailos":
+                date_format = "%d%m%Y"
+            else:
+                date_format = "%d%m%y"
+
+            # as vezes o vencimento pode ser branco
+            if linha_cnab["data_vencimento"] != "00000000":
+                due_date = datetime.datetime.strptime(
+                    str(linha_cnab["data_vencimento"]), date_format
+                ).date()
+
             cnab_return_log_event = {
                 "occurrences": descricao_ocorrencia,
                 "occurrence_date": data_ocorrencia,
@@ -297,10 +323,8 @@ class CNABFileParser(FileParser):
                 "your_number": account_move_line.document_number,
                 "title_value": valor_titulo,
                 "bank_payment_line_id": bank_line.id or False,
-                "invoice_id": account_move_line.invoice_id.id,
-                "due_date": datetime.datetime.strptime(
-                    str(linha_cnab["data_vencimento"]), "%d%m%y"
-                ).date(),
+                "invoice_id": account_move_line.move_id.id,
+                "due_date": due_date,
                 "move_line_id": account_move_line.id,
                 "company_title_identification": linha_cnab["documento_numero"]
                 or account_move_line.document_number,
@@ -360,6 +384,7 @@ class CNABFileParser(FileParser):
 
     def _get_accounting_entries(self, linha_cnab, account_move_line, bank_line):
         row_list = []
+        bank_name_brcobranca = dict_brcobranca_bank[self.bank.code_bc]
         valor_recebido = (
             valor_desconto
         ) = valor_juros_mora = valor_abatimento = valor_tarifa = 0.0
@@ -369,11 +394,21 @@ class CNABFileParser(FileParser):
             # valor recebido = valor pago + valor da tarifa
             valor_recebido = self.cnab_str_to_float(linha_cnab["valor_recebido"])
 
-        if linha_cnab["data_credito"] == "000000" or not linha_cnab["data_credito"]:
+        if bank_name_brcobranca == "ailos":
+            # o ailos lida com as datas um pouco diferente dos outros bancos.
+            # aqui o ano apresentado com 4 digitos.
+            zeros_date = "00000000"
+            date_format = "%d%m%Y"
+        else:
+            # nos outros bancos é apenas 2 digitos.
+            zeros_date = "000000"
+            date_format = "%d%m%y"
+
+        if linha_cnab["data_credito"] == zeros_date or not linha_cnab["data_credito"]:
             data_credito = linha_cnab["data_credito"]
         else:
             data_credito = datetime.datetime.strptime(
-                str(linha_cnab["data_credito"]), "%d%m%y"
+                str(linha_cnab["data_credito"]), date_format
             ).date()
 
         # Valor Desconto
@@ -390,8 +425,8 @@ class CNABFileParser(FileParser):
                             account_move_line.payment_mode_id.discount_account_id.id
                         ),
                         "type": "desconto",
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -403,9 +438,9 @@ class CNABFileParser(FileParser):
                         "credit": valor_desconto,
                         "type": "desconto",
                         "account_id": self.journal.default_credit_account_id.id,
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
                         "partner_id": account_move_line.partner_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -425,9 +460,9 @@ class CNABFileParser(FileParser):
                         "account_id": (
                             account_move_line.payment_mode_id.interest_fee_account_id.id
                         ),
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
                         "partner_id": account_move_line.partner_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -440,9 +475,9 @@ class CNABFileParser(FileParser):
                         "account_id": self.journal.default_credit_account_id.id,
                         "journal_id": account_move_line.journal_id.id,
                         "type": "juros_mora",
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
                         "partner_id": account_move_line.partner_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -460,9 +495,9 @@ class CNABFileParser(FileParser):
                         "credit": valor_tarifa,
                         "account_id": self.journal.default_credit_account_id.id,
                         "type": "tarifa",
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
                         "partner_id": account_move_line.company_id.partner_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -478,8 +513,8 @@ class CNABFileParser(FileParser):
                         "credit": 0.0,
                         "type": "tarifa",
                         "account_id": tariff_charge_account.id,
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -498,8 +533,8 @@ class CNABFileParser(FileParser):
                             account_move_line.payment_mode_id.rebate_account_id.id
                         ),
                         "type": "abatimento",
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -511,9 +546,9 @@ class CNABFileParser(FileParser):
                         "credit": valor_abatimento,
                         "type": "abatimento",
                         "account_id": self.journal.default_credit_account_id.id,
-                        "ref": account_move_line.document_number,
-                        "invoice_id": account_move_line.invoice_id.id,
                         "partner_id": account_move_line.partner_id.id,
+                        "bank_payment_line_id": bank_line.id or False,
+                        "cnab_returned_ref": account_move_line.document_number,
                     }
                 )
 
@@ -524,19 +559,23 @@ class CNABFileParser(FileParser):
             valor_recebido + valor_desconto + valor_abatimento
         ) - valor_juros_mora
 
+        # No itaú(341) o valor recebido (valor principal) já vem com a tarifa descontada
+        # precisamos atualizar o valor recebido para que a reconcialiação feche.
+        if self.bank.code_bc == "341":
+            valor_recebido_calculado += valor_tarifa
+
         row_list.append(
             {
-                "name": account_move_line.invoice_id.number,
+                "name": account_move_line.move_id.name,
                 "debit": 0.0,
                 "credit": valor_recebido_calculado,
                 "move_line": account_move_line,
-                "invoice_id": account_move_line.invoice_id.id,
                 "type": "liquidado",
                 "bank_payment_line_id": bank_line.id or False,
-                "ref": account_move_line.own_number,
                 "account_id": account_move_line.account_id.id,
                 "partner_id": account_move_line.partner_id.id,
                 "date": data_credito,
+                "cnab_returned_ref": account_move_line.own_number,
             }
         )
 
@@ -565,7 +604,13 @@ class CNABFileParser(FileParser):
         :return: dict of vals that represent additional infos for the statement
         """
         return {
-            "name": "Retorno CNAB - Banco "
+            # O campo name precisa ser como abaixo ou não ser enviado
+            # se não gera erro no metodo _check_unique_sequence_number,
+            # na v12 estava indo nesse campo a informação que agora está
+            # no campo ref
+            # "name": self.move_name or "/",
+            # TODO: Precisa de migração?
+            "ref": "Retorno CNAB - Banco "
             + self.bank.short_name
             + " - Conta "
             + self.journal.bank_account_id.acc_number,
@@ -595,10 +640,10 @@ class CNABFileParser(FileParser):
             "credit": line["credit"],
             "debit": line["debit"],
             "partner_id": None,
-            "ref": line["ref"],
             "account_id": line["account_id"],
-            "invoice_id": line["invoice_id"],
             "already_completed": True,
+            "bank_payment_line_id": line["bank_payment_line_id"],
+            "cnab_returned_ref": line["cnab_returned_ref"],
         }
         if (
             line["type"]
