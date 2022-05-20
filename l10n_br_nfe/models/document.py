@@ -279,6 +279,11 @@ class NFe(spec_models.StackedModel):
         compute="_compute_nfe40_idDest",
     )
 
+    partner_code = fields.Char(
+        related = 'partner_id.country_id.code',
+        store = True
+    )
+
     @api.depends("fiscal_additional_data", "customer_additional_data")
     def _compute_nfe40_additional_data(self):
         for record in self:
