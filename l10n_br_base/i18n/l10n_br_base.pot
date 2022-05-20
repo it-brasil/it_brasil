@@ -4,8 +4,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 14.0\n"
+"Project-Id-Version: Odoo Server 15.0+e\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-05-20 17:09+0000\n"
+"PO-Revision-Date: 2022-05-20 17:09+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -129,13 +131,11 @@ msgid "Acauã"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__acc_number_dig
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__acc_number_dig
 msgid "Account Digit"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__acc_number
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__acc_number
 msgid "Account Number"
 msgstr ""
@@ -2052,7 +2052,6 @@ msgid "BIC/Swift Code"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__bra_bank_bic
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__bra_bank_bic
 msgid "BIC/Swift Final Code."
 msgstr ""
@@ -2239,7 +2238,6 @@ msgid "Bank"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__bank_account_type
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__bank_account_type
 msgid "Bank Account Type"
 msgstr ""
@@ -2250,13 +2248,11 @@ msgid "Bank Accounts"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__bra_number
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__bra_number
 msgid "Bank Branch"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_account_setup_bank_manual_config__bra_number_dig
 #: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__bra_number_dig
 msgid "Bank Branch Digit"
 msgstr ""
@@ -6066,7 +6062,6 @@ msgstr ""
 
 #. module: l10n_br_base
 #: model:ir.model,name:l10n_br_base.model_res_city
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "City"
 msgstr ""
 
@@ -6079,7 +6074,8 @@ msgid "City of Address"
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "City..."
 msgstr ""
 
@@ -6306,7 +6302,8 @@ msgid "Companies"
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "Complement..."
 msgstr ""
 
@@ -6795,12 +6792,6 @@ msgid "Coronel Xavier Chaves"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:res.partner.title,name:l10n_br_base.res_partner_title_pvt_ltd
-#: model:res.partner.title,shortcut:l10n_br_base.res_partner_title_pvt_ltd
-msgid "Corp."
-msgstr ""
-
-#. module: l10n_br_base
 #: model:res.city,name:l10n_br_base.city_4204558
 msgid "Correia Pinto"
 msgstr ""
@@ -6920,7 +6911,8 @@ msgid "Country state"
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "Country..."
 msgstr ""
 
@@ -7655,16 +7647,6 @@ msgid "Disable IE validation"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_format_address_mixin__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_l10n_br_base_party_mixin__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_bank__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_city__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_company__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_config_settings__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country_state__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner__display_name
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__display_name
 #: model:ir.model.fields,field_description:l10n_br_base.field_state_tax_numbers__display_name
 msgid "Display Name"
 msgstr ""
@@ -7678,7 +7660,8 @@ msgid "District"
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "District..."
 msgstr ""
 
@@ -10177,16 +10160,6 @@ msgid "IBGE Code"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_format_address_mixin__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_l10n_br_base_party_mixin__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_bank__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_city__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_company__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_config_settings__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country_state__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner__id
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank__id
 #: model:ir.model.fields,field_description:l10n_br_base.field_state_tax_numbers__id
 msgid "ID"
 msgstr ""
@@ -13458,16 +13431,6 @@ msgid "Lassance"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,field_description:l10n_br_base.field_format_address_mixin____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_l10n_br_base_party_mixin____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_bank____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_city____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_company____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_config_settings____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_country_state____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner____last_update
-#: model:ir.model.fields,field_description:l10n_br_base.field_res_partner_bank____last_update
 #: model:ir.model.fields,field_description:l10n_br_base.field_state_tax_numbers____last_update
 msgid "Last Modified on"
 msgstr ""
@@ -13483,7 +13446,6 @@ msgid "Last Updated on"
 msgstr ""
 
 #. module: l10n_br_base
-#: model:ir.model.fields,help:l10n_br_base.field_account_setup_bank_manual_config__bra_bank_bic
 #: model:ir.model.fields,help:l10n_br_base.field_res_partner_bank__bra_bank_bic
 msgid "Last part of BIC/Swift Code."
 msgstr ""
@@ -23167,18 +23129,20 @@ msgid "State Tax Numbers"
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "State..."
 msgstr ""
 
 #. module: l10n_br_base
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "Street number..."
 msgstr ""
 
 #. module: l10n_br_base
 #: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "Street..."
 msgstr ""
 
@@ -27185,7 +27149,7 @@ msgstr ""
 
 #. module: l10n_br_base
 #: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_partner_contact_form
-#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_partner_address
+#: model_terms:ir.ui.view,arch_db:l10n_br_base.l10n_br_base_res_company_form
 msgid "Zip code..."
 msgstr ""
 
