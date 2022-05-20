@@ -43,6 +43,10 @@ class SaleOrderLine(models.Model):
         string='Fiscal Taxes',
     )
 
+    partner_order = fields.Char(string="Ordem de Compra (xPed)", size=15)
+
+    partner_order_line = fields.Char(string="Linha da Ordem de Compra (nItemPed)", size=6)
+
     quantity = fields.Float(
         string="Product Uom Quantity",
         related="product_uom_qty",
@@ -158,9 +162,11 @@ class SaleOrderLine(models.Model):
 
     def _prepare_invoice_line(self, **optional_values):
         self.ensure_one()
-        result = self._prepare_br_fiscal_dict()        
+        result = self._prepare_br_fiscal_dict()
         if self.product_id and self.product_id.invoice_policy == "delivery":
             result["fiscal_quantity"] = self.fiscal_qty_delivered
+            result["partner_order"] = self.partner_order
+            result["partner_order_line"] = self.partner_order_line
         result.update(super()._prepare_invoice_line(**optional_values))
         return result
 

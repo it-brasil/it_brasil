@@ -313,7 +313,7 @@ class AccountMove(models.Model):
                 and move.fiscal_document_id.id != self.env.company.fiscal_dummy_id.id
             ):
                 unlink_documents |= move.fiscal_document_id
-            unlink_invoices |= move
+            unlink_moves |= move
         result = super(AccountMove, unlink_moves).unlink()
         unlink_documents.unlink()
         self.clear_caches()
