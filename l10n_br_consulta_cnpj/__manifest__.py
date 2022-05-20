@@ -9,7 +9,7 @@
     "author": "IT Brasil",
     "maintainers": ["renanteixeira", "it-brasil"],
     "website": "https://github.com/it-brasil/it_brasil",
-    "version": "14.0.2.1.0",
+    "version": "15.0.0.0.1",
     "depends": ["l10n_br_base"],
     "data": [
         'views/res_partner.xml'
