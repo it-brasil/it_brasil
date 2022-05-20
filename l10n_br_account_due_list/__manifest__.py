@@ -15,5 +15,5 @@
     ],
     "installable": True,
     "development_status": "Mature",
-    "auto_install": False,
+    "auto_install": True,
 }
