@@ -4,8 +4,6 @@
 
 from odoo import api, fields, models
 
-from odoo.addons import decimal_precision as dp
-
 from ..constants import (
     AVISO_FAVORECIDO,
     CODIGO_FINALIDADE_TED,
@@ -23,13 +21,13 @@ class AccountPaymentLine(models.Model):
 
     percent_interest = fields.Float(
         string="Percentual de Juros",
-        digits=dp.get_precision("Account"),
+        digits="Account",
     )
 
     amount_interest = fields.Float(
         string="Valor Juros",
         compute="_compute_interest",
-        digits=dp.get_precision("Account"),
+        digits="Account",
     )
 
     own_number = fields.Char(
@@ -91,7 +89,7 @@ class AccountPaymentLine(models.Model):
 
     payment_mode_id = fields.Many2one(
         comodel_name="account.payment.mode",
-        track_visibility="onchange",
+        tracking=True,
     )
 
     # Campo não usado no BRCobranca
@@ -127,7 +125,7 @@ class AccountPaymentLine(models.Model):
         selection_add=[
             ("cnab", "CNAB"),
         ],
-        ondelete="cascade",
+        ondelete={"cnab": "set default"},
     )
 
     # No caso de Ordens de Pagto vinculadas devido o
@@ -145,7 +143,7 @@ class AccountPaymentLine(models.Model):
     ml_maturity_date = fields.Date(related=None)
     # Para manter a rastreabilidade está sendo adicionado uma relação
     # com a account.invoice referente, já que a AML pode ser apagada
-    invoice_id = fields.Many2one(comodel_name="account.invoice", string="Fatura")
+    move_id = fields.Many2one(comodel_name="account.move", string="Fatura")
 
     @api.depends("percent_interest", "amount_currency", "currency_id")
     def _compute_interest(self):

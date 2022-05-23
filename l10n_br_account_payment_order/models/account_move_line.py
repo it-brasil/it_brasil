@@ -144,7 +144,7 @@ class AccountMoveLine(models.Model):
                     # TODO: Aguardando a possibilidade de alteração no
                     #  modulo account_payment_order na v14
                     "ml_maturity_date": self.date_maturity,
-                    "invoice_id": self.invoice_id.id,
+                    "move_id": self.move_id.id,
                 }
             )
 
@@ -257,9 +257,9 @@ class AccountMoveLine(models.Model):
                         record.payment_mode_id.fixed_journal_id.id
                     )
 
-    def reconcile(self, writeoff_acc_id=False, writeoff_journal_id=False):
+    def reconcile(self):
 
-        res = super().reconcile(writeoff_acc_id, writeoff_journal_id)
+        res = super().reconcile()
         for record in self:
             # Verificar Casos de CNAB
             if (

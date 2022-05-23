@@ -1,4 +1,17 @@
-* Luis Felipe Mileo <mileo@kmee.com.br>
-* Fernando Marcato <fernando.marcato@kmee.com.br>
-* Hendrix Costa <hendrix.costa@kmee.com.br>
-* Magno Costa <magno.costa@akretion.com.br>
+* `KMEE <https://www.kmee.com.br>`_:
+
+  * Luis Felipe Mileo
+  * Fernando Marcato
+  * Hendrix Costa
+
+* `Akretion <https://www.akretion.com/pt-BR>`_:
+
+  * Magno Costa
+
+* `Engenere <https://engenere.one>`_:
+
+  * Antônio S. Pereira Neto
+
+* `Escodoo <https://www.escodoo.com.br>`_:
+
+  * Marcel Savegnago
