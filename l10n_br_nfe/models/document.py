@@ -498,8 +498,8 @@ class NFe(spec_models.StackedModel):
                 if not fin.move_id.payment_mode_id:
                     raise UserError(_("Favor preencher os dados do pagamento"))
                 if fin.account_id.user_type_id.type in ('receivable', 'payable'):
-                    modo = fin.move_id.payment_mode_id.fiscal_type.payment_type
-                    avista_aprazo = fin.move_id.payment_mode_id.fiscal_type.indPag
+                    modo = fin.move_id.payment_mode_id.fiscal_payment_mode
+                    avista_aprazo = fin.move_id.payment_mode_id.ind_pag
                     if fin.account_id.user_type_id.type == 'receivable':
                         valor += fin.debit
                     if fin.account_id.user_type_id.type == 'payable':
