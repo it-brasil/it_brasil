@@ -294,6 +294,19 @@ class AccountMove(models.Model):
             self.recalcula(invoice)
         
         invoice._write_shadowed_fields()
+        total_geral = 0.0
+        total_ipi = 0.0
+        for line in invoice.invoice_line_ids:
+            total_geral += line.price_subtotal
+            total_ipi += line.ipi_value
+        # import pudb;pu.db
+        if invoice.amount_total != total_geral:
+            invoice.write({
+                'amount_total': total_geral+total_ipi,
+                'amount_total_signed': total_geral+total_ipi,
+                'amount_tax': total_ipi,
+                'amount_ipi_value': total_ipi,
+            })
         return invoice
 
     def write(self, values):
