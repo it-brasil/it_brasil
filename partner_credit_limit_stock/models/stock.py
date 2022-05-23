@@ -15,25 +15,19 @@ class Picking(models.Model):
         self.msg_error = False
         # Verifica se o stock.picking é OUT ou PICK
         if (self.picking_type_code == 'outgoing') or ((self.picking_type_code == 'internal') and self.sale_id):
-
             if self.partner_id:
                 gerente = self.env.user.has_group("partner_credit_limit_stock.group_credit_limit_manager")
-                limite_disponivel = 0
+                #limite_disponivel = 0
                 bool_credit_limit = False
-
-                # Verifica se partner de entrega tem parent_id.
-                # caso positivo: calculo do limite de crédito será baseado em parent_id
-                # caso contrario: calculo do limite de crédito será baseado no partner_id
                 if self.partner_id.parent_id:
-                    limite_disponivel = self.partner_id.parent_id._check_limit()
                     bool_credit_limit = self.partner_id.parent_id.enable_credit_limit
                 else:
-                    limite_disponivel = self.partner_id._check_limit()
                     bool_credit_limit = self.partner_id.enable_credit_limit
-
                 status_bloqueio = self.sale_id.status_bloqueio
                 #Verificação de requisitos para a aprovação do OUT ou do PICK    
                 if bool_credit_limit:
+                    self.sale_id.limite_credito()
+                    limite_disponivel = self.sale_id.partner_id.credit_rest
                     if limite_disponivel == 0:
                         if not gerente:
                             if (status_bloqueio != 'unblocked') and (status_bloqueio != 'cleared'):
@@ -43,5 +37,4 @@ class Picking(models.Model):
                                 return None 
                         else:
                             self.sale_id.status_bloqueio = 'unblocked'
-
         return super(Picking, self).button_validate()
