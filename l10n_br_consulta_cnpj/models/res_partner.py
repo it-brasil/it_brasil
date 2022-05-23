@@ -189,7 +189,8 @@ class Partner(models.Model):
                 _logger.warning("TEM %s IES", len(result_ie))
                 raise ValidationError(
                     "O CNPJ %s tem %s Inscrições Estaduais, necessário avisar o time de desenvolvimento", self.cnpj_cpf, len(result_ie))
-
+    # def action_check_sefaz(self):
+    #     return None
     def define_fiscal_profile_id(self, fiscal_info):
         module_l10n_br_fiscal = self.env['ir.module.module'].search(
             [('name', '=', 'l10n_br_fiscal'), ('state', '=', 'installed')])
@@ -249,3 +250,4 @@ class Partner(models.Model):
 
         else:
             self.define_inscricao_estadual(fiscal_info)
+    
