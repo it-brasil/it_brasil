@@ -29,6 +29,7 @@ class AccountMove(models.Model):
         return values
 
     def _prepare_wh_invoice_line(self, invoice, move_line):
+        # import pudb;pu.db
         values = {
             "name": move_line.name,
             "quantity": move_line.quantity,
@@ -110,8 +111,9 @@ class AccountMove(models.Model):
         return result
 
     def button_cancel(self):
-        # TODO FIXME migration
-        # Esse método é responsavel por verificar se há alguma fatura de impostos retidos
-        # associado a essa fatura e cancela-las também. o método precisa ser refatorado.
-        # self._withholding_validate()
+        for doc in self.filtered(lambda d: d.document_type_id):
+            doc.fiscal_document_id.action_document_cancel()
+        # Esse método é responsavel por verificar se há alguma fatura de impostos
+        # retidos associada a essa fatura e cancela-las também.
+        self._withholding_validate()
         return super().button_cancel()

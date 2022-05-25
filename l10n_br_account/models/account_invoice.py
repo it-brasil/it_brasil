@@ -23,6 +23,8 @@ MOVE_TO_OPERATION = {
     "in_invoice": "in",
     "out_refund": "in",
     "in_refund": "out",
+    "out_receipt": "out",
+    "in_receipt": "in",
 }
 
 REFUND_TO_OPERATION = {
@@ -62,10 +64,10 @@ class AccountMove(models.Model):
     _inherits = {"l10n_br_fiscal.document": "fiscal_document_id"}
     _order = "date DESC, name DESC"
 
-    # initial account.invoice inherits on fiscal.document that are
-    # disable with active=False in their fiscal_document table.
-    # To make these invoices still visible, we set active=True
-    # in the invoice table.
+    # some account.move records _inherits from an fiscal.document that is
+    # disabled with active=False (dummy record) in the l10n_br_fiscal_document table.
+    # To make the invoices still visible, we set active=True
+    # in the account_move table.
     active = fields.Boolean(
         string="Active",
         default=True,
@@ -216,72 +218,92 @@ class AccountMove(models.Model):
             defaults["issuer"] = DOCUMENT_ISSUER_PARTNER
         return defaults
 
-    def recalcula(self, invoice):
-        for order in invoice:
-            # if order.amount_financial_total == order.amount_total:
-            #     continue
-            res = {}
-            icms_base = 0.0
-            icms_value = 0.0
-            ipi_base = 0.0
-            ipi_value = 0.0
-            pis_base = 0.0
-            pis_value = 0.0
-            cofins_base = 0.0
-            cofins_value = 0.0
+    # def recalcula(self, invoice):
+    #     for order in invoice:
+    #         # if order.amount_financial_total == order.amount_total:
+    #         #     continue
+    #         res = {}
+    #         icms_base = 0.0
+    #         icms_value = 0.0
+    #         ipi_base = 0.0
+    #         ipi_value = 0.0
+    #         pis_base = 0.0
+    #         pis_value = 0.0
+    #         cofins_base = 0.0
+    #         cofins_value = 0.0                    
 
-            for line in order.invoice_line_ids:
-                taxes = line._compute_taxes(line.fiscal_tax_ids)["taxes"]
-                for tax in line.fiscal_tax_ids:
-                    computed_tax = taxes.get(tax.tax_domain)
-                    pr = order.currency_id.rounding
-                    if computed_tax and not float_is_zero(
-                        computed_tax.get("tax_value", 0.0), precision_rounding=pr
-                    ):
-                        group = tax.tax_group_id
-                        res.setdefault(group, {"amount": 0.0, "base": 0.0})
-                        res[group]["amount"] += computed_tax.get("tax_value", 0.0)
-                        res[group]["base"] += computed_tax.get("base", 0.0)
-                if taxes.get('icms')['base']:
-                    line.icms_base = taxes.get('icms')['base']
-                    line.icms_value = taxes.get('icms')['tax_value']
-                    icms_base += line.icms_base
-                    icms_value += line.icms_value
-                if taxes.get('ipi')['base']:
-                    line.ipi_base = taxes.get('ipi')['base']
-                    line.ipi_value = taxes.get('ipi')['tax_value']
-                    ipi_base += line.ipi_base
-                    ipi_value += line.ipi_value
+    #         for line in order.invoice_line_ids:
+    #             print('Linha : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
+    #             taxes = line._compute_taxes(line.fiscal_tax_ids)["taxes"]
+    #             for tax in line.fiscal_tax_ids:
+    #                 computed_tax = taxes.get(tax.tax_domain)
+    #                 pr = order.currency_id.rounding
+    #                 if computed_tax and not float_is_zero(
+    #                     computed_tax.get("tax_value", 0.0), precision_rounding=pr
+    #                 ):
+    #                     group = tax.tax_group_id
+    #                     res.setdefault(group, {"amount": 0.0, "base": 0.0})
+    #                     res[group]["amount"] += computed_tax.get("tax_value", 0.0)
+    #                     res[group]["base"] += computed_tax.get("base", 0.0)
+    #             if taxes.get('icms')['base']:
+    #                 line.icms_base = taxes.get('icms')['base']
+    #                 line.icms_value = taxes.get('icms')['tax_value']
+    #                 icms_base += line.icms_base
+    #                 icms_value += line.icms_value
+    #             if taxes.get('ipi')['base']:
+    #                 line.ipi_base = taxes.get('ipi')['base']
+    #                 line.ipi_value = taxes.get('ipi')['tax_value']
+    #                 ipi_base += line.ipi_base
+    #                 ipi_value += line.ipi_value
 
-                if taxes.get('pis')['base']:
-                    line.pis_base = taxes.get('pis')['base']
-                    line.pis_value = taxes.get('pis')['tax_value']
-                    pis_base += line.pis_base
-                    pis_value += line.pis_value
+    #             if taxes.get('pis')['base']:
+    #                 line.pis_base = taxes.get('pis')['base']
+    #                 line.pis_value = taxes.get('pis')['tax_value']
+    #                 pis_base += line.pis_base
+    #                 pis_value += line.pis_value
 
-                if taxes.get('cofins')['base']:
-                    line.cofins_base = taxes.get('cofins')['base']
-                    line.cofins_value = taxes.get('cofins')['tax_value']
-                    cofins_base += line.cofins_base
-                    cofins_value += line.cofins_value
+    #             if taxes.get('cofins')['base']:
+    #                 line.cofins_base = taxes.get('cofins')['base']
+    #                 line.cofins_value = taxes.get('cofins')['tax_value']
+    #                 cofins_base += line.cofins_base
+    #                 cofins_value += line.cofins_value
 
-                compute_result = line._compute_taxes(line.fiscal_tax_ids)
-                line.amount_tax_included = compute_result.get("amount_included", 0.0)
-                line.amount_tax_not_included = compute_result.get(
-                    "amount_not_included", 0.0
-                )
-                line.amount_tax_withholding = compute_result.get("amount_withholding", 0.0)
-                line.estimate_tax = compute_result.get("estimate_tax", 0.0)
-                # total += line.amount_tax_included
-            # order.amount_total = total
-            order.amount_icms_base = icms_base
-            order.amount_icms_value = icms_value
-            order.amount_ipi_base = ipi_base
-            order.amount_ipi_value = ipi_value
-            order.amount_cofins_base = cofins_base
-            order.amount_cofins_value = cofins_value
-            order.amount_pis_base = pis_base
-            order.amount_pis_value = pis_value
+    #             compute_result = line._compute_taxes(line.fiscal_tax_ids)
+    #             line.amount_tax_included = compute_result.get("amount_included", 0.0)
+    #             line.amount_tax_not_included = compute_result.get(
+    #                 "amount_not_included", 0.0
+    #             )
+    #             line.amount_tax_withholding = compute_result.get("amount_withholding", 0.0)
+    #             line.estimate_tax = compute_result.get("estimate_tax", 0.0)
+    #             # total += line.amount_tax_included
+
+    #         diferenca = 0.0
+    #         dif_ipi = 0.0
+    #         dif_deb = 0.0
+    #         for line in order.line_ids:
+    #             print('Linha XX : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
+
+    #             if 'IPI' in line.name and line.credit:
+    #                 diferenca = line.credit - ipi_value
+    #                 if diferenca:
+    #                     dif_ipi = ipi_value
+    #                     print('Linha CC : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
+    #         for line in order.line_ids:
+    #             if 'Receber' in line.account_id.user_type_id.name and line.debit and diferenca:
+    #                     # import pudb;pu.db
+    #                     dif_deb = line.debit - diferenca
+    #                     print('Linha DD : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
+    #         if dif_ipi and dif_deb:
+    #             line.write({ })
+    #         # order.amount_total = total
+    #         order.amount_icms_base = icms_base
+    #         order.amount_icms_value = icms_value
+    #         order.amount_ipi_base = ipi_base
+    #         order.amount_ipi_value = ipi_value
+    #         order.amount_cofins_base = cofins_base
+    #         order.amount_cofins_value = cofins_value
+    #         order.amount_pis_base = pis_base
+    #         order.amount_pis_value = pis_value
 
     @api.model_create_multi
     def create(self, values):
@@ -290,23 +312,23 @@ class AccountMove(models.Model):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
 
-        if invoice.document_type:
-            self.recalcula(invoice)
+        # if invoice.document_type:
+        #     self.recalcula(invoice)
         
         invoice._write_shadowed_fields()
-        total_geral = 0.0
-        total_ipi = 0.0
-        for line in invoice.invoice_line_ids:
-            total_geral += line.price_subtotal
-            total_ipi += line.ipi_value
-        # import pudb;pu.db
-        if invoice.amount_total != total_geral:
-            invoice.write({
-                'amount_total': total_geral+total_ipi,
-                'amount_total_signed': total_geral+total_ipi,
-                'amount_tax': total_ipi,
-                'amount_ipi_value': total_ipi,
-            })
+        # total_geral = 0.0
+        # total_ipi = 0.0
+        # for line in invoice.invoice_line_ids:
+        #     total_geral += line.price_subtotal
+        #     total_ipi += line.ipi_value
+        # # import pudb;pu.db
+        # if invoice.amount_total != total_geral:
+        #     invoice.write({
+        #         'amount_total': total_geral+total_ipi,
+        #         'amount_total_signed': total_geral+total_ipi,
+        #         'amount_tax': total_ipi,
+        #         'amount_ipi_value': total_ipi,
+        #     })
         return invoice
 
     def write(self, values):
@@ -341,385 +363,146 @@ class AccountMove(models.Model):
             default["line_ids"] = self.line_ids[0]
         return super().copy(default)
 
-    def _recompute_tax_lines(self, recompute_tax_base_amount=False):
-        """Compute the dynamic tax lines of the journal entry.
-        :param recompute_tax_base_amount: Flag forcing only the recomputation of the `tax_base_amount` field.
-        """
-        self.ensure_one()
-        in_draft_mode = self != self._origin
+    @api.model
+    def _serialize_tax_grouping_key(self, grouping_dict):
+        return "-".join(str(v) for v in grouping_dict.values())
 
-        def _serialize_tax_grouping_key(grouping_dict):
-            """ Serialize the dictionary values to be used in the taxes_map.
-            :param grouping_dict: The values returned by '_get_tax_grouping_key_from_tax_line' or '_get_tax_grouping_key_from_base_line'.
-            :return: A string representing the values.
-            """
-            return "-".join(str(v) for v in grouping_dict.values())
+    @api.model
+    def _compute_taxes_mapped(self, base_line):
 
-        def _compute_base_line_taxes(base_line):
-            """Compute taxes amounts both in company currency / foreign currency as the ratio between
-            amount_currency & balance could not be the same as the expected currency rate.
-            The 'amount_currency' value will be set on compute_all(...)['taxes'] in multi-currency.
-            :param base_line:   The account.move.line owning the taxes.
-            :return:            The result of the compute_all method.
-            """
-            move = base_line.move_id
+        move = base_line.move_id
 
-            if move.is_invoice(include_receipts=True):
-                handle_price_include = True
-                sign = -1 if move.is_inbound() else 1
-                quantity = base_line.quantity
-                is_refund = move.move_type in ("out_refund", "in_refund")
-                price_unit_wo_discount = (
-                    sign * base_line.price_unit * (1 - (base_line.discount / 100.0))
+        if move.is_invoice(include_receipts=True):
+            handle_price_include = True
+            sign = -1 if move.is_inbound() else 1
+            quantity = base_line.quantity
+            is_refund = move.move_type in ("out_refund", "in_refund")
+            price_unit_wo_discount = (
+                sign * base_line.price_unit * (1 - (base_line.discount / 100.0))
+            )
+        else:
+            handle_price_include = False
+            quantity = 1.0
+            tax_type = base_line.tax_ids[0].type_tax_use if base_line.tax_ids else None
+            is_refund = (tax_type == "sale" and base_line.debit) or (
+                tax_type == "purchase" and base_line.credit
+            )
+            price_unit_wo_discount = base_line.amount_currency
+
+        balance_taxes_res = base_line.tax_ids._origin.with_context(
+            force_sign=move._get_tax_force_sign()
+        ).compute_all(
+            price_unit_wo_discount,
+            currency=base_line.currency_id,
+            quantity=quantity,
+            product=base_line.product_id,
+            partner=base_line.partner_id,
+            is_refund=is_refund,
+            handle_price_include=handle_price_include,
+            fiscal_taxes=base_line.fiscal_tax_ids,
+            operation_line=base_line.fiscal_operation_line_id,
+            ncm=base_line.ncm_id,
+            nbs=base_line.nbs_id,
+            nbm=base_line.nbm_id,
+            cest=base_line.cest_id,
+            discount_value=base_line.discount_value,
+            insurance_value=base_line.insurance_value,
+            other_value=base_line.other_value,
+            freight_value=base_line.freight_value,
+            fiscal_price=base_line.fiscal_price,
+            fiscal_quantity=base_line.fiscal_quantity,
+            uot=base_line.uot_id,
+            icmssn_range=base_line.icmssn_range_id,
+            icms_origin=base_line.icms_origin,
+        )
+
+        return balance_taxes_res
+
+    def _preprocess_taxes_map(self, taxes_map):
+        """Useful in case we want to pre-process taxes_map"""
+
+        taxes_mapped = super()._preprocess_taxes_map(taxes_map=taxes_map)
+
+        for line in self.line_ids.filtered(
+            lambda line: not line.tax_repartition_line_id
+        ):
+            if not line.tax_ids or not line.fiscal_tax_ids:
+                continue
+
+            compute_all_vals = self._compute_taxes_mapped(line)
+
+            for tax_vals in compute_all_vals["taxes"]:
+                grouping_dict = self._get_tax_grouping_key_from_base_line(
+                    line, tax_vals
                 )
-            else:
-                handle_price_include = False
-                quantity = 1.0
-                tax_type = (
-                    base_line.tax_ids[0].type_tax_use if base_line.tax_ids else None
+                grouping_key = self._serialize_tax_grouping_key(grouping_dict)
+
+                tax_repartition_line = self.env["account.tax.repartition.line"].browse(
+                    tax_vals["tax_repartition_line_id"]
                 )
-                is_refund = (tax_type == 'sale' and base_line.debit) or (
-                    tax_type == 'purchase' and base_line.credit
+
+                if taxes_mapped[grouping_key]:
+                    taxes_mapped[grouping_key]["amount"] += tax_vals["amount"]
+                    taxes_mapped[grouping_key][
+                        "tax_base_amount"
+                    ] += self._get_base_amount_to_display(
+                        tax_vals["base"], tax_repartition_line, tax_vals["group"]
                     )
-                price_unit_wo_discount = base_line.amount_currency
 
-            balance_taxes_res = base_line.tax_ids._origin.with_context(
-                force_sign=move._get_tax_force_sign()
-            ).compute_all(
-                price_unit_wo_discount,
-                currency=base_line.currency_id,
-                quantity=quantity,
-                product=base_line.product_id,
-                partner=base_line.partner_id,
-                is_refund=is_refund,
-                handle_price_include=handle_price_include,
-                fiscal_taxes=base_line.fiscal_tax_ids,
-                operation_line=base_line.fiscal_operation_line_id,
-                ncm=base_line.ncm_id,
-                nbs=base_line.nbs_id,
-                nbm=base_line.nbm_id,
-                cest=base_line.cest_id,
-                discount_value=base_line.discount_value,
-                insurance_value=base_line.insurance_value,
-                other_value=base_line.other_value,
-                freight_value=base_line.freight_value,
-                fiscal_price=base_line.fiscal_price,
-                fiscal_quantity=base_line.fiscal_quantity,
-                uot=base_line.uot_id,
-                icmssn_range=base_line.icmssn_range_id,
-                icms_origin=base_line.icms_origin,
-            )
-            if move.move_type == 'entry':
-                repartition_field = is_refund and 'refund_repartition_line_ids' or 'invoice_repartition_line_ids'
-                repartition_tags = base_line.tax_ids.flatten_taxes_hierarchy().mapped(repartition_field).filtered(lambda x: x.repartition_type == 'base').tag_ids
-                tags_need_inversion = self._tax_tags_need_inversion(move, is_refund, tax_type)
-                if tags_need_inversion:
-                    balance_taxes_res['base_tags'] = base_line._revert_signed_tags(repartition_tags).ids
-                    for tax_res in balance_taxes_res['taxes']:
-                        tax_res['tag_ids'] = base_line._revert_signed_tags(self.env['account.account.tag'].browse(tax_res['tag_ids'])).ids
-
-            return balance_taxes_res
-
-        taxes_map = {}
-
-        # ==== Add tax lines ====
-        to_remove = self.env['account.move.line']
-        for line in self.line_ids.filtered('tax_repartition_line_id'):
-            grouping_dict = self._get_tax_grouping_key_from_tax_line(line)
-            grouping_key = _serialize_tax_grouping_key(grouping_dict)
-            if grouping_key in taxes_map:
-                # A line with the same key does already exist, we only need one
-                # to modify it; we have to drop this one.
-                to_remove += line
-            else:
-                taxes_map[grouping_key] = {
-                    'tax_line': line,
-                    'amount': 0.0,
-                    'tax_base_amount': 0.0,
-                    'grouping_dict': False,
-                }
-        if not recompute_tax_base_amount:
-            self.line_ids -= to_remove
-
-        # ==== Mount base lines ====
-        for line in self.line_ids.filtered(lambda line: not line.tax_repartition_line_id):
-            # Don't call compute_all if there is no tax.
-            if not line.tax_ids:
-                if not recompute_tax_base_amount:
-                    line.tax_tag_ids = [(5, 0, 0)]
-                continue
-
-            compute_all_vals = _compute_base_line_taxes(line)
-
-            # Assign tags on base line
-            if not recompute_tax_base_amount:
-                line.tax_tag_ids = compute_all_vals['base_tags'] or [(5, 0, 0)]
-
-            tax_exigible = True
-            for tax_vals in compute_all_vals['taxes']:
-                grouping_dict = self._get_tax_grouping_key_from_base_line(line, tax_vals)
-                grouping_key = _serialize_tax_grouping_key(grouping_dict)
-
-                tax_repartition_line = self.env['account.tax.repartition.line'].browse(tax_vals['tax_repartition_line_id'])
-                tax = tax_repartition_line.invoice_tax_id or tax_repartition_line.refund_tax_id
-
-                if tax.tax_exigibility == 'on_payment':
-                    tax_exigible = False
-
-                taxes_map_entry = taxes_map.setdefault(grouping_key, {
-                    'tax_line': None,
-                    'amount': 0.0,
-                    'tax_base_amount': 0.0,
-                    'grouping_dict': False,
-                })
-                taxes_map_entry['amount'] += tax_vals['amount']
-                taxes_map_entry['tax_base_amount'] += self._get_base_amount_to_display(tax_vals['base'], tax_repartition_line, tax_vals['group'])
-                taxes_map_entry['grouping_dict'] = grouping_dict
-            if not recompute_tax_base_amount:
-                line.tax_exigible = tax_exigible
-
-        # ==== Pre-process taxes_map ====
-        taxes_map = self._preprocess_taxes_map(taxes_map)
-
-        # ==== Process taxes_map ====
-        for taxes_map_entry in taxes_map.values():
-            # The tax line is no longer used in any base lines, drop it.
-            if taxes_map_entry['tax_line'] and not taxes_map_entry['grouping_dict']:
-                if not recompute_tax_base_amount:
-                    self.line_ids -= taxes_map_entry['tax_line']
-                continue
-
-            currency = self.env['res.currency'].browse(taxes_map_entry['grouping_dict']['currency_id'])
-
-            # Don't create tax lines with zero balance.
-            if currency.is_zero(taxes_map_entry['amount']):
-                if taxes_map_entry['tax_line'] and not recompute_tax_base_amount:
-                    self.line_ids -= taxes_map_entry['tax_line']
-                continue
-
-            # tax_base_amount field is expressed using the company currency.
-            tax_base_amount = currency._convert(taxes_map_entry['tax_base_amount'], self.company_currency_id, self.company_id, self.date or fields.Date.context_today(self))
-
-            # Recompute only the tax_base_amount.
-            if recompute_tax_base_amount:
-                if taxes_map_entry['tax_line']:
-                    taxes_map_entry['tax_line'].tax_base_amount = tax_base_amount
-                continue
-
-            balance = currency._convert(
-                taxes_map_entry['amount'],
-                self.company_currency_id,
-                self.company_id,
-                self.date or fields.Date.context_today(self),
-            )
-            to_write_on_line = {
-                'amount_currency': taxes_map_entry['amount'],
-                'currency_id': taxes_map_entry['grouping_dict']['currency_id'],
-                'debit': balance > 0.0 and balance or 0.0,
-                'credit': balance < 0.0 and -balance or 0.0,
-                'tax_base_amount': tax_base_amount,
-            }
-
-            if taxes_map_entry['tax_line']:
-                # Update an existing tax line.
-                taxes_map_entry['tax_line'].update(to_write_on_line)
-            else:
-                # Create a new tax line.
-                create_method = in_draft_mode and self.env['account.move.line'].new or self.env['account.move.line'].create
-                tax_repartition_line_id = taxes_map_entry['grouping_dict']['tax_repartition_line_id']
-                tax_repartition_line = self.env['account.tax.repartition.line'].browse(tax_repartition_line_id)
-                tax = tax_repartition_line.invoice_tax_id or tax_repartition_line.refund_tax_id
-                taxes_map_entry['tax_line'] = create_method({
-                    **to_write_on_line,
-                    'name': tax.name,
-                    'move_id': self.id,
-                    'partner_id': line.partner_id.id,
-                    'company_id': line.company_id.id,
-                    'company_currency_id': line.company_currency_id.id,
-                    'tax_base_amount': tax_base_amount,
-                    'exclude_from_invoice_tab': True,
-                    'tax_exigible': tax.tax_exigibility == 'on_invoice',
-                    **taxes_map_entry['grouping_dict'],
-                })
-
-            if in_draft_mode:
-                taxes_map_entry['tax_line'].update(taxes_map_entry['tax_line']._get_fields_onchange_balance(force_computation=True))   
+        return taxes_mapped
 
     def action_export_xml(self):
         return True
 
-    # @api.depends(
-    #     "invoice_line_ids",
-    #     "currency_id",
-    #     "company_id",
-    #     "invoice_date",
-    #     "move_type",
-    # )
-    # def _compute_amount(self):
-    #     inv_lines = self.invoice_line_ids.filtered(
-    #         lambda l: not l.fiscal_operation_line_id
-    #         or l.fiscal_operation_line_id.add_to_amount
-    #     )
-    #     for inv_line in inv_lines:
-    #         if inv_line.cfop_id:
-    #             if inv_line.cfop_id.finance_move:
-    #                 self.amount_untaxed += inv_line.price_subtotal
-    #                 self.amount_tax += inv_line.price_tax
-    #                 self.amount_total += inv_line.price_total
-    #         else:
-    #             self.amount_untaxed += inv_line.price_subtotal
-    #             self.amount_tax += inv_line.price_tax
-    #             self.amount_total += inv_line.price_total
 
-    #     self.amount_total -= self.amount_tax_withholding
+    def _recompute_payment_terms_lines(self):
+        """Compute the dynamic payment term lines of the journal entry.
+        overwritten this method to change aml's field name.
+        """
 
-    #     amount_total_company_signed = self.amount_total
-    #     amount_untaxed_signed = self.amount_untaxed
-    #     if (
-    #         self.currency_id
-    #         and self.company_id
-    #         and self.currency_id != self.company_id.currency_id
-    #     ):
-    #         currency_id = self.currency_id
-    #         amount_total_company_signed = currency_id._convert(
-    #             self.amount_total,
-    #             self.company_id.currency_id,
-    #             self.company_id,
-    #             self.invoice_date or fields.Date.today(),
-    #         )
-    #         amount_untaxed_signed = currency_id._convert(
-    #             self.amount_untaxed,
-    #             self.company_id.currency_id,
-    #             self.company_id,
-    #             self.invoice_date or fields.Date.today(),
-    #         )
-    #     sign = self.move_type in ["in_refund", "out_refund"] and -1 or 1
-    #     # self.amount_total_company_signed = amount_total_company_signed * sign
-    #     self.amount_residual = amount_total_company_signed * sign
-    #     self.amount_total_signed = self.amount_total * sign
-    #     self.amount_tax_withholding = self.amount_total * sign
-    #     self.amount_untaxed_signed = amount_untaxed_signed * sign
-
-    @api.model
-    def invoice_line_move_line_get(self):
-        move_lines_dict = super().invoice_line_move_line_get()
-        new_mv_lines_dict = []
-        for line in move_lines_dict:
-            invoice_line = self.line_ids.filtered(lambda l: l.id == line.get("invl_id"))
-
-            if invoice_line.fiscal_operation_id:
-                if invoice_line.fiscal_operation_id.deductible_taxes:
-                    line["price"] = invoice_line.price_total
-                else:
-                    line["price"] = invoice_line.price_total - (
-                        invoice_line.amount_tax_withholding
-                        + invoice_line.amount_tax_included
-                    )
-
-            if invoice_line.cfop_id:
-                if invoice_line.cfop_id.finance_move:
-                    new_mv_lines_dict.append(line)
-            else:
-                new_mv_lines_dict.append(line)
-
-        return new_mv_lines_dict
-
-    @api.model
-    def tax_line_move_line_get(self):
-        tax_lines_dict = super().tax_line_move_line_get()
-        if self.fiscal_operation_id and self.fiscal_operation_id.deductible_taxes:
-            for tax_line in self.tax_line_ids:
-                analytic_tag_ids = [
-                    (4, analytic_tag.id, None)
-                    for analytic_tag in tax_line.analytic_tag_ids
-                ]
-
-                deductible_tax = tax_line.tax_id.tax_group_id.deductible_tax(
-                    INVOICE_TAX_USER_TYPE[self.type]
+        # TODO - esse método é executado em um onchange, na emissão de um novo
+        # documento fiscal o numero do documento pode estar em branco
+        # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
+        # antes de salva-la.
+        result = super()._recompute_payment_terms_lines()
+        if self.document_number:
+            terms_lines = self.line_ids.filtered(
+                lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
+                and l.move_id.document_type_id
+            )
+            terms_lines.sorted(lambda line: line.date_maturity)
+            for idx, terms_line in enumerate(terms_lines):
+                # TODO TODO pegar o método do self.fiscal_document_id.with_context(
+                # fiscal_document_no_company=True
+                # )._compute_document_name()
+                terms_line.name = "{}/{}-{}".format(
+                    self.document_number, idx + 1, len(terms_lines)
                 )
+        return result
 
-                if deductible_tax:
-                    account = deductible_tax.account_id or tax_line.account_id
-                    tax_line_vals = {
-                        "invoice_tax_line_id": tax_line.id,
-                        "tax_line_id": tax_line.tax_id.id,
-                        "type": "tax",
-                        "name": tax_line.name or deductible_tax.name,
-                        "price_unit": tax_line.amount_total * -1,
-                        "quantity": 1,
-                        "price": tax_line.amount_total * -1,
-                        "account_id": account.id,
-                        "account_analytic_id": tax_line.account_analytic_id.id,
-                        "analytic_tag_ids": analytic_tag_ids,
-                        "move_id": self.id,
-                    }
-                    tax_lines_dict.append(tax_line_vals)
+    # @api.model
+    # def invoice_line_move_line_get(self):
+    #     move_lines_dict = super().invoice_line_move_line_get()
+    #     new_mv_lines_dict = []
+    #     for line in move_lines_dict:
+    #         invoice_line = self.line_ids.filtered(lambda l: l.id == line.get("invl_id"))
 
-        return tax_lines_dict
-
-    # def finalize_invoice_move_lines(self, move_lines):
-    #     lines = super().finalize_invoice_move_lines(move_lines)
-    #     financial_lines = [
-    #         line for line in lines if line[2]["account_id"] == self.account_id.id
-    #     ]
-    #     count = 1
-
-    #     for line in financial_lines:
-    #         if line[2]["debit"] or line[2]["credit"]:
-    #             if self.document_type_id:
-    #                 line[2]["name"] = "{}/{}-{}".format(
-    #                     self.fiscal_document_id.with_context(
-    #                         fiscal_document_no_company=True
-    #                     )._compute_document_name(),
-    #                     count,
-    #                     len(financial_lines),
-    #                 )
-    #                 count += 1
-    #     return lines
-
-    # def get_taxes_values(self):
-    #     tax_grouped = {}
-    #     round_curr = self.currency_id.round
-    #     for line in self.line_ids:
-    #         if not line.account_id or line.display_type:
-    #             continue
-
-    #         computed_taxes = line.tax_ids.compute_all(
-    #             price_unit=line.price_unit,
-    #             currency=line.move_id.currency_id,
-    #             quantity=line.quantity,
-    #             product=line.product_id,
-    #             partner=line.move_id.partner_id,
-    #             fiscal_taxes=line.fiscal_tax_ids,
-    #             operation_line=line.fiscal_operation_line_id,
-    #             ncm=line.ncm_id,
-    #             nbs=line.nbs_id,
-    #             nbm=line.nbm_id,
-    #             cest=line.cest_id,
-    #             discount_value=line.discount_value,
-    #             insurance_value=line.insurance_value,
-    #             other_value=line.other_value,
-    #             freight_value=line.freight_value,
-    #             fiscal_price=line.fiscal_price,
-    #             fiscal_quantity=line.fiscal_quantity,
-    #             uot=line.uot_id,
-    #             icmssn_range=line.icmssn_range_id,
-    #         )["taxes"]
-
-    #         for tax in computed_taxes:
-    #             if tax.get("amount", 0.0) != 0.0:
-    #                 val = self._prepare_tax_line_vals(line, tax)
-    #                 key = (
-    #                     self.env["account.tax"].browse(tax["id"]).get_grouping_key(val)
+    #         if invoice_line.fiscal_operation_id:
+    #             if invoice_line.fiscal_operation_id.deductible_taxes:
+    #                 line["price"] = invoice_line.price_total
+    #             else:
+    #                 line["price"] = invoice_line.price_total - (
+    #                     invoice_line.amount_tax_withholding
+    #                     + invoice_line.amount_tax_included
     #                 )
 
-    #                 if key not in tax_grouped:
-    #                     tax_grouped[key] = val
-    #                     tax_grouped[key]["base"] = round_curr(val["base"])
-    #                 else:
-    #                     tax_grouped[key]["amount"] += val["amount"]
-    #                     tax_grouped[key]["base"] += round_curr(val["base"])
-    #     return tax_grouped
+    #         if invoice_line.cfop_id:
+    #             if invoice_line.cfop_id.finance_move:
+    #                 new_mv_lines_dict.append(line)
+    #         else:
+    #             new_mv_lines_dict.append(line)
+
+    #     return new_mv_lines_dict
 
     @api.onchange("fiscal_operation_id")
     def _onchange_fiscal_operation_id(self):
@@ -849,11 +632,6 @@ class AccountMove(models.Model):
         #         to_reconcile_lines.filtered(lambda l: l.reconciled).reconcile()
 
         return result
-
-    def button_cancel(self):
-        for i in self.filtered(lambda d: d.document_type_id):
-            i.fiscal_document_id.action_document_cancel()
-        return super().button_cancel()
 
     def view_xml(self):
         self.ensure_one()
