@@ -125,57 +125,6 @@ class AccountMoveLine(models.Model):
         ondelete="restrict",
     )
 
-    @api.depends(
-        "price_unit",
-        "discount",
-        "tax_ids",
-        "quantity",
-        "product_id",
-        "move_id.partner_id",
-        "move_id.currency_id",
-        "move_id.company_id",
-        "move_id.date",
-        "move_id.date",
-        "fiscal_tax_ids",
-    )
-    def _compute_price(self):
-        """Compute the amounts of the SO line."""
-        # TODO FIXME migrate. No such method in Odoo 13+
-        if self.document_type_id:
-            # Call mixin compute method
-            self._compute_amounts()
-            # Update record
-            self.update(
-                {
-                    "discount": self.discount_value,
-                    "price_subtotal": self.amount_untaxed + self.discount_value,
-                    "price_tax": self.amount_tax,
-                    "price_total": self.amount_total,
-                }
-            )
-
-            price_subtotal_signed = self.price_subtotal
-
-            if (
-                self.move_id.currency_id
-                and self.move_id.currency_id != self.move_id.company_id.currency_id
-            ):
-                currency = self.move_id.currency_id
-                date = self.move_id._get_currency_rate_date()
-                price_subtotal_signed = currency._convert(
-                    price_subtotal_signed,
-                    self.move_id.company_id.currency_id,
-                    self.company_id or self.env.company,
-                    date or fields.Date.today(),
-                )
-            sign = self.move_id.move_type in ["in_refund", "out_refund"] and -1 or 1
-            self.price_subtotal_signed = price_subtotal_signed * sign
-
-    # @api.depends('price_total')
-    # def _get_price_tax(self):
-    #     for l in self:
-    #         l.price_tax = l.price_total - l.price_subtotal
-
     @api.model
     def _shadowed_fields(self):
         """Returns the list of shadowed fields that are synced
@@ -192,7 +141,6 @@ class AccountMoveLine(models.Model):
         else:
             return False
 
-
     @api.model_create_multi
     def create(self, vals_list):
         move = ""
@@ -202,70 +150,76 @@ class AccountMoveLine(models.Model):
                 if vals_list[0].get('exclude_from_invoice_tab'):
                     return vals_list
         dummy_doc = self.env.company.fiscal_dummy_id
-        fiscal_doc_id = False
+        dummy_line = fields.first(dummy_doc.fiscal_line_ids)
+        # fiscal_doc_id = False
         for values in vals_list:
             fiscal_doc_id = (
                 self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
             )
-            if dummy_doc.id == fiscal_doc_id or values.get("exclude_from_invoice_tab"):
-                values["fiscal_document_line_id"] = fields.first(dummy_doc.fiscal_line_ids).id
+            if fiscal_doc_id == dummy_doc.id or values.get("exclude_from_invoice_tab"):
+                values["fiscal_document_line_id"] = dummy_line.id
 
-            price = values.get("price_unit")
-            if move and values.get("currency_id") != move.company_id.currency_id.id:
-                values.update({"currency_id": move.company_id.currency_id.id})
-                if price:
-                    price = move.currency_id._convert(
-                        price,
-                        move.company_id.currency_id,
-                        move.company_id or self.env.company,
-                        move.date or fields.Date.today(),
-                    )
+            # price = values.get("price_unit")
+            # if move and values.get("currency_id") != move.company_id.currency_id.id:
+            #     values.update({"currency_id": move.company_id.currency_id.id})
+            #     if price:
+            #         price = move.currency_id._convert(
+            #             price,
+            #             move.company_id.currency_id,
+            #             move.company_id or self.env.company,
+            #             move.date or fields.Date.today(),
+            #         )
 
             values.update(
                 self._update_fiscal_quantity(
                     values.get("product_id"),
-                    price,
+                    values.get("price_unit"),
                     values.get("quantity"),
                     values.get("uom_id"),
                     values.get("uot_id"),
                 )
             )
-        lines = super().create(vals_list)
 
-        # if fiscal_doc_id and dummy_doc.id != fiscal_doc_id:
-        if dummy_doc.id != fiscal_doc_id:
-            for line in lines:
-                # # verificar se carregou o NCM
-                if not line.ncm_id:
-                    line.ncm_id = line.product_id.ncm_id.id
-                shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-                if shadowed_fiscal_vals:
-                    doc_id = line.move_id.fiscal_document_id.id
-                    shadowed_fiscal_vals["document_id"] = doc_id
-                    line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+        lines = super().create(vals_list)
+        for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
+            shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
+            if shadowed_fiscal_vals:
+                doc_id = line.move_id.fiscal_document_id.id
+                shadowed_fiscal_vals["document_id"] = doc_id
+                line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+
         return lines
 
     def write(self, values):
-        result = super().write(values)
+        dummy_doc = self.env.company.fiscal_dummy_id
+        dummy_line = fields.first(dummy_doc.fiscal_line_ids)
+        non_dummy = self.filtered(lambda l: l.fiscal_document_line_id != dummy_line)
+        if values.get("move_id") and len(non_dummy) == len(self):
+            # we can write the document_id in all lines
+            values["document_id"] = (
+                self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
+            )
+            result = super().write(values)
+        elif values.get("move_id"):
+            # we will only define document_id for non dummy lines
+            result = super().write(values)
+            doc_id = (
+                self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
+            )
+            super(AccountMoveLine, non_dummy).write({"document_id": doc_id})
+        else:
+            result = super().write(values)
+
         for line in self:
             if line.wh_move_line_id and (
                 "quantity" in values or "price_unit" in values
             ):
                 raise UserError(
-                    _("You can't edit one invoice related a withholding entry")
+                    _("You cannot edit an invoice related to a withholding entry")
                 )
-            dummy_doc = self.env.company.fiscal_dummy_id
-            dummy_line = fields.first(dummy_doc.fiscal_line_ids)
             if line.fiscal_document_line_id != dummy_line:
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-                if shadowed_fiscal_vals:
-                    line.fiscal_document_line_id.write(shadowed_fiscal_vals)
-            if values.get("move_id"):
-                if line.product_id:
-                    line.write({"document_id": 
-                        self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-                    })
-
+                line.fiscal_document_line_id.write(shadowed_fiscal_vals)
         return result
 
     def unlink(self):
