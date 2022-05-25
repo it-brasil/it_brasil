@@ -217,9 +217,11 @@ class AccountMoveLine(models.Model):
                 raise UserError(
                     _("You cannot edit an invoice related to a withholding entry")
                 )
+
             if line.fiscal_document_line_id != dummy_line:
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-                line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+                if shadowed_fiscal_vals:
+                    line.fiscal_document_line_id.write(shadowed_fiscal_vals)
         return result
 
     def unlink(self):
