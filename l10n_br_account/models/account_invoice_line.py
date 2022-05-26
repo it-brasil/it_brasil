@@ -157,6 +157,13 @@ class AccountMoveLine(models.Model):
                 self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
             )
             if fiscal_doc_id == dummy_doc.id or values.get("exclude_from_invoice_tab"):
+                if len(dummy_line) < 1:
+                    raise UserError(
+                        _(
+                            "Document line dummy not found. Please contact "
+                            "your system administrator."
+                        )
+                    )                
                 values["fiscal_document_line_id"] = dummy_line.id
 
             # price = values.get("price_unit")
@@ -182,6 +189,11 @@ class AccountMoveLine(models.Model):
 
         lines = super().create(vals_list)
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
+            # # verificar se carregou o NCM
+            if not line.ncm_id:
+                line.ncm_id = line.product_id.ncm_id.id
+            if not line.uom_id:
+                line.uom_id = line.product_id.uom_id.id 
             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
             if shadowed_fiscal_vals:
                 doc_id = line.move_id.fiscal_document_id.id
