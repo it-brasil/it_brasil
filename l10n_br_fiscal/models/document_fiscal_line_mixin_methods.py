@@ -502,25 +502,26 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             self.icms_reduction = tax_dict.get("percent_reduction")
             self.icms_value = tax_dict.get("tax_value")
 
-            # vBCUFDest - Valor da BC do ICMS na UF de destino
-            self.icms_destination_base = tax_dict.get("icms_dest_base")
+            if tax_dict.get("icms_dest_base"):
+                # vBCUFDest - Valor da BC do ICMS na UF de destino
+                self.icms_destination_base = tax_dict.get("icms_dest_base")
 
-            # pICMSUFDest - Alíquota interna da UF de destino
-            self.icms_origin_percent = tax_dict.get("icms_origin_perc")
+                # pICMSUFDest - Alíquota interna da UF de destino
+                self.icms_origin_percent = tax_dict.get("icms_origin_perc")
 
-            # pICMSInter - Alíquota interestadual das UF envolvidas
-            self.icms_destination_percent = tax_dict.get("icms_dest_perc")
+                # pICMSInter - Alíquota interestadual das UF envolvidas
+                self.icms_destination_percent = tax_dict.get("icms_dest_perc")
 
-            # pICMSInterPart - Percentual provisório de partilha
-            # do ICMS Interestadual
-            self.icms_sharing_percent = tax_dict.get("icms_sharing_percent")
+                # pICMSInterPart - Percentual provisório de partilha
+                # do ICMS Interestadual
+                self.icms_sharing_percent = tax_dict.get("icms_sharing_percent")
 
-            # vICMSUFRemet - Valor do ICMS Interestadual
-            # para a UF do remetente
-            self.icms_origin_value = tax_dict.get("icms_origin_value")
+                # vICMSUFRemet - Valor do ICMS Interestadual
+                # para a UF do remetente
+                self.icms_origin_value = tax_dict.get("icms_origin_value")
 
-            # vICMSUFDest - Valor do ICMS Interestadual para a UF de destino
-            self.icms_destination_value = tax_dict.get("icms_dest_value")
+                # vICMSUFDest - Valor do ICMS Interestadual para a UF de destino
+                self.icms_destination_value = tax_dict.get("icms_dest_value")
 
     @api.onchange(
         "icms_base",
