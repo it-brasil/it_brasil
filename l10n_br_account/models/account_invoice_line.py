@@ -188,12 +188,14 @@ class AccountMoveLine(models.Model):
             )
 
         lines = super().create(vals_list)
+        for line in lines:
+            line._update_taxes()
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
             # # verificar se carregou o NCM
-            if not line.ncm_id:
-                line.ncm_id = line.product_id.ncm_id.id
-            if not line.uom_id:
-                line.uom_id = line.product_id.uom_id.id 
+            # if not line.ncm_id:
+            #     line.ncm_id = line.product_id.ncm_id.id
+            # if not line.uom_id:
+            #     line.uom_id = line.product_id.uom_id.id 
             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
             if shadowed_fiscal_vals:
                 doc_id = line.move_id.fiscal_document_id.id

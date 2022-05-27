@@ -29,7 +29,6 @@ class AccountMove(models.Model):
         return values
 
     def _prepare_wh_invoice_line(self, invoice, move_line):
-        # import pudb;pu.db
         values = {
             "name": move_line.name,
             "quantity": move_line.quantity,

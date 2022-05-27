@@ -218,93 +218,6 @@ class AccountMove(models.Model):
             defaults["issuer"] = DOCUMENT_ISSUER_PARTNER
         return defaults
 
-    # def recalcula(self, invoice):
-    #     for order in invoice:
-    #         # if order.amount_financial_total == order.amount_total:
-    #         #     continue
-    #         res = {}
-    #         icms_base = 0.0
-    #         icms_value = 0.0
-    #         ipi_base = 0.0
-    #         ipi_value = 0.0
-    #         pis_base = 0.0
-    #         pis_value = 0.0
-    #         cofins_base = 0.0
-    #         cofins_value = 0.0                    
-
-    #         for line in order.invoice_line_ids:
-    #             print('Linha : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
-    #             taxes = line._compute_taxes(line.fiscal_tax_ids)["taxes"]
-    #             for tax in line.fiscal_tax_ids:
-    #                 computed_tax = taxes.get(tax.tax_domain)
-    #                 pr = order.currency_id.rounding
-    #                 if computed_tax and not float_is_zero(
-    #                     computed_tax.get("tax_value", 0.0), precision_rounding=pr
-    #                 ):
-    #                     group = tax.tax_group_id
-    #                     res.setdefault(group, {"amount": 0.0, "base": 0.0})
-    #                     res[group]["amount"] += computed_tax.get("tax_value", 0.0)
-    #                     res[group]["base"] += computed_tax.get("base", 0.0)
-    #             if taxes.get('icms')['base']:
-    #                 line.icms_base = taxes.get('icms')['base']
-    #                 line.icms_value = taxes.get('icms')['tax_value']
-    #                 icms_base += line.icms_base
-    #                 icms_value += line.icms_value
-    #             if taxes.get('ipi')['base']:
-    #                 line.ipi_base = taxes.get('ipi')['base']
-    #                 line.ipi_value = taxes.get('ipi')['tax_value']
-    #                 ipi_base += line.ipi_base
-    #                 ipi_value += line.ipi_value
-
-    #             if taxes.get('pis')['base']:
-    #                 line.pis_base = taxes.get('pis')['base']
-    #                 line.pis_value = taxes.get('pis')['tax_value']
-    #                 pis_base += line.pis_base
-    #                 pis_value += line.pis_value
-
-    #             if taxes.get('cofins')['base']:
-    #                 line.cofins_base = taxes.get('cofins')['base']
-    #                 line.cofins_value = taxes.get('cofins')['tax_value']
-    #                 cofins_base += line.cofins_base
-    #                 cofins_value += line.cofins_value
-
-    #             compute_result = line._compute_taxes(line.fiscal_tax_ids)
-    #             line.amount_tax_included = compute_result.get("amount_included", 0.0)
-    #             line.amount_tax_not_included = compute_result.get(
-    #                 "amount_not_included", 0.0
-    #             )
-    #             line.amount_tax_withholding = compute_result.get("amount_withholding", 0.0)
-    #             line.estimate_tax = compute_result.get("estimate_tax", 0.0)
-    #             # total += line.amount_tax_included
-
-    #         diferenca = 0.0
-    #         dif_ipi = 0.0
-    #         dif_deb = 0.0
-    #         for line in order.line_ids:
-    #             print('Linha XX : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
-
-    #             if 'IPI' in line.name and line.credit:
-    #                 diferenca = line.credit - ipi_value
-    #                 if diferenca:
-    #                     dif_ipi = ipi_value
-    #                     print('Linha CC : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
-    #         for line in order.line_ids:
-    #             if 'Receber' in line.account_id.user_type_id.name and line.debit and diferenca:
-    #                     # import pudb;pu.db
-    #                     dif_deb = line.debit - diferenca
-    #                     print('Linha DD : %s - %s - %s' %(line.name, str(line.credit), str(line.debit)))
-    #         if dif_ipi and dif_deb:
-    #             line.write({ })
-    #         # order.amount_total = total
-    #         order.amount_icms_base = icms_base
-    #         order.amount_icms_value = icms_value
-    #         order.amount_ipi_base = ipi_base
-    #         order.amount_ipi_value = ipi_value
-    #         order.amount_cofins_base = cofins_base
-    #         order.amount_cofins_value = cofins_value
-    #         order.amount_pis_base = pis_base
-    #         order.amount_pis_value = pis_value
-
     @api.model_create_multi
     def create(self, values):
         for vals in values:
@@ -312,23 +225,7 @@ class AccountMove(models.Model):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
 
-        # if invoice.document_type:
-        #     self.recalcula(invoice)
-        
         invoice._write_shadowed_fields()
-        # total_geral = 0.0
-        # total_ipi = 0.0
-        # for line in invoice.invoice_line_ids:
-        #     total_geral += line.price_subtotal
-        #     total_ipi += line.ipi_value
-        # # import pudb;pu.db
-        # if invoice.amount_total != total_geral:
-        #     invoice.write({
-        #         'amount_total': total_geral+total_ipi,
-        #         'amount_total_signed': total_geral+total_ipi,
-        #         'amount_tax': total_ipi,
-        #         'amount_ipi_value': total_ipi,
-        #     })
         return invoice
 
     def write(self, values):
@@ -721,4 +618,3 @@ class AccountMove(models.Model):
     #                 result[i][2][name] = [(6, 0, line[name].ids)]
 
     #     return result
-
