@@ -11,6 +11,8 @@ class SaleOrderLine(models.Model):
     _name = 'sale.order.line'
     _inherit = [_name, 'l10n_br_fiscal.document.line.mixin']
 
+    country_id = fields.Many2one(related="company_id.country_id", store=True)
+
     @api.model
     def _default_fiscal_operation(self):
         return self.env.user.company_id.sale_fiscal_operation_id
@@ -168,6 +170,14 @@ class SaleOrderLine(models.Model):
             result["quantity"] = self.qty_to_invoice
             result["partner_order"] = self.partner_order
             result["partner_order_line"] = self.partner_order_line
+
+        # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
+        # fica errado e na linha do diario tbem (ipi)
+        if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
+                result["uot_id"] = self.product_id.uot_id
+                result["fiscal_price"] = self.price_unit / (self.product_id.uot_factor or 1.0)
+                result["fiscal_quantity"] = self.qty_to_invoice * (self.product_id.uot_factor or 1.0)
+
         result.update(super()._prepare_invoice_line(**optional_values))
         return result
 
