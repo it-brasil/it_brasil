@@ -166,10 +166,8 @@ class SaleOrderLine(models.Model):
         self.ensure_one()
         result = self._prepare_br_fiscal_dict()
         if self.product_id and self.product_id.invoice_policy == "delivery":
+            self._compute_qty_delivered()
             result["fiscal_quantity"] = self.qty_to_invoice
-            result["quantity"] = self.qty_to_invoice
-            result["partner_order"] = self.partner_order
-            result["partner_order_line"] = self.partner_order_line
 
         # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
         # fica errado e na linha do diario tbem (ipi)

@@ -189,9 +189,10 @@ class AccountMoveLine(models.Model):
 
         lines = super().create(vals_list)
 
-        # funcao necessaria para recalcular os valores dos tributos qdo fatura Parcial um pedido
-        for line in lines:
-            line._update_taxes()
+        # # funcao necessaria para recalcular os valores dos tributos qdo fatura Parcial um pedido
+        # for line in lines:
+        #     # print('%s-%s' %(line.name, str(line.price_subtotal)))
+        #     line._update_taxes()
 
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
             # # verificar se carregou o NCM

@@ -309,6 +309,12 @@ class SaleOrder(models.Model):
         document_type_list = []
 
         for invoice_id in inv_ids:
+
+            # In the case of partial deliveries, recalculates the calculation
+            # base and tax amounts
+            for line in invoice_id.invoice_line_ids:
+                line._onchange_fiscal_tax_ids()
+
             invoice_created_by_super = invoice_id
 
             # Identify how many Document Types exist
