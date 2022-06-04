@@ -36,17 +36,17 @@ class StockPicking(models.Model):
         domain=lambda self: self._fiscal_operation_domain(),
     )
 
+    operation_name = fields.Char(
+        string="Operation Name",
+        copy=False,
+    )
+
     comment_ids = fields.Many2many(
         comodel_name="l10n_br_fiscal.comment",
         relation="stock_picking_comment_rel",
         column1="picking_id",
         column2="comment_id",
         string="Comments",
-    )
-
-    operation_name = fields.Char(
-        string="Operation Name",
-        copy=False,
     )
 
     def _get_amount_lines(self):
@@ -56,3 +56,40 @@ class StockPicking(models.Model):
     @api.depends("move_lines")
     def _compute_amount(self):
         super()._compute_amount()
+
+    @api.model
+    def fields_view_get(
+        self, view_id=None, view_type="form", toolbar=False, submenu=False
+    ):
+
+        order_view = super().fields_view_get(view_id, view_type, toolbar, submenu)
+
+        if view_type == "form":
+
+            view = self.env["ir.ui.view"]
+
+            sub_form_view = order_view["fields"]["move_ids_without_package"]["views"][
+                "form"
+            ]["arch"]
+
+            sub_form_node = self.env["stock.move"].inject_fiscal_fields(sub_form_view)
+
+            sub_arch, sub_fields = view.postprocess_and_fields(
+                sub_form_node, "stock.move", None
+            )
+
+            order_view["fields"]["move_ids_without_package"]["views"]["form"] = {
+                "fields": sub_fields,
+                "arch": sub_arch,
+            }
+
+        return order_view
+
+    @api.onchange("fiscal_operation_id")
+    def _onchange_fiscal_operation_id(self):
+        super()._onchange_fiscal_operation_id()
+        if self.fiscal_operation_id:
+            for mv in self.move_ids_without_package:
+                mv.partner_id = self.partner_id
+                mv.fiscal_operation_id = self.fiscal_operation_id.id
+                mv._onchange_fiscal_operation_id()

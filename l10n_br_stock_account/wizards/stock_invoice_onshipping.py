@@ -13,9 +13,10 @@ class StockInvoiceOnshipping(models.TransientModel):
         default=True,
     )
 
-    # group = fields.Selection(
-    #     selection_add=[("fiscal_operation", "Fiscal Operation")],
-    # )
+    group = fields.Selection(
+        selection_add=[("fiscal_operation", "Fiscal Operation")],
+        ondelete={"fiscal_operation": "set default"},
+    )
 
     def _get_journal(self):
         """
