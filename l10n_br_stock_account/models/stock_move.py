@@ -59,13 +59,13 @@ class StockMove(models.Model):
         string="Comments",
     )
 
-    ind_final = fields.Selection(related="picking_id.ind_final")
-
     # O price_unit fica negativo por metodos do core
     # durante o processo chamado pelo botão Validate p/
     # valorização de estoque, sem o compute o valor permance positivo.
     # A Fatura é criada com os dois valores positivos.
     fiscal_price = fields.Float(compute="_compute_fiscal_price")
+
+    ind_final = fields.Selection(related="picking_id.ind_final")
 
     @api.onchange("product_id", "product_uom", "product_uom_qty", "price_unit")
     def _onchange_product_quantity(self):
@@ -88,8 +88,8 @@ class StockMove(models.Model):
         # com mais de uma Operação Fiscal, nesses outros modulos é feita a
         # alteração para usar a Operação Fiscal principal, isso é a do
         # cabeçalho do Pedido
-        # result.update({"fiscal_operation_id": self.mapped("fiscal_operation_id")[0].id})
-        result.update({"fiscal_operation_id": self.fiscal_operation_id.id})
+        if self.mapped("fiscal_operation_id"):
+            result.update({"fiscal_operation_id": self.mapped("fiscal_operation_id")[0].id})
         # A mesma questão do self, aqui se uma linha for
         # 2binvoiced o Picking também será
         result.update({"invoice_state": self.mapped("invoice_state")[0]})
@@ -119,6 +119,7 @@ class StockMove(models.Model):
         return values
 
     def _get_price_unit_invoice(self, inv_type, partner, qty=1):
+
         result = super()._get_price_unit_invoice(inv_type, partner, qty)
         product = self.mapped("product_id")
         product.ensure_one()
@@ -132,7 +133,7 @@ class StockMove(models.Model):
         return result
 
     def _get_price_unit(self):
-        """ Returns the unit price to store on the quant """
+        """Returns the unit price to store on the quant"""
         result = super()._get_price_unit()
 
         # No Brasil o caso de Ordens de Entrega com Operação Fiscal
