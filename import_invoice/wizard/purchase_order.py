@@ -17,29 +17,36 @@ class PurchaseOrderWizard(models.TransientModel):
         root =  ET.ElementTree(ET.fromstring(base)).getroot()
         cnpj_emit = root.find(".//{http://www.portalfiscal.inf.br/nfe}emit/{http://www.portalfiscal.inf.br/nfe}CNPJ").text
         
-        pucharse = self.env["purchase.order"].browse(self._context.get("active_id"))
-        cnpj_fornecedor = self.clear_cnpj(pucharse.partner_id.cnpj_cpf) if pucharse.partner_id.cnpj_cpf else False
+        purchase = self.env["purchase.order"].browse(self._context.get("active_id"))
+        cnpj_fornecedor = self.clear_cnpj(purchase.partner_id.cnpj_cpf) if purchase.partner_id.cnpj_cpf else False
         cnpj_xml = self.clear_cnpj(cnpj_emit)
 
         if cnpj_fornecedor != cnpj_xml:
             raise UserError(_("O CNPJ do emitente não é igual ao CNPJ do parceiro do pedido de compras"))
 
         itens =  {}
-        for item in ["chNFe","serie","nProt","dhRecbto","dhEmi"]:
+        search_itens = ["nNF", "chNFe","serie","nProt","finNFe", "dhRecbto","dhEmi"]
+        
+        for item in search_itens:
             src = root.find(".//{http://www.portalfiscal.inf.br/nfe}"+ item).text
             if item in ["dhRecbto","dhEmi"]:
                 src = src.replace("T"," ").replace("-03:00","")
             itens[item] = src
+        
+        _logger.info(["[DEBUG]", itens])
 
         vals = {
-            "document_number": itens["chNFe"],
+            "document_number": itens["nNF"],
+            "document_key": itens["chNFe"],
             "document_serie": itens["serie"],
             "authorization_protocol": itens["nProt"],
             "invoice_date": itens["dhEmi"],
+            "date": itens["dhEmi"],
             "authorization_date": itens["dhRecbto"],
+            "edoc_purpose": itens["finNFe"],
         } 
         
-        invoice = pucharse.action_create_invoice()
+        invoice = purchase.action_create_invoice()
         self.env["account.move"].browse(invoice).write(vals)
 
     def clear_cnpj(self, cnpj):
