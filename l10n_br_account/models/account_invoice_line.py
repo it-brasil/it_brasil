@@ -73,6 +73,8 @@ class AccountMoveLine(models.Model):
 
     partner_company_type = fields.Selection(related="partner_id.company_type")
 
+    ind_final = fields.Selection(related="move_id.ind_final")
+
     fiscal_genre_code = fields.Char(
         related="fiscal_genre_id.code",
         string="Fiscal Product Genre Code",
@@ -166,17 +168,6 @@ class AccountMoveLine(models.Model):
                     )                
                 values["fiscal_document_line_id"] = dummy_line.id
 
-            # price = values.get("price_unit")
-            # if move and values.get("currency_id") != move.company_id.currency_id.id:
-            #     values.update({"currency_id": move.company_id.currency_id.id})
-            #     if price:
-            #         price = move.currency_id._convert(
-            #             price,
-            #             move.company_id.currency_id,
-            #             move.company_id or self.env.company,
-            #             move.date or fields.Date.today(),
-            #         )
-
             values.update(
                 self._update_fiscal_quantity(
                     values.get("product_id"),
@@ -188,18 +179,10 @@ class AccountMoveLine(models.Model):
             )
 
         lines = super().create(vals_list)
-
-        # # funcao necessaria para recalcular os valores dos tributos qdo fatura Parcial um pedido
         # for line in lines:
-        #     # print('%s-%s' %(line.name, str(line.price_subtotal)))
-        #     line._update_taxes()
+        #     self._onchange_fiscal_operation_line_id()
 
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
-            # # verificar se carregou o NCM
-            # if not line.ncm_id:
-            #     line.ncm_id = line.product_id.ncm_id.id
-            # if not line.uom_id:
-            #     line.uom_id = line.product_id.uom_id.id 
             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
             if shadowed_fiscal_vals:
                 doc_id = line.move_id.fiscal_document_id.id
