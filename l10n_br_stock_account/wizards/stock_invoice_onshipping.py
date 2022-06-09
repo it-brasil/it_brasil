@@ -102,14 +102,33 @@ class StockInvoiceOnshipping(models.TransientModel):
 
         values.update(fiscal_values)
 
+        # Assim nao entrava as taxas DEDUTIVEIS
+        # values["tax_ids"] = [
+        #     (
+        #         6,
+        #         0,
+        #         self.env["l10n_br_fiscal.tax"]
+        #         .browse(move.tax_id.ids)
+        #         .account_taxes()
+        #         .ids,
+        #     )
+        # ]
+
+        # aqui passo as taxas dedutiveis
+        type = "purchase"
+        if move.fiscal_operation_id.fiscal_operation_type == 'in':
+            type = "sale"
+        tax_ids = move.fiscal_tax_ids.account_taxes(user_type=type).ids
+        if move.fiscal_operation_id.deductible_taxes:
+            tax_ids += move.fiscal_tax_ids.account_taxes(
+                user_type=type, deductible=True
+            ).ids
+
         values["tax_ids"] = [
             (
                 6,
                 0,
-                self.env["l10n_br_fiscal.tax"]
-                .browse(fiscal_values["fiscal_tax_ids"])
-                .account_taxes()
-                .ids,
+                tax_ids,
             )
         ]
 
@@ -133,3 +152,39 @@ class StockInvoiceOnshipping(models.TransientModel):
                 key = (key, move.fiscal_operation_line_id)
 
         return key
+
+    # Usei esta funcao para corrigir quando tem Unidade Fiscal no item
+    # e para carregar a conta que esta nos tributos
+    def _create_invoice(self, invoice_values):
+        """Override this method if you need to change any values of the
+        invoice and the lines before the invoice creation
+        :param invoice_values: dict with the invoice and its lines
+        :return: invoice
+        """
+        
+        for values in invoice_values['invoice_line_ids']:
+            if len(values) == 3 and not 'product_id' in values[2]:
+                continue
+            product = self.env["product.product"].browse([values[2]['product_id']])
+            if product and product.uot_id and product.uom_id != product.uot_id:
+                values[2]["uot_id"] = product.uot_id.id
+                values[2]["fiscal_price"] = values[2]['price_unit'] / (product.uot_factor or 1.0)
+                values[2]["fiscal_quantity"] = values[2]['quantity'] * (product.uot_factor or 1.0)
+
+        invoice = super()._create_invoice(invoice_values)
+
+        for invoice_id in invoice:
+            # In the case of partial deliveries, recalculates the calculation
+            # base and tax amounts
+            for line in invoice_id.invoice_line_ids:
+                line._onchange_fiscal_tax_ids()
+
+        # Estava saindo com a Conta errada no line_ids
+        for inv_line in invoice.line_ids:
+            for tax in inv_line.tax_ids:
+                for inv in invoice.line_ids:
+                    if inv.name == tax.name:
+                        for rep in tax.invoice_repartition_line_ids:
+                            if rep.account_id and rep.account_id != inv.account_id:
+                                inv.account_id = rep.account_id.id
+        return invoice
