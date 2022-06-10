@@ -93,6 +93,7 @@
             <field
                             name="ipi_guideline_id"
                             attrs="{'invisible': [('tax_domain', '!=', 'ipi')]}"
+                            options="{'no_create': True, 'no_create_edit': True}"
                         />
           </group>
           <group
@@ -104,7 +105,7 @@
                         name="state_from_id"
                         options="{'no_create': True, 'no_create_edit': True}"
                     />
-            <field name="state_to_ids" />
+            <field name="state_to_ids" options="{'no_create': True}" />
           </group>
           <notebook>
             <page name="ncms_page" string="NCM">
@@ -176,11 +177,26 @@
                     />
               </group>
             </page>
+            <page name="city_taxation_codes_page" string="City Taxation Code">
+              <group name="city_taxation_codes" string="City Taxation Codes">
+                <field
+                                    name="city_taxation_code_ids"
+                                    force_save="1"
+                                    nolabel="1"
+                                    colspan="2"
+                                />
+              </group>
+            </page>
             <page name="products_page" string="Product">
               <group name="products" string="Products">
                 <field name="product_ids" force_save="1" nolabel="1" colspan="2" />
               </group>
             </page>
+            <page name="fiscal_profile_page" string="Fiscal Profile">
+              <group name="fiscal_profile" string="Fiscal Profile">
+                  <field name="ind_final" />
+              </group>
+          </page>
           </notebook>
         </sheet>
         <div class="oe_chatter">

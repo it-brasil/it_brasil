@@ -5,6 +5,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 from ..constants.fiscal import (
+    FINAL_CUSTOMER,
     FISCAL_IN_OUT,
     FISCAL_OUT,
     OPERATION_STATE,
@@ -198,6 +199,19 @@ class TaxDefinition(models.Model):
         string="Products",
     )
 
+    city_taxation_code_ids = fields.Many2many(
+        comodel_name="l10n_br_fiscal.city.taxation.code",
+        relation="tax_definition_city_taxation_code_rel",
+        column1="tax_definition_id",
+        column2="city_taxation_code_id",
+        string="City Taxation Codes",
+    )
+
+    ind_final = fields.Selection(
+        selection=FINAL_CUSTOMER,
+        string="Final Consumption Operation",
+    )
+
     date_start = fields.Datetime(
         string="Start Date",
         readonly=True,
@@ -331,7 +345,15 @@ class TaxDefinition(models.Model):
         return write_super
 
     def map_tax_definition(
-        self, company, partner, product, ncm=None, nbm=None, nbs=None, cest=None
+        self,
+        company,
+        partner,
+        product,
+        ncm=None,
+        nbm=None,
+        nbs=None,
+        cest=None,
+        city_taxation_code=None,
     ):
 
         if not ncm:
@@ -357,6 +379,9 @@ class TaxDefinition(models.Model):
             "|",
             ("cest_ids", "=", False),
             ("cest_ids", "=", cest.id),
+            "|",
+            ("city_taxation_code_ids", "=", False),
+            ("city_taxation_code_ids", "=", city_taxation_code.id),
             "|",
             ("product_ids", "=", False),
             ("product_ids", "=", product.id),

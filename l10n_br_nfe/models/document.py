@@ -500,10 +500,12 @@ class NFe(spec_models.StackedModel):
                 if fin.account_id.user_type_id.type in ('receivable', 'payable'):
                     modo = fin.move_id.payment_mode_id.fiscal_payment_mode
                     avista_aprazo = fin.move_id.payment_mode_id.ind_pag
-                    if fin.account_id.user_type_id.type == 'receivable':
-                        valor += fin.debit
-                    if fin.account_id.user_type_id.type == 'payable':
-                        valor += fin.credit
+                    # estava dando erro aqui qdo era devolucao
+                    # if fin.account_id.user_type_id.type == 'receivable' and (
+                        # self.fiscal_operation_id.fiscal_type == 'sale':
+                    valor += fin.debit + fin.credit
+                    # if fin.account_id.user_type_id.type == 'payable' and self.fiscal_operation_id.fiscal_type == 'purchase' :
+                        # valor += fin.credit
 
             self.nfe40_detPag = [
                 (5, 0, 0),
