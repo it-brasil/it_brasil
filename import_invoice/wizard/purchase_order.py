@@ -1,11 +1,17 @@
+from datetime import datetime, timedelta
 import logging
 import base64
 import xml.etree.ElementTree as ET
 from odoo import fields, models, _
-from odoo.exceptions import UserError 
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
+notification = {
+    "type": "ir.actions.client",
+    "tag": "display_notification",
+    "params": {"next": {"type": "ir.actions.act_window_close"}},
+}
 
 class PurchaseOrderWizard(models.TransientModel):
     _name = "purchase.order.wizard"
@@ -25,7 +31,7 @@ class PurchaseOrderWizard(models.TransientModel):
             raise UserError(_("O CNPJ do emitente não é igual ao CNPJ do parceiro do pedido de compras"))
 
         itens =  {}
-        search_itens = ["nNF", "chNFe","serie","nProt","finNFe", "dhRecbto","dhEmi"]
+        search_itens = ["nNF", "chNFe","serie","nProt","finNFe", "dhRecbto","dhEmi","vNF"]
         
         for item in search_itens:
             src = root.find(".//{http://www.portalfiscal.inf.br/nfe}"+ item).text
@@ -46,8 +52,27 @@ class PurchaseOrderWizard(models.TransientModel):
             "edoc_purpose": itens["finNFe"],
         } 
         
-        invoice = purchase.action_create_invoice()
-        self.env["account.move"].browse(invoice).write(vals)
+        if "{:.2f}".format(purchase.amount_total) != itens["vNF"]:
+            vals_activity = {
+                "summary": f"Valores Divergentes (PO {purchase.name})",
+                "note": f"Valor total do xml difere do total do pedido de compras (PO {purchase.name})",
+                "date_deadline": datetime.today() + timedelta(days=5),
+                "user_id": purchase.user_id.id or 1,
+                "activity_type_id": 4,
+                "res_model_id": 539,
+                "res_id": purchase.id,
+            }
+            self.env["mail.activity"].create(vals_activity)
+            notification["params"].update(
+                {
+                    "title": _("Atenção"),
+                    "message": _("Valor total do xml difere do total do pedido de compras, uma atividade foi aberta para que isso seja analisado"),
+                    "type": "warning",
+                }
+            )
+            return notification
+        invoice_id = purchase.action_create_invoice()            
+        self.env["account.move"].browse(invoice_id).write(vals)
 
     def clear_cnpj(self, cnpj):
         return cnpj.replace(".","").replace("/","").replace("-","")
