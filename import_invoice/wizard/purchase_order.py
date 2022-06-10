@@ -51,12 +51,14 @@ class PurchaseOrderWizard(models.TransientModel):
             "authorization_date": itens["dhRecbto"],
             "edoc_purpose": itens["finNFe"],
         } 
-        
+
         if "{:.2f}".format(purchase.amount_total) != itens["vNF"]:
             vals_activity = {
                 "summary": f"Valores Divergentes (PO {purchase.name})",
-                "note": f"Valor total do xml difere do total do pedido de compras (PO {purchase.name})",
-                "date_deadline": datetime.today() + timedelta(days=5),
+                "note": f"Valor total do xml difere do total do pedido de compras (PO {purchase.name})" +
+                        f"<br><br> Número da nota: {itens['nNF']} <br>Chave da nota: {itens['chNFe']}" + 
+                        f"<br>Valor da nota: {itens['vNF']}  | Valor do pedido: {'{:.2f}'.format(purchase.amount_total)}",
+                "date_deadline": datetime.today(),
                 "user_id": purchase.user_id.id or 1,
                 "activity_type_id": 4,
                 "res_model_id": self.env["ir.model"].search([("model","=","purchase.order")]).id,
@@ -71,6 +73,7 @@ class PurchaseOrderWizard(models.TransientModel):
                 }
             )
             return notification
+        
         invoice_id = purchase.action_create_invoice()            
         self.env["account.move"].browse(invoice_id).write(vals)
 
