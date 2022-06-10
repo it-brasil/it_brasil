@@ -51,6 +51,7 @@ SHADOWED_FIELDS = [
     "company_id",
     "currency_id",
     "partner_shipping_id",
+    "user_id",
 ]
 
 
@@ -268,7 +269,6 @@ class AccountMove(models.Model):
     def _compute_taxes_mapped(self, base_line):
 
         move = base_line.move_id
-
         if move.is_invoice(include_receipts=True):
             handle_price_include = True
             sign = -1 if move.is_inbound() else 1
@@ -432,21 +432,6 @@ class AccountMove(models.Model):
         for invoice in self:
             if invoice.document_type_id:
                 if invoice.issuer == DOCUMENT_ISSUER_COMPANY:
-                    if (
-                        not invoice.comment_ids
-                        and invoice.fiscal_operation_id.comment_ids
-                    ):
-                        invoice.comment_ids |= self.fiscal_operation_id.comment_ids
-
-                    for line in invoice.line_ids:
-                        if (
-                            not line.comment_ids
-                            and line.fiscal_operation_line_id.comment_ids
-                        ):
-                            line.comment_ids |= (
-                                line.fiscal_operation_line_id.comment_ids
-                            )
-
                     invoice.fiscal_document_id._document_date()
                     invoice.fiscal_document_id._document_number()
 
