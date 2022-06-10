@@ -382,7 +382,7 @@ class TaxDefinition(models.Model):
             "|",
             ("city_taxation_code_ids", "=", False),
             ("city_taxation_code_ids", "=", city_taxation_code.id),
-            "|"
+            "|",
             ("product_ids", "=", False),
             ("product_ids", "=", product.id),
         ]
