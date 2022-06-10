@@ -59,7 +59,7 @@ class PurchaseOrderWizard(models.TransientModel):
                 "date_deadline": datetime.today() + timedelta(days=5),
                 "user_id": purchase.user_id.id or 1,
                 "activity_type_id": 4,
-                "res_model_id": 539,
+                "res_model_id": self.env["ir.model"].search([("model","=","purchase.order")]).id,
                 "res_id": purchase.id,
             }
             self.env["mail.activity"].create(vals_activity)
