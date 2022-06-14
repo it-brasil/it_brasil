@@ -373,7 +373,7 @@ class AccountMove(models.Model):
                 # fiscal_document_no_company=True
                 # )._compute_document_name()
                 terms_line.name = "{}/{}-{}".format(
-                    self.document_number, idx + 1, len(terms_lines)
+                    self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
                 )
         return result
 
