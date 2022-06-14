@@ -68,7 +68,7 @@ class AccountMove(models.Model):
             #  ocorre da linha vir vazia o que impede de entrar no FOR
             #  abaixo causando o não preenchimento de dados usados no Boleto,
             #  isso deve ser melhor investigado
-            # self._compute_financial()
+            self._compute_financial()
 
             for index, interval in enumerate(self.financial_move_line_ids):
                 inv_number = self.get_invoice_fiscal_number().split("/")[-1]
