@@ -10,7 +10,7 @@ import tempfile
 import requests
 
 from odoo import _, fields, models
-from odoo.exceptions import Warning as UserError
+from odoo.exceptions import UserError
 
 from ..constants.br_cobranca import get_brcobranca_api_url
 
@@ -53,7 +53,7 @@ class AccountMove(models.Model):
         inv_number = self.get_invoice_fiscal_number().split("/")[-1].zfill(8)
         file_name = "boleto_nf-" + inv_number + ".pdf"
 
-        self.file_pdf_id = self.env["ir.attachment"].create(
+        self.file_boleto_pdf_id = self.env["ir.attachment"].create(
             {
                 "name": file_name,
                 "store_fname": file_name,
@@ -102,4 +102,34 @@ class AccountMove(models.Model):
     def view_boleto_pdf(self):
         if not self.file_boleto_pdf_id:
             self.gera_boleto_pdf()
-        return self._target_new_tab(self.file_pdf_id)
+        return self._target_new_tab(self.file_boleto_pdf_id)
+
+    def _post(self, soft=True):
+        super()._post(soft)
+
+        for line in self.line_ids:
+            if line.move_id and line.cnab_returned_ref:
+                # Podem existir sequencias do nosso numero/own_number iguais entre
+                # bancos diferentes, porém os Diario/account.journal
+                # não pode ser o mesmo.
+                # IMPORTANTE: No parser estou definindo o CNAB_RETURNED_REF do
+                # que não quero usar aqui com account_move_line.document_number
+                line_to_reconcile = self.env["account.move.line"].search(
+                    [
+                        ("own_number", "=", line.cnab_returned_ref),
+                        ("journal_payment_mode_id", "=", self.journal_id.id),
+                    ]
+                )
+                # Vincula a última Ordem de Debito enviada
+                order_ids = line_to_reconcile.payment_line_ids.mapped("order_id")
+                for order in order_ids:
+                    for pay_line in order.payment_line_ids:
+                        if pay_line.move_line_id == line_to_reconcile:
+                            order.move_ids |= line.move_id
+
+                # Conciliação Automatica entre a Linha da Fatura e a Linha criada
+                if self.journal_id.return_auto_reconcile:
+                    if line_to_reconcile:
+                        (line + line_to_reconcile).reconcile()
+                        line_to_reconcile.cnab_state = "done"
+                        line_to_reconcile.payment_situation = "liquidada"
