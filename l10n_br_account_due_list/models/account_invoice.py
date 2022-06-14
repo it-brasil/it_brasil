@@ -7,31 +7,37 @@ from odoo import api, fields, models
 class AccountInvoice(models.Model):
     _inherit = "account.move"
 
-    financial_move_line_ids = fields.One2many(
+    financial_move_line_ids = fields.Many2many(
         comodel_name="account.move.line",
-        inverse_name="move_id",
+        relation="account_invoice_account_financial_move_line_rel",
+        compute="_compute_financial",
+        store=True,
         string="Financial Move Lines",
-        readonly=True,
-        domain="[('account_id.user_type_id.type', 'in', ('receivable', 'payable'))]",
     )
 
     payment_move_line_ids = fields.Many2many(
-        comodel_name="account.move.line",
-        relation="account_invoice_account_payment_move_line_rel",
+        "account.move.line",
         string="Payment Move Lines",
         compute="_compute_payments",
         store=True,
     )
 
+    @api.depends("line_ids", "state")
+    def _compute_financial(self):
+        for move in self:
+            lines = move.line_ids.filtered(
+                lambda l: l.account_id.internal_type in ("receivable", "payable")
+            )
+            move.financial_move_line_ids = lines.sorted()
+
     @api.depends("line_ids.amount_residual")
     def _compute_payments(self):
-        for move in self.filtered(lambda m: not m.payment_state == "not_paid"):
-            amls = [
+        for move in self:
+            move.payment_move_line_ids = [
                 aml.id
                 for partial, amount, aml in move._get_reconciled_invoices_partials()
             ]
-            move.payment_move_line_ids = amls
-            
+
     def _get_reconciled_invoices_partials(self):
         ''' Helper to retrieve the details about reconciled invoices.
         :return A list of tuple (partial, amount, invoice_line).
