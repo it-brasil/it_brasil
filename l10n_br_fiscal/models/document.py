@@ -475,6 +475,8 @@ class Document(models.Model):
     def _onchange_fiscal_operation_id(self):
         super()._onchange_fiscal_operation_id()
         if self.fiscal_operation_id:
+            self.operation_name = self.fiscal_operation_id.name
+            self.comment_ids = self.fiscal_operation_id.comment_ids            
             self.fiscal_operation_type = self.fiscal_operation_id.fiscal_operation_type
             self.edoc_purpose = self.fiscal_operation_id.edoc_purpose
 
