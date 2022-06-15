@@ -153,6 +153,37 @@ class StockInvoiceOnshipping(models.TransientModel):
 
         return key
 
+    def _search_document_related(self, invoice):
+        pickings = self._load_pickings()
+        picking = fields.first(pickings)
+        if picking.fiscal_operation_id and picking.fiscal_operation_id.fiscal_type == "purchase_refund":
+            reference = self.env['purchase.order'].search([('name','=',picking.group_id.name)])
+            one_document = True
+            for doc_referenced in reference.invoice_ids:
+                if (doc_referenced.fiscal_operation_id.return_fiscal_operation_id == picking.fiscal_operation_id
+                    and doc_referenced.document_type_id.code == "55"):
+                    subsequent_documents = []
+                    subsequent_documents.append(
+                    (
+                        0,
+                        0,
+                        {
+                            "document_id": invoice.fiscal_document_id.id,
+                            "document_related_id": doc_referenced.fiscal_document_id.id,
+                            "document_type_id": doc_referenced.document_type_id.id,
+                            "document_serie": doc_referenced.document_serie,
+                            "document_number": doc_referenced.document_number,
+                            "document_date": doc_referenced.document_date,
+                            "document_key": doc_referenced.document_key,
+                        },
+                    )
+                    )
+                    # se existe mais de um documento fiscal para o pedido entao tem 
+                    # que selecionar manualmente
+                    if one_document:
+                        invoice.write({"document_related_ids": subsequent_documents})
+                    one_document = False
+
     # Usei esta funcao para corrigir quando tem Unidade Fiscal no item
     # e para carregar a conta que esta nos tributos
     def _create_invoice(self, invoice_values):
@@ -174,6 +205,11 @@ class StockInvoiceOnshipping(models.TransientModel):
         invoice = super()._create_invoice(invoice_values)
 
         for invoice_id in invoice:
+            
+            if invoice_id.fiscal_operation_id.fiscal_type == "purchase_refund":
+                # buscando documento de referencia se existir
+                self._search_document_related(invoice_id)
+
             # coloquei isso pq nao estava carregando o edoc_purpose
             if invoice_id.fiscal_operation_id:
                 # coloquei as linhas abaixo copiadas do document.py do fiscal pq nao passava la
