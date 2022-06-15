@@ -174,6 +174,14 @@ class StockInvoiceOnshipping(models.TransientModel):
         invoice = super()._create_invoice(invoice_values)
 
         for invoice_id in invoice:
+            # coloquei isso pq nao estava carregando o edoc_purpose
+            if invoice_id.fiscal_operation_id:
+                # coloquei as linhas abaixo copiadas do document.py do fiscal pq nao passava la
+                invoice_id.operation_name = invoice_id.fiscal_operation_id.name
+                invoice_id.comment_ids = invoice_id.fiscal_operation_id.comment_ids            
+                invoice_id.fiscal_operation_type = invoice_id.fiscal_operation_id.fiscal_operation_type
+                invoice_id.edoc_purpose = invoice_id.fiscal_operation_id.edoc_purpose
+
             # In the case of partial deliveries, recalculates the calculation
             # base and tax amounts
             for line in invoice_id.invoice_line_ids:
