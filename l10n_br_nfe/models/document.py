@@ -503,7 +503,10 @@ class NFe(spec_models.StackedModel):
                     # estava dando erro aqui qdo era devolucao
                     # if fin.account_id.user_type_id.type == 'receivable' and (
                         # self.fiscal_operation_id.fiscal_type == 'sale':
-                    valor += fin.debit + fin.credit
+                    if modo == "90":
+                        valor = 0.0
+                    else:
+                        valor += fin.debit + fin.credit
                     # if fin.account_id.user_type_id.type == 'payable' and self.fiscal_operation_id.fiscal_type == 'purchase' :
                         # valor += fin.credit
 
@@ -889,6 +892,7 @@ class NFe(spec_models.StackedModel):
                 self.state_fiscal = SITUACAO_FISCAL_CANCELADO
 
             self.state_edoc = SITUACAO_EDOC_CANCELADA
+            self.move_ids.button_cancel()
             self.cancel_event_id.set_done(
                 status_code=retevento.infEvento.cStat,
                 response=retevento.infEvento.xMotivo,
