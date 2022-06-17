@@ -11,6 +11,7 @@ class AccountMove(models.Model):
 	def action_post(self):
 		#self.ensure_one()
 		document = self.fiscal_document_id
+		document.valida_dados_remetente()
 		document.valida_dados_destinatario()
 		document.valida_dados_produtos()
 		return super().action_post() 
