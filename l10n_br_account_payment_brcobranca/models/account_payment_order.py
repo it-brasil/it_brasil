@@ -174,6 +174,7 @@ class PaymentOrder(models.Model):
         brcobranca_api_url = get_brcobranca_api_url()
         # EX.: "http://boleto_cnab_api:9292/api/remessa"
         brcobranca_service_url = brcobranca_api_url + "/api/remessa"
+        
         logger.info(
             "Connecting to %s to generate CNAB-REMESSA file for Payment Order %s",
             brcobranca_service_url,
@@ -212,4 +213,3 @@ class PaymentOrder(models.Model):
                 # Importante para saber a situação do CNAB no caso
                 # de um pagto feito por fora ( dinheiro, deposito, etc)
                 payment_line.move_line_id.cnab_state = "exported"
-        self.action_done()
