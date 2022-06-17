@@ -44,6 +44,7 @@ from . import icms_regulation
 from . import icms_relief
 from . import document_type
 from . import document_serie
+# Carlos: inclui o payment pq preciso do indPag
 from . import payment
 from . import product_genre
 from . import certificate

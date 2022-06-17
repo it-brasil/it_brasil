@@ -504,6 +504,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             self.icms_reduction = tax_dict.get("percent_reduction")
             self.icms_value = tax_dict.get("tax_value")
 
+            # Carlos : da erro ao Criar uma fatura na Venda sem este IF
             if tax_dict.get("icms_dest_base"):
                 # vBCUFDest - Valor da BC do ICMS na UF de destino
                 self.icms_destination_base = tax_dict.get("icms_dest_base")
@@ -784,7 +785,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             product_id = self.product_id.id
         self.update(
             self._update_fiscal_quantity(
-                product_id, self.price_unit, self.quantity, self.uom_id.id, self.uot_id.id
+                product_id, self.price_unit, self.quantity, self.uom_id, self.uot_id
             )
         )
 
@@ -800,6 +801,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
     def _onchange_city_taxation_code_id(self):
         if self.city_taxation_code_id:
             self.cnae_id = self.city_taxation_code_id.cnae_id
+            self._onchange_fiscal_operation_id()
 
     @api.model
     def _add_fields_to_amount(self):

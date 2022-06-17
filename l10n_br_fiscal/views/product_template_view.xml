@@ -65,9 +65,9 @@
                                 name="icms_origin"
                                 attrs="{'required': [('fiscal_type', '!=', '09')], 'invisible': [('fiscal_type', '=', '09')]}"
                             />
-                            <field 
+                            <field
                                 name="ncm_id"
-                                required="1" 
+                                required="1"
                                 options="{'no_create': True, 'no_create_edit': True}"
                             />
                             <field name="tax_icms_or_issqn" required="1" />
@@ -83,12 +83,12 @@
                                 <tree editable="bottom">
                                     <field name="code" />
                                     <field name="name" />
-                                    <field 
+                                    <field
                                         name="service_type_id"
                                         options="{'no_create': True, 'no_create_edit': True}"
                                     />
                                     <field
-                                        name="state_id" 
+                                        name="state_id"
                                         options="{'no_create': True, 'no_create_edit': True}"
                                     />
                                     <field
