@@ -126,13 +126,13 @@ class Certificate(models.Model):
             if c.date_expiration:
                 c.is_valid = c.date_expiration >= fields.Datetime.now()
 
-    @api.model
+    """ @api.model
     def create(self, values):
         values.update(
             self._certificate_data(values.get("file"), values.get("password"))
         )
 
-        return super(Certificate, self).create(values)
+        return super(Certificate, self).create(values) """
 
     def write(self, values):
         values.update(

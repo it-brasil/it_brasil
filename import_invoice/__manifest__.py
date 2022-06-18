@@ -2,15 +2,16 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 {
-    "name": "Importar Faturas XML",
+    "name": "Importar Faturas",
     "description": """Importar Faturas""",
     "version": "14.0.1.0.0",
     "license": "AGPL-3",
     "author": "Lucas Avila",
-    "depends": ["l10n_br_base", "purchase", "account"],
+    "depends": ["base", "purchase", "account", "l10n_br"],
     "data": [
         "security/ir.model.access.csv",
-        "views/purchase_order.xml"
+        "wizard/purchase_order.xml",
+        "wizard/account_import_nfe.xml",
     ],
     "demo": [],
     "sequence": 5,
