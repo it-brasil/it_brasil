@@ -13,6 +13,8 @@ from ..constants.fiscal import (
     DOCUMENT_ISSUER_COMPANY,
     DOCUMENT_ISSUER_DICT,
     DOCUMENT_ISSUER_PARTNER,
+    EDOC_PURPOSE,
+    EDOC_PURPOSE_NORMAL,
     FISCAL_IN_OUT_DICT,
     MODELO_FISCAL_CTE,
     MODELO_FISCAL_NFCE,
@@ -164,14 +166,9 @@ class Document(models.Model):
     )
 
     edoc_purpose = fields.Selection(
-        selection=[
-            ("1", "Normal"),
-            ("2", "Complementar"),
-            ("3", "Ajuste"),
-            ("4", "Devolução de mercadoria"),
-        ],
+        selection=EDOC_PURPOSE,
         string="Finalidade",
-        default="1",
+        default=EDOC_PURPOSE_NORMAL,
     )
 
     event_ids = fields.One2many(
@@ -203,6 +200,12 @@ class Document(models.Model):
         string="DF-e Consult",
     )
 
+    xml_error_message = fields.Text(
+        readonly=True,
+        string="XML validation errors",
+        copy=False,
+    )
+
     # Você não vai poder fazer isso em modelos que já tem state
     # TODO Porque não usar o campo state do fiscal.document???
     state = fields.Selection(related="state_edoc", string="State")
@@ -217,12 +220,6 @@ class Document(models.Model):
         string="Subsequent documents generated?",
         compute="_compute_document_subsequent_generated",
         default=False,
-    )
-
-    xml_error_message = fields.Text(
-        readonly=True,
-        string="XML validation errors",
-        copy=False,
     )
 
     @api.constrains("document_key")
@@ -385,7 +382,7 @@ class Document(models.Model):
         ]
 
         for record in self.filtered(
-            lambda d: d != self.env.user.company_id.fiscal_dummy_id
+            lambda d: d != self.env.company.fiscal_dummy_id
             and d.state_edoc in forbidden_states_unlink
         ):
             raise ValidationError(

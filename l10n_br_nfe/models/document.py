@@ -503,7 +503,10 @@ class NFe(spec_models.StackedModel):
                     # estava dando erro aqui qdo era devolucao
                     # if fin.account_id.user_type_id.type == 'receivable' and (
                         # self.fiscal_operation_id.fiscal_type == 'sale':
-                    valor += fin.debit + fin.credit
+                    if modo == "90":
+                        valor = 0.0
+                    else:
+                        valor += fin.debit + fin.credit
                     # if fin.account_id.user_type_id.type == 'payable' and self.fiscal_operation_id.fiscal_type == 'purchase' :
                         # valor += fin.credit
 
@@ -706,6 +709,23 @@ class NFe(spec_models.StackedModel):
             super()._build_many2one(
                 self.env["res.partner"], vals, new_value, "partner_id", value, path
             )
+        elif key == "nfe40_entrega" and self.env.context.get("edoc_type") == "in":
+            enderEntreg_value = self.env["res.partner"].build_attrs(value, path=path)
+            new_value.update(enderEntreg_value)
+            parent_domain = [("nfe40_CNPJ", "=", new_value.get("nfe40_CNPJ"))]
+            parent_partner_match = self.env["res.partner"].search(
+                parent_domain, limit=1
+            )
+            new_vals = {
+                "nfe40_CNPJ": False,
+                "type": "delivery",
+                "parent_id": parent_partner_match.id,
+                "company_type": "person",
+            }
+            new_value.update(new_vals)
+            super()._build_many2one(
+                self.env["res.partner"], vals, new_value, key, value, path
+            )
         elif self.env.context.get("edoc_type") == "in" and key in [
             "nfe40_dest",
             "nfe40_enderDest",
@@ -889,6 +909,7 @@ class NFe(spec_models.StackedModel):
                 self.state_fiscal = SITUACAO_FISCAL_CANCELADO
 
             self.state_edoc = SITUACAO_EDOC_CANCELADA
+            self.move_ids.button_cancel()
             self.cancel_event_id.set_done(
                 status_code=retevento.infEvento.cStat,
                 response=retevento.infEvento.xMotivo,

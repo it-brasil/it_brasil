@@ -3,7 +3,7 @@
 
 import json
 
-# from erpbrasil.base.misc import punctuation_rm
+from erpbrasil.base import misc
 from lxml import etree
 
 from odoo import api, fields, models
@@ -23,11 +23,11 @@ class DataAbstract(models.AbstractModel):
         string="Unmasked Code", compute="_compute_code_unmasked", store=True, index=True
     )
 
-    # @api.depends("code")
-    # def _compute_code_unmasked(self):
-    #     for r in self:
-    #         # TODO mask code and unmasck
-    #         r.code_unmasked = punctuation_rm(r.code)
+    @api.depends("code")
+    def _compute_code_unmasked(self):
+        for r in self:
+            # TODO mask code and unmasck
+            r.code_unmasked = misc.punctuation_rm(r.code)
 
     @api.model
     def fields_view_get(
