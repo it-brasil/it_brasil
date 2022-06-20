@@ -124,7 +124,7 @@
                                 <form>
                                     <group>
                                         <field name="company_id" invisible="1" />
-                                        <field 
+                                        <field
                                             name="document_type_id"
                                             options="{'no_create': True, 'no_create_edit': True}"
                                         />
@@ -136,7 +136,7 @@
                                 </form>
                             </field>
                         </page>
-                        <page name="subsequent_operation" string="Subsequent Operations">
+                        <page name="subsequent_operation" string="Operations">
                             <group>
                                 <field name="return_fiscal_operation_id" />
                                 <field name="inverse_fiscal_operation_id" />

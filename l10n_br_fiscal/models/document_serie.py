@@ -4,7 +4,11 @@
 
 from odoo import _, api, fields, models
 
-from ..constants.fiscal import FISCAL_IN_OUT, FISCAL_IN_OUT_DEFAULT
+from ..constants.fiscal import (
+    DOCUMENT_ISSUER_COMPANY,
+    FISCAL_IN_OUT,
+    FISCAL_IN_OUT_DEFAULT,
+)
 
 
 class DocumentSerie(models.Model):
@@ -93,6 +97,27 @@ class DocumentSerie(models.Model):
     def next_seq_number(self):
         self.ensure_one()
         document_number = self.internal_sequence_id._next()
-        if self._is_invalid_number(document_number):
+        if self._is_invalid_number(document_number) or self.check_number_in_use(
+            document_number
+        ):
             document_number = self.next_seq_number()
         return document_number
+
+    def check_number_in_use(self, document_number):
+        """Check if a document with the same number already exists, this can
+        happen in some cases, for example invoices imported in Odoo from another ERP."""
+
+        return (
+            self.env["l10n_br_fiscal.document"]
+            .search(
+                [
+                    ("document_number", "=", document_number),
+                    ("document_serie_id", "=", self.id),
+                    ("document_type_id", "=", self.document_type_id.id),
+                    ("issuer", "=", DOCUMENT_ISSUER_COMPANY),
+                    ("company_id", "=", self.company_id.id),
+                ],
+                limit=1,
+            )
+            .exists()
+        )

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <odoo>
 
     <record id="certificate_search" model="ir.ui.view">
@@ -39,8 +39,8 @@
                     </div>
                     <div class="oe_button_box" name="button_box">
 
-                        <field name="active" invisible="1" />
-                        <widget
+            <field name="active" invisible="1" />
+            <widget
                             name="web_ribbon"
                             title="Archived"
                             bg_color="bg-danger"
@@ -49,8 +49,8 @@
 
                     </div>
                     <group>
-                        <field name="type" />
-                        <field name="subtype" />
+                      <field name="type" />
+                      <field name="subtype" />
                     </group>
                     <group>
                         <group string="File">

@@ -200,7 +200,7 @@
             </h1>
           </div>
           <group name="l10n_br_fiscal" colspan="4">
-            <field 
+            <field
                             name="fiscal_operation_id"
                             options="{'no_create': True, 'no_create_edit': True}"
                         /> <!-- USE MIXIN VIEW -->
