@@ -175,10 +175,16 @@ class OperationLine(models.Model):
             cfop = self.cfop_export_id
         return cfop
 
+    def _build_mapping_result_ipi(self, mapping_result, tax_definition):
+        mapping_result[
+            "ipi_guideline"
+        ] = tax_definition.ipi_guideline_id or self.env.ref(
+            "l10n_br_fiscal.tax_guideline_999"
+        )
+
     def _build_mapping_result(self, mapping_result, tax_definition):
         mapping_result["taxes"][tax_definition.tax_domain] = tax_definition.tax_id
-        if tax_definition.ipi_guideline_id:
-            mapping_result["ipi_guideline"] = tax_definition.ipi_guideline_id
+        self._build_mapping_result_ipi(mapping_result, tax_definition)
 
     def map_fiscal_taxes(
         self,
@@ -191,13 +197,14 @@ class OperationLine(models.Model):
         nbm=None,
         nbs=None,
         cest=None,
+        city_taxation_code=None,
+        ind_final=None,
     ):
 
         mapping_result = {
             "taxes": {},
             "cfop": False,
             "ipi_guideline": False,
-            "taxes_value": 0.00,
         }
 
         self.ensure_one()
@@ -208,7 +215,14 @@ class OperationLine(models.Model):
 
         # 1 Get Tax Defs from Company
         for tax_definition in company.tax_definition_ids.map_tax_definition(
-            company, partner, product, ncm=ncm, nbm=nbm, nbs=nbs, cest=cest
+            company,
+            partner,
+            product,
+            ncm=ncm,
+            nbm=nbm,
+            nbs=nbs,
+            cest=cest,
+            city_taxation_code=city_taxation_code,
         ):
             self._build_mapping_result(mapping_result, tax_definition)
 
@@ -234,6 +248,7 @@ class OperationLine(models.Model):
                     nbm=nbm,
                     cest=cest,
                     operation_line=self,
+                    ind_final=ind_final,
                 )
 
                 for tax in tax_icms_ids:
@@ -241,13 +256,27 @@ class OperationLine(models.Model):
 
         # 4 From Operation Line
         for tax_definition in self.tax_definition_ids.map_tax_definition(
-            company, partner, product, ncm=ncm, nbm=nbm, nbs=nbs, cest=cest
+            company,
+            partner,
+            product,
+            ncm=ncm,
+            nbm=nbm,
+            nbs=nbs,
+            cest=cest,
+            city_taxation_code=city_taxation_code,
         ):
             self._build_mapping_result(mapping_result, tax_definition)
 
         # 5 From CFOP
         for tax_definition in cfop.tax_definition_ids.map_tax_definition(
-            company, partner, product, ncm=ncm, nbm=nbm, nbs=nbs, cest=cest
+            company,
+            partner,
+            product,
+            ncm=ncm,
+            nbm=nbm,
+            nbs=nbs,
+            cest=cest,
+            city_taxation_code=city_taxation_code,
         ):
             self._build_mapping_result(mapping_result, tax_definition)
 
@@ -255,7 +284,14 @@ class OperationLine(models.Model):
         for (
             tax_definition
         ) in partner.fiscal_profile_id.tax_definition_ids.map_tax_definition(
-            company, partner, product, ncm=ncm, nbm=nbm, nbs=nbs, cest=cest
+            company,
+            partner,
+            product,
+            ncm=ncm,
+            nbm=nbm,
+            nbs=nbs,
+            cest=cest,
+            city_taxation_code=city_taxation_code,
         ):
             self._build_mapping_result(mapping_result, tax_definition)
 

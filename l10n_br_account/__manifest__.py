@@ -12,7 +12,6 @@
         "l10n_br_coa",
         "l10n_br_fiscal",
         "l10n_br_account_due_list",
-        "l10n_br_account_payment_order"
     ],
     "data": [
         # security
@@ -30,7 +29,6 @@
         "views/document_view.xml",
         "views/fiscal_invoice_view.xml",
         "views/fiscal_invoice_line_view.xml",
-        "views/account_payment_mode.xml",
         # Wizards
         #        "wizards/account_invoice_refund_view.xml",
         #        "wizards/wizard_document_status.xml",

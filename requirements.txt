@@ -1,5 +1,5 @@
 # generated from manifests external_dependencies
-erpbrasil.assinatura
+erpbrasil.assinatura==1.2.0
 erpbrasil.base
 erpbrasil.edoc
 erpbrasil.transmissao

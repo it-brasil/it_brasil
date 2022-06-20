@@ -25,44 +25,6 @@ class AccountJournal(models.Model):
         default=False,
     )
 
-    def _write_extra_move_lines(self, parser, move):
-        """Insert extra lines after the main statement lines.
-
-        After the main statement lines have been created, you can override this
-        method to create extra statement lines.
-
-            :param:    browse_record of the current parser
-            :param:    result_row_list: [{'key':value}]
-            :param:    profile: browserecord of account.statement.profile
-            :param:    statement_id: int/long of the current importing
-              statement ID
-            :param:    context: global context
-        """
-
-        move_line_obj = self.env["account.move.line"]
-
-        for line in move.line_ids:
-            if line.invoice_id:
-                # Pesquisando pelo Nosso Numero e Invoice evito o problema
-                # de existirem move lines com o mesmo valor no campo
-                # nosso numero, que pode acontecer qdo existem mais de um banco
-                # configurado para gerar Boletos
-                # IMPORTANTE: No parser estou definindo o REF do que não quero
-                # usar aqui com account_move_line.document_number
-                line_to_reconcile = move_line_obj.search(
-                    [
-                        ("own_number", "=", line.ref),
-                        ("invoice_id", "=", line.invoice_id.id),
-                    ]
-                )
-
-                # Conciliação Automatica entre a Linha da Fatura e a Linha criada
-                if self.return_auto_reconcile:
-                    if line_to_reconcile:
-                        (line + line_to_reconcile).reconcile()
-                        line_to_reconcile.cnab_state = "done"
-                        line_to_reconcile.payment_situation = "liquidada"
-
     def multi_move_import(self, file_stream, ftype="csv"):
         """Create multiple bank statements from values given by the parser for
         the given profile.
@@ -123,7 +85,7 @@ class AccountJournal(models.Model):
         attachment_data = {
             "name": file_name,
             "datas": file_stream,
-            "datas_fname": file_name,
+            "store_fname": file_name,
             "res_model": "l10n_br_cnab.return.log",
             "res_id": cnab_return_log.id,
         }
@@ -140,7 +102,7 @@ class AccountJournal(models.Model):
             move.cnab_return_log_id = cnab_return_log.id
             # Lançamento Automatico do Diário
             if self.return_auto_reconcile:
-                move.post()
+                move.action_post()
 
         return moves
 
@@ -240,9 +202,9 @@ class AccountJournal(models.Model):
                 if self.create_counterpart:
                     self._create_counterpart(parser, move)
                 # Check if move is balanced
-                move.assert_balanced()
+                move._check_balanced()
                 # Computed total amount of the move
-                move._amount_compute()
+                # move._amount_compute()
                 # No caso do CNAB o arquivo usado está sendo armazenado no
                 # objeto l10n_br_cnab.return.log já que um arquivo pode gerar
                 # diversos account.move

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<record id="acess_wizard_certificate_message" model="ir.model.access">
+        <field name="name">Aviso Prévio: Data de Expiração de Certificado</field>
+        <field name="model_id" ref="certificate_date_validation.model_wizard_certificate_message" />
+        <field name="group_id" ref=""/>
+        <field name="perm_create" eval="True" />
+        <field name="perm_read" eval="True" />
+        <field name="perm_write" eval="True" />
+        <field name="perm_unlink" eval="True" />
+    </record>
+	
+
+</odoo>
