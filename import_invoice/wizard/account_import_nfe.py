@@ -55,8 +55,7 @@ class WizardImportNfe(models.TransientModel):
     def _import_xml(self, xml):
         nfe = objectify.fromstring(xml)
         company_id = self.env.company
-        self.env['account.move'].import_nfe(
-            company_id, nfe, xml)
+        self.env['account.move'].import_nfe(company_id, nfe, xml)
 
     def action_import_nfe(self):
         if not self.nfe_xml and not self.zip_file:
