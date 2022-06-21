@@ -120,4 +120,5 @@ class ResCompany(spec_models.SpecModel):
         )
         if not values.get("name"):
             values["name"] = values.get("nfe40_xNome") or values.get("nfe40_xFant")
+            values["name"] = values.get("nfe40_xFant") or values.get("nfe40_xNome")
         return values
