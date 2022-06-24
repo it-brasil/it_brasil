@@ -59,6 +59,8 @@
           <form>
               <group>
                   <field name="nfe40_qVol" />
+                  <field name="nfe40_esp" />
+                  <field name="nfe40_marca" />
                   <field name="nfe40_pesoL" />
                   <field name="nfe40_pesoB" />
               </group>
