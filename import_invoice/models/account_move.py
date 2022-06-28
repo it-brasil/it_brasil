@@ -1,9 +1,5 @@
-import base64
-import pytz
 import logging
-from odoo import fields, models, _
-from dateutil import parser
-from datetime import datetime
+from odoo import models, _, api
 from lxml import objectify
 from odoo.exceptions import UserError, ValidationError
 
@@ -87,10 +83,11 @@ class AccountMove(models.Model):
             "date": nfe.NFe.infNFe.ide.dhEmi.text,
             "company_id": company_id.id,
             "currency_id": company_id.currency_id.id,
-            "journal_id": self.env["account.journal"].search([("type","=","purchase")], limit=1).id,
+            "journal_id": self._search_default_journal(["purchase"]).id,
             "move_type": "in_invoice",
             "state": "draft",
             "state_edoc": "em_digitacao",
+            "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
 
             # Não obrigatórios
             "document_type_id": company_id.document_type_id.id,
@@ -105,13 +102,11 @@ class AccountMove(models.Model):
         _logger.info(["Criando Fatura"])
         invoice = self.create(invoice)
 
-        xml_file_vals = {
-            "name": f"NFe-{nfe.protNFe.infProt.chNFe.text}.xml",
-            "datas": xml
-        }
         _logger.info(["Criando Att Xml"])
+        xml_file_vals = {"name": f"NFe-{nfe.protNFe.infProt.chNFe.text}.xml", "datas": xml}
         xml_file = self.env["ir.attachment"].create(xml_file_vals)
 
+        _logger.info(["Criando Evento de Autorização"])
         vals_event = {
             "company_id": company_id.id,
             "document_id": invoice.fiscal_document_id.id,
@@ -123,14 +118,14 @@ class AccountMove(models.Model):
             "file_response_id": xml_file.id,
             "file_request_id": xml_file.id
         }
-        _logger.info(["Criando Evento de Autorização"])
         authorization_event = self.env["l10n_br_fiscal.event"].create(vals_event)
 
-        update_invoice = {
-            "authorization_event_id": authorization_event.id
-        }
         _logger.info(["Atualizando Fatura"])
-        invoice.update(update_invoice)
+        invoice.update({"authorization_event_id": authorization_event.id})
+
+        _logger.info(["Criando Linha Da Fatura"])
+        for line in nfe.NFe.infNFe.det: 
+            item = self.create_invoice_item(line, invoice) 
 
         return invoice
 
@@ -150,89 +145,33 @@ class AccountMove(models.Model):
         
         return dict(partner_id=partner_id.id)
 
-
-    """ ================================================
-                    TODO Não Validado    
-    ================================================="""
-
-    def create_invoice_item(self, item, company_id, partner_id):
+    def create_invoice_item(self, item, invoice):
         codigo = get(item.prod, 'cProd', str)
+        seller_id = self.env['product.supplierinfo'].search([('name', '=', invoice.partner_id.id),('product_code', '=', codigo)])
 
-        seller_id = self.env['product.supplierinfo'].search([
-            ('name', '=', partner_id),
-            ('product_code', '=', codigo),
-            ('product_id.active', '=', True)])
-
-        product = None
+        product_id = None
         if seller_id:
-            product = seller_id.product_id
-            if len(product) > 1:
-                message = '\n'.join(["Produto: %s - %s" % (x.default_code or '', x.name) for x in product])
+            product_id = seller_id.product_tmpl_id
+            if len(product_id) > 1:
+                message = '\n'.join(["Produto: %s - %s" % (x.default_code or '', x.name) for x in product_id])
                 raise UserError("Existem produtos duplicados com mesma codificação, corrija-os antes de prosseguir:\n%s" % message)
 
-        if not product and item.prod.cEAN and \
-           str(item.prod.cEAN) != 'SEM GTIN':
-            product = self.env['product.product'].search(
+        if not product_id and item.prod.cEAN and str(item.prod.cEAN) != 'SEM GTIN':
+            product_id = self.env['product.product'].search(
                 [('barcode', '=', item.prod.cEAN)], limit=1)
+        
+        if not product_id:
+            raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
 
-        uom_id = self.env['uom.uom'].search([
-            ('name', '=', str(item.prod.uCom))], limit=1).id
-
-        if not uom_id:
-            uom_id = product and product.uom_id.id or False
-        product_id = product and product.id or False
-
-        quantidade = item.prod.qCom
-        preco_unitario = item.prod.vUnCom
-        valor_bruto = item.prod.vProd
-        desconto = 0
-        if hasattr(item.prod, 'vDesc'):
-            desconto = item.prod.vDesc
-        seguro = 0
-        if hasattr(item.prod, 'vSeg'):
-            seguro = item.prod.vSeg
-        frete = 0
-        if hasattr(item.prod, 'vFrete'):
-            frete = item.prod.vFrete
-        outras_despesas = 0
-        if hasattr(item.prod, 'vOutro'):
-            outras_despesas = item.prod.vOutro
-        indicador_total = str(item.prod.indTot)
-        cfop = item.prod.CFOP
-        ncm = item.prod.NCM
-        cest = get(item, 'item.prod.CEST')
-        nItemPed = get(item, 'prod.nItemPed')
-
-        invoice_eletronic_Item = {
-            'product_id': product_id, 'uom_id': uom_id,
-            'quantidade': quantidade, 'preco_unitario': preco_unitario,
-            'valor_bruto': valor_bruto, 'desconto': desconto, 'seguro': seguro,
-            'frete': frete, 'outras_despesas': outras_despesas,
-            'valor_liquido': valor_bruto - desconto + frete + seguro + outras_despesas,
-            'indicador_total': indicador_total, 'unidade_medida': str(item.prod.uCom),
-            'cfop': cfop, 'ncm': ncm, 'product_ean': item.prod.cEAN,
-            'product_cprod': codigo, 'product_xprod': item.prod.xProd,
-            'cest': cest, 'item_pedido_compra': nItemPed,
-            'company_id': company_id.id,
+        product = {
+            'move_id': invoice.id, 
+            'product_id': product_id.id,
+            'quantity': item.prod.qCom,
+            #
+            'account_id': product_id.categ_id.property_account_expense_categ_id.id,
+            'ncm_id': product_id.ncm_id.id,
+            "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
         }
-        if hasattr(item.prod, 'DI'):
-            di_ids = []
-            for di in item.prod.DI:
-                di_ids.append(self._get_di(item.prod.DI))
-            invoice_eletronic_Item.update({'import_declaration_ids': di_ids})
-
-        #return self.env['eletronic.document.line'].create(
-        #    invoice_eletronic_Item)
-
-   
-    def get_items(self, nfe, company_id, partner_id, supplier):
-        items = []
-        for det in nfe.NFe.infNFe.det:
-            item = self.create_invoice_item(
-                det, company_id, partner_id, supplier)
-            items.append((4, item.id if item else False, False))
-        return {'document_line_ids': items}
-
-    
-
-
+        _logger.info(["Criando A linha "])
+        itens = self.env['account.move.line'].create(product) 
+        return itens
