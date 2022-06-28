@@ -35,12 +35,6 @@ def get(obj, path, conversion=None):
     return None
 
 
-def remove_none_values(dict):
-    res = {}
-    res.update({k: v for k, v in dict.items() if v})
-    return res
-
-
 def cnpj_cpf_format(cnpj_cpf):
     if len(cnpj_cpf) == 14:
         cnpj_cpf = (cnpj_cpf[0:2] + '.' + cnpj_cpf[2:5] +
@@ -51,17 +45,7 @@ def cnpj_cpf_format(cnpj_cpf):
         cnpj_cpf = (cnpj_cpf[0:3] + '.' + cnpj_cpf[3:6] +
                     '.' + cnpj_cpf[6:9] + '-' + cnpj_cpf[9:11])
     return cnpj_cpf
-
-
-def format_ncm(ncm):
-    if len(ncm) == 4:
-        ncm = ncm[:2] + '.' + ncm[2:4]
-    elif len(ncm) == 6:
-        ncm = ncm[:4] + '.' + ncm[4:6]
-    else:
-        ncm = ncm[:4] + '.' + ncm[4:6] + '.' + ncm[6:8]
-
-    return ncm
+ 
 
 
 class AccountMove(models.Model):
@@ -125,25 +109,8 @@ class AccountMove(models.Model):
 
         _logger.info(["Criando Linha Da Fatura"])
         for line in nfe.NFe.infNFe.det: 
-            item = self.create_invoice_item(line, invoice) 
-
+            self.create_invoice_item(line, invoice) 
         return invoice
-
-    def _get_company_invoice(self, nfe):
-        dest_cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.dest.CNPJ.text).zfill(14))
-        company = self.env['res.company'].sudo().search([('partner_id.cnpj_cpf', '=', dest_cnpj_cpf)])
-
-        if not company: 
-            raise UserError("XML não destinado nem emitido por esta empresa.")
-        return dict(company_id=company.id,)
-
-    def get_partner_nfe(self, nfe):
-        cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.emit.CNPJ.text).zfill(14))
-        partner_id = self.env['res.partner'].search([('cnpj_cpf', '=', cnpj_cpf)], limit=1)        
-        if not partner_id:
-            raise ValidationError(_("Parceiro não cadastrado"))
-        
-        return dict(partner_id=partner_id.id)
 
     def create_invoice_item(self, item, invoice):
         codigo = get(item.prod, 'cProd', str)
@@ -163,15 +130,51 @@ class AccountMove(models.Model):
         if not product_id:
             raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
 
-        product = {
+        product_debit = {
             'move_id': invoice.id, 
             'product_id': product_id.id,
             'quantity': item.prod.qCom,
-            #
+            'debit': item.prod.qCom * item.prod.vUnCom,
+            "exclude_from_invoice_tab": False,
+            "price_unit": item.prod.vUnCom,
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
             "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
         }
-        _logger.info(["Criando A linha "])
-        itens = self.env['account.move.line'].create(product) 
-        return itens
+
+        product_credit = {
+            "name": False,
+            'move_id': invoice.id, 
+            'product_id': product_id.id,
+            'quantity': 1,
+            'credit': item.prod.qCom * item.prod.vUnCom,
+            "price_unit": -(item.prod.qCom * item.prod.vUnCom),
+            "exclude_from_invoice_tab": True,
+            'account_id': invoice.partner_id.property_account_payable_id.id,
+            'ncm_id': product_id.ncm_id.id,
+            "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
+        }
+
+        list_product = [product_debit, product_credit]
+
+        _logger.info(["Criando A linha", list_product])
+        self.env['account.move.line'].create(list_product)
+        return
+
+    def _get_company_invoice(self, nfe):
+        dest_cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.dest.CNPJ.text).zfill(14))
+        company = self.env['res.company'].sudo().search([('partner_id.cnpj_cpf', '=', dest_cnpj_cpf)])
+
+        if not company: 
+            raise UserError("XML não destinado nem emitido por esta empresa.")
+        return dict(company_id=company.id,)
+
+    def get_partner_nfe(self, nfe):
+        cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.emit.CNPJ.text).zfill(14))
+        partner_id = self.env['res.partner'].search([('cnpj_cpf', '=', cnpj_cpf)], limit=1)        
+        if not partner_id:
+            raise ValidationError(_("Parceiro não cadastrado"))
+        
+        return dict(partner_id=partner_id.id)
+
+    
