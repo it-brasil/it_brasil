@@ -45,8 +45,6 @@ def cnpj_cpf_format(cnpj_cpf):
         cnpj_cpf = (cnpj_cpf[0:3] + '.' + cnpj_cpf[3:6] +
                     '.' + cnpj_cpf[6:9] + '-' + cnpj_cpf[9:11])
     return cnpj_cpf
- 
-
 
 class AccountMove(models.Model):
     _inherit = 'account.move'
@@ -57,7 +55,6 @@ class AccountMove(models.Model):
 
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
-
         if self.search([('document_key', '=', nfe.protNFe.infProt.chNFe.text)]):
             raise UserError('Documento Eletrônico já importado!')
 
@@ -108,8 +105,28 @@ class AccountMove(models.Model):
         invoice.update({"authorization_event_id": authorization_event.id})
 
         _logger.info(["Criando Linha Da Fatura"])
+        debit_itens = []
+        credit_total = 0
         for line in nfe.NFe.infNFe.det: 
-            self.create_invoice_item(line, invoice) 
+            credit_total += line.prod.qCom * line.prod.vUnCom
+            product_debit = self.create_invoice_item(line, invoice)
+            debit_itens.append([0,0, product_debit])
+
+        product_credit = {
+            "name": False,
+            'move_id': invoice.id, 
+            'quantity': 1,
+            "fiscal_quantity": 1,
+            'currency_id': invoice.company_id.currency_id.id,
+            "debit": 0,
+            'credit': credit_total,
+            "fiscal_price": - credit_total,
+            "exclude_from_invoice_tab": True,
+            'account_id': invoice.partner_id.property_account_payable_id.id,
+        }
+        debit_itens.append([0,0, product_credit])
+        invoice.line_ids = debit_itens          
+        invoice._onchange_invoice_line_ids()
         return invoice
 
     def create_invoice_item(self, item, invoice):
@@ -129,37 +146,26 @@ class AccountMove(models.Model):
         
         if not product_id:
             raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
-
+ 
         product_debit = {
             'move_id': invoice.id, 
             'product_id': product_id.id,
             'quantity': item.prod.qCom,
+            'fiscal_quantity': item.prod.qCom,
+            'currency_id': invoice.company_id.currency_id.id,
+            'credit': 0,
             'debit': item.prod.qCom * item.prod.vUnCom,
-            "exclude_from_invoice_tab": False,
-            "price_unit": item.prod.vUnCom,
+            'exclude_from_invoice_tab': False,
+            'price_unit': item.prod.vUnCom,
+            'fiscal_price': item.prod.vUnCom,
+            'cfop_id':  self.env["l10n_br_fiscal.cfop"].search([('code','=', item.prod.CFOP)], limit=1).id,
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
-            "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
-        }
-
-        product_credit = {
-            "name": False,
-            'move_id': invoice.id, 
-            'product_id': product_id.id,
-            'quantity': 1,
-            'credit': item.prod.qCom * item.prod.vUnCom,
-            "price_unit": -(item.prod.qCom * item.prod.vUnCom),
-            "exclude_from_invoice_tab": True,
-            'account_id': invoice.partner_id.property_account_payable_id.id,
-            'ncm_id': product_id.ncm_id.id,
-            "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
-        }
-
-        list_product = [product_debit, product_credit]
-
-        _logger.info(["Criando A linha", list_product])
-        self.env['account.move.line'].create(list_product)
-        return
+            'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
+            #'icms_cst_id': self.env["l10n_br_fiscal.cst"].search([("code", "=", item.imposto.ICMS.ICMSSN500.CSOSN)], limit=1).id,
+            #'icms_origin': str(item.imposto.ICMS.ICMSSN500.orig),
+        }   
+        return product_debit
 
     def _get_company_invoice(self, nfe):
         dest_cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.dest.CNPJ.text).zfill(14))
@@ -177,4 +183,3 @@ class AccountMove(models.Model):
         
         return dict(partner_id=partner_id.id)
 
-    
