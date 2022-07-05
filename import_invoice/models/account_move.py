@@ -1,7 +1,11 @@
+import base64
+import pytz
 import logging
-from odoo import models, _, api
+from odoo import fields, models, _
+from dateutil import parser
+from datetime import datetime
 from lxml import objectify
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError,ValidationError
 
 
 _logger = logging.getLogger(__name__)
@@ -35,6 +39,12 @@ def get(obj, path, conversion=None):
     return None
 
 
+def remove_none_values(dict):
+    res = {}
+    res.update({k: v for k, v in dict.items() if v})
+    return res
+
+
 def cnpj_cpf_format(cnpj_cpf):
     if len(cnpj_cpf) == 14:
         cnpj_cpf = (cnpj_cpf[0:2] + '.' + cnpj_cpf[2:5] +
@@ -45,6 +55,18 @@ def cnpj_cpf_format(cnpj_cpf):
         cnpj_cpf = (cnpj_cpf[0:3] + '.' + cnpj_cpf[3:6] +
                     '.' + cnpj_cpf[6:9] + '-' + cnpj_cpf[9:11])
     return cnpj_cpf
+
+
+def format_ncm(ncm):
+    if len(ncm) == 4:
+        ncm = ncm[:2] + '.' + ncm[2:4]
+    elif len(ncm) == 6:
+        ncm = ncm[:4] + '.' + ncm[4:6]
+    else:
+        ncm = ncm[:4] + '.' + ncm[4:6] + '.' + ncm[6:8]
+
+    return ncm
+
 
 class AccountMove(models.Model):
     _inherit = 'account.move'
@@ -127,6 +149,7 @@ class AccountMove(models.Model):
                 'account_id': invoice.partner_id.property_account_payable_id.id,
             }
             debit_itens.append([0,0, product_credit])
+        
         invoice.line_ids = debit_itens
         for line in invoice.invoice_line_ids: 
             taxes = line._get_computed_taxes()
@@ -161,7 +184,7 @@ class AccountMove(models.Model):
             'fiscal_quantity': item.prod.qCom,
             'currency_id': invoice.company_id.currency_id.id,
             'credit': 0,
-            'debit': item.prod.qCom * item.prod.vUnCom + item.imposto.IPI.IPITrib.vIPI,
+            'debit': item.prod.qCom * item.prod.vUnCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0),
             'exclude_from_invoice_tab': False,
             'price_unit': item.prod.vUnCom,
             'fiscal_price': item.prod.vUnCom,
@@ -169,12 +192,17 @@ class AccountMove(models.Model):
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
             'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
-            'ipi_base': item.imposto.IPI.IPITrib.vBC,
-            'ipi_percent': item.imposto.IPI.IPITrib.pIPI,
-            'ipi_value': item.imposto.IPI.IPITrib.vIPI
-            #'icms_cst_id': self.env["l10n_br_fiscal.cst"].search([("code", "=", item.imposto.ICMS.ICMSSN500.CSOSN)], limit=1).id,
-            #'icms_origin': str(item.imposto.ICMS.ICMSSN500.orig),
         }   
+
+        if hasattr(item.imposto, 'ICMS'):
+            product_debit.update(self._get_icms(item.imposto)) 
+
+        if hasattr(item.imposto, 'IPI'):
+            product_debit.update(self._get_ipi(item.imposto.IPI))
+
+        product_debit.update(self._get_pis(item.imposto.PIS))
+        product_debit.update(self._get_cofins(item.imposto.COFINS))
+
         return product_debit
 
     def _get_company_invoice(self, nfe):
@@ -192,3 +220,76 @@ class AccountMove(models.Model):
             raise ValidationError(_("Parceiro não cadastrado"))
         
         return dict(partner_id=partner_id.id)
+
+
+    def _get_icms(self, imposto):
+        csts = ['00', '10', '20', '30', '40', '41', '50',
+                '51', '60', '70', '90']
+        csts += ['101', '102', '103', '201', '202', '203',
+                 '300', '400', '500', '900']
+
+        cst_item = None
+        vals = {}
+
+        for cst in csts:
+            tag_icms = None
+            if hasattr(imposto.ICMS, 'ICMSSN%s' % cst):
+                tag_icms = 'ICMSSN'
+                cst_item = get(imposto, 'ICMS.ICMSSN%s.CSOSN' % cst, str)
+            elif hasattr(imposto.ICMS, 'ICMS%s' % cst):
+                tag_icms = 'ICMS'
+                cst_item = get(imposto, 'ICMS.ICMS%s.CST' % cst, str)
+                cst_item = str(cst_item).zfill(2)
+            if tag_icms:
+                icms = imposto.ICMS
+                vals = { 
+                    'icms_origin': get(
+                        icms, '%s%s.orig' % (tag_icms, cst), str),
+                    'icms_base_type': get(
+                        icms, '%s%s.modBC' % (tag_icms, cst), str), 
+                    'icms_base': get(
+                        icms, '%s%s.vBC' % (tag_icms, cst)),
+                    'icms_reduction': get(
+                        icms, '%s%s.pRedBC' % (tag_icms, cst)),
+                    'icms_percent': get(
+                        icms, '%s%s.pICMS' % (tag_icms, cst)),
+                    'icms_value': get(
+                        icms, '%s%s.vICMS' % (tag_icms, cst)),
+                }
+
+        return remove_none_values(vals)
+
+    
+    def _get_ipi(self, ipi):
+        vals = {}
+        for item in ipi.getchildren():
+            vals = { 
+                'ipi_base': get(ipi, '%s.vBC' % item.tag[36:]),
+                'ipi_percent': get(ipi, '%s.pIPI' % item.tag[36:]),
+                'ipi_value': get(ipi, '%s.vIPI' % item.tag[36:]), 
+            }
+
+        return remove_none_values(vals)
+
+
+    def _get_pis(self, pis):
+        vals = {}
+        for item in pis.getchildren():
+            vals = { 
+                'pis_base': get(pis, '%s.vBC' % item.tag[36:]),
+                'pis_percent': get(pis, '%s.pPIS' % item.tag[36:]),
+                'pis_value': get(pis, '%s.vPIS' % item.tag[36:]),
+            }
+
+        return remove_none_values(vals)
+
+    def _get_cofins(self, cofins):
+        vals = {}
+        for item in cofins.getchildren():
+            vals = { 
+                'cofins_base': get(cofins, '%s.vBC' % item.tag[36:]),
+                'cofins_percent': get(cofins, '%s.pCOFINS' % item.tag[36:]),
+                'cofins_value': get(cofins, '%s.vCOFINS' % item.tag[36:]),
+            }
+
+        return remove_none_values(vals)
