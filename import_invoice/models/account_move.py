@@ -77,8 +77,9 @@ class AccountMove(models.Model):
 
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
-        """ if self.search([('document_key', '=', nfe.protNFe.infProt.chNFe.text)]):
-            raise UserError('Documento Eletrônico já importado!') """
+        
+        if self.search([('document_key', '=', nfe.protNFe.infProt.chNFe.text)]):
+            raise UserError('Documento Eletrônico já importado!')
 
         invoice = {
             # Campos obrigatórios
