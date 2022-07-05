@@ -129,9 +129,7 @@ class AccountMove(models.Model):
 
         _logger.info(["Criando Linha Da Fatura"])
         debit_itens = []
-        credit_total = 0
         for line in nfe.NFe.infNFe.det: 
-            credit_total += line.prod.qCom * line.prod.vUnCom
             product_debit = self.create_invoice_item(line, invoice)
             debit_itens.append([0,0, product_debit])
 
