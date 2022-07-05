@@ -55,8 +55,8 @@ class AccountMove(models.Model):
 
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
-        if self.search([('document_key', '=', nfe.protNFe.infProt.chNFe.text)]):
-            raise UserError('Documento Eletrônico já importado!')
+        """ if self.search([('document_key', '=', nfe.protNFe.infProt.chNFe.text)]):
+            raise UserError('Documento Eletrônico já importado!') """
 
         invoice = {
             # Campos obrigatórios
@@ -112,21 +112,27 @@ class AccountMove(models.Model):
             product_debit = self.create_invoice_item(line, invoice)
             debit_itens.append([0,0, product_debit])
 
-        product_credit = {
-            "name": False,
-            'move_id': invoice.id, 
-            'quantity': 1,
-            "fiscal_quantity": 1,
-            'currency_id': invoice.company_id.currency_id.id,
-            "debit": 0,
-            'credit': credit_total,
-            "fiscal_price": - credit_total,
-            "exclude_from_invoice_tab": True,
-            'account_id': invoice.partner_id.property_account_payable_id.id,
-        }
-        debit_itens.append([0,0, product_credit])
-        invoice.line_ids = debit_itens          
-        invoice._onchange_invoice_line_ids()
+        for line in nfe.NFe.infNFe.cobr.dup:
+            product_credit = {
+                "name": False,
+                'move_id': invoice.id, 
+                'quantity': 1,
+                "fiscal_quantity": 1,
+                'currency_id': invoice.company_id.currency_id.id,
+                "debit": 0,
+                'credit': line.vDup,
+                'date_maturity': str(line.dVenc),
+                "fiscal_price": - line.vDup,
+                "exclude_from_invoice_tab": True,
+                'account_id': invoice.partner_id.property_account_payable_id.id,
+            }
+            debit_itens.append([0,0, product_credit])
+        invoice.line_ids = debit_itens
+        for line in invoice.invoice_line_ids: 
+            taxes = line._get_computed_taxes()
+            if taxes and line.move_id.fiscal_position_id:
+                taxes = line.move_id.fiscal_position_id.map_tax(taxes, partner=line.partner_id)
+            line.tax_ids = taxes
         return invoice
 
     def create_invoice_item(self, item, invoice):
@@ -148,13 +154,14 @@ class AccountMove(models.Model):
             raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
  
         product_debit = {
+            'name': product_id.name, 
             'move_id': invoice.id, 
             'product_id': product_id.id,
             'quantity': item.prod.qCom,
             'fiscal_quantity': item.prod.qCom,
             'currency_id': invoice.company_id.currency_id.id,
             'credit': 0,
-            'debit': item.prod.qCom * item.prod.vUnCom,
+            'debit': item.prod.qCom * item.prod.vUnCom + item.imposto.IPI.IPITrib.vIPI,
             'exclude_from_invoice_tab': False,
             'price_unit': item.prod.vUnCom,
             'fiscal_price': item.prod.vUnCom,
@@ -162,6 +169,9 @@ class AccountMove(models.Model):
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
             'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
+            'ipi_base': item.imposto.IPI.IPITrib.vBC,
+            'ipi_percent': item.imposto.IPI.IPITrib.pIPI,
+            'ipi_value': item.imposto.IPI.IPITrib.vIPI
             #'icms_cst_id': self.env["l10n_br_fiscal.cst"].search([("code", "=", item.imposto.ICMS.ICMSSN500.CSOSN)], limit=1).id,
             #'icms_origin': str(item.imposto.ICMS.ICMSSN500.orig),
         }   
@@ -182,4 +192,3 @@ class AccountMove(models.Model):
             raise ValidationError(_("Parceiro não cadastrado"))
         
         return dict(partner_id=partner_id.id)
-
