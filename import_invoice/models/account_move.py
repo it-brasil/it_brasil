@@ -1,9 +1,5 @@
-import base64
-import pytz
 import logging
-from odoo import fields, models, _
-from dateutil import parser
-from datetime import datetime
+from odoo import models, _
 from lxml import objectify
 from odoo.exceptions import UserError,ValidationError
 
@@ -55,17 +51,7 @@ def cnpj_cpf_format(cnpj_cpf):
         cnpj_cpf = (cnpj_cpf[0:3] + '.' + cnpj_cpf[3:6] +
                     '.' + cnpj_cpf[6:9] + '-' + cnpj_cpf[9:11])
     return cnpj_cpf
-
-
-def format_ncm(ncm):
-    if len(ncm) == 4:
-        ncm = ncm[:2] + '.' + ncm[2:4]
-    elif len(ncm) == 6:
-        ncm = ncm[:4] + '.' + ncm[4:6]
-    else:
-        ncm = ncm[:4] + '.' + ncm[4:6] + '.' + ncm[6:8]
-
-    return ncm
+ 
 
 
 class AccountMove(models.Model):
@@ -129,26 +115,48 @@ class AccountMove(models.Model):
 
         _logger.info(["Criando Linha Da Fatura"])
         debit_itens = []
+        credit_total = 0
         for line in nfe.NFe.infNFe.det: 
+            credit_total += round(line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0), 3)
             product_debit = self.create_invoice_item(line, invoice)
             debit_itens.append([0,0, product_debit])
 
-        for line in nfe.NFe.infNFe.cobr.dup:
+        # TODO Diferença centavos
+        """ if nfe.NFe.infNFe.total.ICMSTot.vNF != credit_total:
+            return """
+
+        if hasattr(nfe.NFe.infNFe, "cobr"):
+            for line in nfe.NFe.infNFe.cobr.dup:
+                product_credit = {
+                    "name": False,
+                    'move_id': invoice.id, 
+                    'quantity': 1,
+                    "fiscal_quantity": 1,
+                    'currency_id': invoice.company_id.currency_id.id,
+                    "debit": 0,
+                    'credit': line.vDup , 
+                    'date_maturity': str(line.dVenc),
+                    "fiscal_price": - line.vDup,
+                    "exclude_from_invoice_tab": True,
+                    'account_id': invoice.partner_id.property_account_payable_id.id,
+                }
+                debit_itens.append([0,0, product_credit])
+        else:
             product_credit = {
-                "name": False,
-                'move_id': invoice.id, 
-                'quantity': 1,
-                "fiscal_quantity": 1,
-                'currency_id': invoice.company_id.currency_id.id,
-                "debit": 0,
-                'credit': line.vDup,
-                'date_maturity': str(line.dVenc),
-                "fiscal_price": - line.vDup,
-                "exclude_from_invoice_tab": True,
-                'account_id': invoice.partner_id.property_account_payable_id.id,
-            }
+                    "name": False,
+                    'move_id': invoice.id, 
+                    'quantity': 1,
+                    "fiscal_quantity": 1,
+                    'currency_id': invoice.company_id.currency_id.id,
+                    "debit": 0,
+                    'credit': round(credit_total, 2),
+                    'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
+                    "fiscal_price": - round(credit_total, 2),
+                    "exclude_from_invoice_tab": True,
+                    'account_id': invoice.partner_id.property_account_payable_id.id,
+                }
             debit_itens.append([0,0, product_credit])
-        
+            invoice.update({"move_type": "in_refund"})    
         invoice.line_ids = debit_itens
         for line in invoice.invoice_line_ids: 
             taxes = line._get_computed_taxes()
@@ -183,7 +191,7 @@ class AccountMove(models.Model):
             'fiscal_quantity': item.prod.qCom,
             'currency_id': invoice.company_id.currency_id.id,
             'credit': 0,
-            'debit': item.prod.qCom * item.prod.vUnCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0),
+            'debit': round(item.prod.qCom * item.prod.vUnCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0), 2),
             'exclude_from_invoice_tab': False,
             'price_unit': item.prod.vUnCom,
             'fiscal_price': item.prod.vUnCom,
