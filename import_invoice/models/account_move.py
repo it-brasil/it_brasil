@@ -88,30 +88,8 @@ class AccountMove(models.Model):
 
         invoice.update(self._get_company_invoice(nfe))
         invoice.update(self.get_partner_nfe(nfe))
-
-        _logger.info(["Criando Fatura"])
         invoice = self.create(invoice)
-
-        _logger.info(["Criando Att Xml"])
-        xml_file_vals = {"name": f"NFe-{nfe.protNFe.infProt.chNFe.text}.xml", "datas": xml}
-        xml_file = self.env["ir.attachment"].create(xml_file_vals)
-
-        _logger.info(["Criando Evento de Autorização"])
-        vals_event = {
-            "company_id": company_id.id,
-            "document_id": invoice.fiscal_document_id.id,
-            "document_type_id": company_id.document_type_id.id,
-            "document_number": nfe.NFe.infNFe.ide.nNF.text,
-            "document_serie_id": self.env["l10n_br_fiscal.document.serie"].search([('code','=','1')], limit=1).id,
-            "partner_id": invoice.partner_id.id or False,
-            "protocol_number": nfe.protNFe.infProt.nProt.text,
-            "file_response_id": xml_file.id,
-            "file_request_id": xml_file.id
-        }
-        authorization_event = self.env["l10n_br_fiscal.event"].create(vals_event)
-
-        _logger.info(["Atualizando Fatura"])
-        invoice.update({"authorization_event_id": authorization_event.id})
+        invoice.update(self.create_attachment(nfe, company_id, invoice, xml))
 
         _logger.info(["Criando Linha Da Fatura"])
         debit_itens = []
@@ -153,28 +131,12 @@ class AccountMove(models.Model):
                 }
             debit_itens.append([0,0, product_credit])
             invoice.update({"move_type": "in_refund"})  
-        
         invoice.line_ids = debit_itens
         return
 
     def create_invoice_item(self, item, invoice):
-        codigo = get(item.prod, 'cProd', str)
-        seller_id = self.env['product.supplierinfo'].search([('name', '=', invoice.partner_id.id),('product_code', '=', codigo)])
+        product_id = self.search_product(item, invoice)
 
-        product_id = None
-        if seller_id:
-            product_id = seller_id.product_tmpl_id
-            if len(product_id) > 1:
-                message = '\n'.join(["Produto: %s - %s" % (x.default_code or '', x.name) for x in product_id])
-                raise UserError("Existem produtos duplicados com mesma codificação, corrija-os antes de prosseguir:\n%s" % message)
-
-        if not product_id and item.prod.cEAN and str(item.prod.cEAN) != 'SEM GTIN':
-            product_id = self.env['product.product'].search(
-                [('barcode', '=', item.prod.cEAN)], limit=1)
-        
-        if not product_id:
-            raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
- 
         product_debit = {
             'name': product_id.name, 
             'move_id': invoice.id, 
@@ -203,6 +165,44 @@ class AccountMove(models.Model):
         product_debit.update(self._get_cofins(item.imposto.COFINS))
 
         return product_debit
+    
+    def search_product(self, item, invoice):
+        codigo = get(item.prod, 'cProd', str)
+        seller_id = self.env['product.supplierinfo'].search([('name', '=', invoice.partner_id.id),('product_code', '=', codigo)])
+
+        product_id = False
+        if seller_id:
+            product_id = seller_id.product_tmpl_id
+            if len(product_id) > 1:
+                message = '\n'.join(["Produto: %s - %s" % (x.default_code or '', x.name) for x in product_id])
+                raise UserError("Existem produtos duplicados com mesma codificação, corrija-os antes de prosseguir:\n%s" % message)
+
+        if not product_id and item.prod.cEAN and str(item.prod.cEAN) != 'SEM GTIN':
+            product_id = self.env['product.product'].search(
+                [('barcode', '=', item.prod.cEAN)], limit=1)
+        
+        if not product_id:
+            raise UserError("Não existe nenhum produto cadatrado com o código: %s" % codigo)
+        return product_id
+
+    def create_attachment(self, nfe, company_id, invoice, xml):
+        xml_file_vals = {"name": f"NFe-{nfe.protNFe.infProt.chNFe.text}.xml", "datas": xml}
+        xml_file = self.env["ir.attachment"].create(xml_file_vals)
+
+        _logger.info(["Criando Evento de Autorização"])
+        vals_event = {
+            "company_id": company_id.id,
+            "document_id": invoice.fiscal_document_id.id,
+            "document_type_id": company_id.document_type_id.id,
+            "document_number": nfe.NFe.infNFe.ide.nNF.text,
+            "document_serie_id": self.env["l10n_br_fiscal.document.serie"].search([('code','=','1')], limit=1).id,
+            "partner_id": invoice.partner_id.id or False,
+            "protocol_number": nfe.protNFe.infProt.nProt.text,
+            "file_response_id": xml_file.id,
+            "file_request_id": xml_file.id
+        }
+        authorization_event = self.env["l10n_br_fiscal.event"].create(vals_event)
+        return {"authorization_event_id": authorization_event.id}
 
     def _get_company_invoice(self, nfe):
         dest_cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.dest.CNPJ.text).zfill(14))
