@@ -94,6 +94,8 @@ class NFe(spec_models.StackedModel):
                 'Não há Parceiro vinculado ao documento fiscal!')
 
     def valida_dados_produtos(self):
+        if not self.document_type or self.document_type.code != 55:
+            return True
         products = self.fiscal_line_ids.product_id.product_tmpl_id
         if products:
             final_msg = ''
