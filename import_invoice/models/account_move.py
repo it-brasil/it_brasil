@@ -92,30 +92,47 @@ class AccountMove(models.Model):
         invoice.update(self.create_attachment(nfe, company_id, invoice, xml))
 
         _logger.info(["Criando Linha Da Fatura"])
-        debit_itens = []
+        if hasattr(nfe.NFe.infNFe, "cobr"):
+            itens = self.invoice_with_payment(nfe, invoice)
+        else:
+            itens = self.invoice_without_payment(nfe, invoice)
+            invoice.update({"move_type": "in_refund"})  
+        invoice.line_ids = itens
+        return
+    
+    def invoice_without_payment(self, nfe, invoice):
+        itens = []
+        debit_total = 0
+        for line in nfe.NFe.infNFe.det: 
+                debit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
+                product_credit = self.create_invoice_item_2(line, invoice)
+                itens.append([0,0, product_credit])
+
+        product_debit = {
+            "name": False,
+            'move_id': invoice.id, 
+            'quantity': 1,
+            "fiscal_quantity": 1,
+            'currency_id': invoice.company_id.currency_id.id,
+            'debit': debit_total,
+            'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
+            "fiscal_price": debit_total,
+            "exclude_from_invoice_tab": True,
+            'account_id': invoice.partner_id.property_account_payable_id.id,
+            }
+        itens.append([0,0, product_debit])
+
+        return itens
+
+    def invoice_with_payment(self, nfe, invoice):
+        itens = []
         credit_total = 0
         for line in nfe.NFe.infNFe.det: 
-            credit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
-            product_debit = self.create_invoice_item(line, invoice)
-            debit_itens.append([0,0, product_debit])
-            
-        if hasattr(nfe.NFe.infNFe, "cobr"):
-            for line in nfe.NFe.infNFe.cobr.dup:
-                product_credit = {
-                    "name": False,
-                    'move_id': invoice.id, 
-                    'quantity': 1,
-                    "fiscal_quantity": 1,
-                    'currency_id': invoice.company_id.currency_id.id,
-                    "debit": 0,
-                    'credit': line.vDup, 
-                    'date_maturity': str(line.dVenc),
-                    "fiscal_price": - line.vDup,
-                    "exclude_from_invoice_tab": True,
-                    'account_id': invoice.partner_id.property_account_payable_id.id,
-                }
-                debit_itens.append([0,0, product_credit])
-        else:
+                credit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
+                product_debit = self.create_invoice_item(line, invoice)
+                itens.append([0,0, product_debit])
+
+        for line in nfe.NFe.infNFe.cobr.dup:
             product_credit = {
                 "name": False,
                 'move_id': invoice.id, 
@@ -123,16 +140,51 @@ class AccountMove(models.Model):
                 "fiscal_quantity": 1,
                 'currency_id': invoice.company_id.currency_id.id,
                 "debit": 0,
-                'credit': credit_total,
-                'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
-                "fiscal_price": - credit_total,
+                'credit': line.vDup, 
+                'date_maturity': str(line.dVenc),
+                "fiscal_price": - line.vDup,
                 "exclude_from_invoice_tab": True,
                 'account_id': invoice.partner_id.property_account_payable_id.id,
-                }
-            debit_itens.append([0,0, product_credit])
-            invoice.update({"move_type": "in_refund"})  
-        invoice.line_ids = debit_itens
-        return
+            }
+            itens.append([0,0, product_credit])
+
+        product_credit = {
+            "name": False,
+            'move_id': invoice.id, 
+            'quantity': 1,
+            "fiscal_quantity": 1,
+            'currency_id': invoice.company_id.currency_id.id,
+            "debit": 0,
+            'credit': credit_total,
+            'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
+            "fiscal_price": - credit_total,
+            "exclude_from_invoice_tab": True,
+            'account_id': invoice.partner_id.property_account_payable_id.id,
+            }
+        itens.append([0,0, product_credit])
+
+        return itens
+
+    def create_invoice_item_2(self, item, invoice):
+        product_id = self.search_product(item, invoice)
+
+        product_credit = {
+            'name': product_id.name, 
+            'move_id': invoice.id, 
+            'product_id': product_id.id,
+            'quantity': item.prod.qCom,
+            'fiscal_quantity': item.prod.qCom,
+            'currency_id': invoice.company_id.currency_id.id,
+            'credit': item.prod.qCom * item.prod.vUnCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0),
+            'exclude_from_invoice_tab': False,
+            'price_unit': item.prod.vUnCom,
+            'fiscal_price': item.prod.vUnCom,
+            'cfop_id':  self.env["l10n_br_fiscal.cfop"].search([('code','=', item.prod.CFOP)], limit=1).id,
+            'account_id': product_id.categ_id.property_account_expense_categ_id.id,
+            'ncm_id': product_id.ncm_id.id,
+            'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
+        }   
+        return product_credit
 
     def create_invoice_item(self, item, invoice):
         product_id = self.search_product(item, invoice)
