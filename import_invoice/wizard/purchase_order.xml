@@ -8,24 +8,24 @@
             <form>
                 <group>
                     <group>
-                        <field name="xml_invoice" string="Arquivo XML"/>
+                        <field name="xml_invoice" />
                     </group>
                 </group>
                 <footer>
                     <button
                         name="import_invoice"
                         type="object"
-                        string="Importar"
+                        string="Import"
                         class="btn-primary"
                     />
-                    <button string="Cancelar" class="btn-secondary" special="cancel" />
+                    <button string="Cancel" class="btn-secondary" special="cancel" />
                 </footer>
             </form>
         </field>
     </record>
 
     <record id="custom_purchase_action" model="ir.actions.act_window">
-        <field name="name">Importar XML</field>
+        <field name="name">Import Invoice</field>
         <field name="res_model">purchase.order.wizard</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="purchase_wizard_form" />
@@ -39,8 +39,8 @@
         <field name="arch" type="xml">
             <button name="action_rfq_send" position="before">
                 <button name="%(import_invoice.custom_purchase_action)d" type="action" 
-                string="Importar XML" class="btn-primary" context="{'create_bill':True}" 
-                attrs="{'invisible': ['|', ('state', 'not in', ('purchase', 'done')), ('invoice_status', 'in', ('no', 'invoiced'))]}"></button>
+                string="Import Invoice" class="btn-primary" context="{'create_bill':True}" 
+                attrs="{'invisible': [('state', 'not in', ('purchase', 'done'))]}"></button>
             </button>
         </field>
     </record>
