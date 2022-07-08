@@ -1,5 +1,5 @@
 import logging
-from odoo import models, _
+from odoo import models, _, api
 from lxml import objectify
 from odoo.exceptions import UserError,ValidationError
 
@@ -117,52 +117,11 @@ class AccountMove(models.Model):
             'debit': debit_total,
             'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
             "fiscal_price": debit_total,
+            'freight_value': nfe.NFe.infNFe.total.ICMSTot.vFrete,
             "exclude_from_invoice_tab": True,
             'account_id': invoice.partner_id.property_account_payable_id.id,
             }
         itens.append([0,0, product_debit])
-
-        return itens
-
-    def invoice_with_payment(self, nfe, invoice):
-        itens = []
-        credit_total = 0
-        for line in nfe.NFe.infNFe.det: 
-                credit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
-                product_debit = self.create_invoice_item(line, invoice)
-                itens.append([0,0, product_debit])
-
-        for line in nfe.NFe.infNFe.cobr.dup:
-            product_credit = {
-                "name": False,
-                'move_id': invoice.id, 
-                'quantity': 1,
-                "fiscal_quantity": 1,
-                'currency_id': invoice.company_id.currency_id.id,
-                "debit": 0,
-                'credit': line.vDup, 
-                'date_maturity': str(line.dVenc),
-                "fiscal_price": - line.vDup,
-                "exclude_from_invoice_tab": True,
-                'account_id': invoice.partner_id.property_account_payable_id.id,
-            }
-            itens.append([0,0, product_credit])
-
-        product_credit = {
-            "name": False,
-            'move_id': invoice.id, 
-            'quantity': 1,
-            "fiscal_quantity": 1,
-            'currency_id': invoice.company_id.currency_id.id,
-            "debit": 0,
-            'credit': credit_total,
-            'date_maturity': str(nfe.NFe.infNFe.ide.dhEmi.text),
-            "fiscal_price": - credit_total,
-            "exclude_from_invoice_tab": True,
-            'account_id': invoice.partner_id.property_account_payable_id.id,
-            }
-        itens.append([0,0, product_credit])
-
         return itens
 
     def create_invoice_item_2(self, item, invoice):
@@ -179,12 +138,41 @@ class AccountMove(models.Model):
             'exclude_from_invoice_tab': False,
             'price_unit': item.prod.vUnCom,
             'fiscal_price': item.prod.vUnCom,
+            'freight_value': item.prod.vFrete,
             'cfop_id':  self.env["l10n_br_fiscal.cfop"].search([('code','=', item.prod.CFOP)], limit=1).id,
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
             'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
         }   
         return product_credit
+
+    def invoice_with_payment(self, nfe, invoice):
+        itens = []
+        credit_total = 0
+        parcelas = len(nfe.NFe.infNFe.cobr.dup)
+        _logger.info(["Parcelas", parcelas, "Frete", nfe.NFe.infNFe.total.ICMSTot.vFrete])
+        frete = nfe.NFe.infNFe.total.ICMSTot.vFrete / parcelas
+        for line in nfe.NFe.infNFe.det: 
+                credit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
+                product_debit = self.create_invoice_item(line, invoice)
+                itens.append([0,0, product_debit])
+
+        for line in nfe.NFe.infNFe.cobr.dup:
+            product_credit = {
+                'name': False,
+                'move_id': invoice.id, 
+                'quantity': 1,
+                'fiscal_quantity': 1,
+                'currency_id': invoice.company_id.currency_id.id,
+                'debit': 0,
+                'credit': line.vDup - frete, 
+                'date_maturity': str(line.dVenc),
+                'fiscal_price': - line.vDup - frete,
+                'exclude_from_invoice_tab': True,
+                'account_id': invoice.partner_id.property_account_payable_id.id,
+            }
+            itens.append([0,0, product_credit])
+        return itens
 
     def create_invoice_item(self, item, invoice):
         product_id = self.search_product(item, invoice)
@@ -204,6 +192,7 @@ class AccountMove(models.Model):
             'cfop_id':  self.env["l10n_br_fiscal.cfop"].search([('code','=', item.prod.CFOP)], limit=1).id,
             'account_id': product_id.categ_id.property_account_expense_categ_id.id,
             'ncm_id': product_id.ncm_id.id,
+            'freight_value': item.prod.vFrete,
             'fiscal_operation_id': self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
         }   
 
