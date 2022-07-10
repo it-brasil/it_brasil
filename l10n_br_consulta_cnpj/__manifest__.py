@@ -12,6 +12,7 @@
     "version": "14.0.2.2.0",
     "depends": ["l10n_br_base"],
     "data": [
+        'security/ir.model.access.csv',
         'views/res_partner.xml'
     ],
     "demo": [],
