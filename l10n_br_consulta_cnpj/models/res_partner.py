@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import datetime
 import json
 import re
@@ -5,7 +6,7 @@ import logging
 
 import requests
 
-from odoo import models, _, fields
+from odoo import api, models, _, fields
 from odoo.exceptions import ValidationError, UserError
 
 
@@ -51,6 +52,25 @@ class Partner(models.Model):
         copy=False
     )
 
+    cnpjws_razao_social = fields.Char(
+        string="Razão Social Completa",
+        readonly=True,
+        copy=False
+    )
+
+    cnpjws_size_legal_name = fields.Integer(
+        string="Tamanho Razão Social",
+        copy=False,
+        default=0
+    )
+
+    cnpjws_manual_razao_social = fields.Boolean(
+        string="Precisa de ajuste Razão Social",
+        help="Se essa opção estiver marcada, significa que a Razão Social possuí mais de 60 caracteres e você precisa ajustar manualmente.",
+        copy=False,
+        default=False
+    )
+
     def action_consult_cnpj(self):
         cnpjws_url = 'https://publica.cnpj.ws/cnpj/'
         if self.company_type == 'company':
@@ -59,7 +79,13 @@ class Partner(models.Model):
                 response = requests.get(cnpjws_url + cnpj)
                 cnpjws_result = json.loads(response.text)
                 if response.status_code == 200:
+                    if len(cnpjws_result['razao_social']) > 60:
+                        self.cnpjws_manual_razao_social = True
+
                     self.legal_name = cnpjws_result['razao_social']
+                    self.cnpjws_razao_social = cnpjws_result['razao_social']
+
+                    self.cnpjws_size_legal_name = len(self.legal_name)
 
                     cnpjws_estabelecimento = cnpjws_result['estabelecimento']
                     cnpjws_pais = cnpjws_result['estabelecimento']['pais']['comex_id']
@@ -214,3 +240,11 @@ class Partner(models.Model):
 
         else:
             self.define_inscricao_estadual(fiscal_info)
+
+    def write(self, vals):
+        if "legal_name" in vals:
+            if len(vals["legal_name"]) <= 60:
+                self.cnpjws_size_legal_name = len(vals["legal_name"])
+                self.cnpjws_manual_razao_social = False
+
+        return super().write(vals)

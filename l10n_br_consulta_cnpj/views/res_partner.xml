@@ -23,6 +23,9 @@
                     <strong>Baixada</strong>
                     é aquela que fez essa solicitação a conceder de ofício ou ao órgão competente.
                 </div>
+                <div class="alert alert-warning mb-0" role="alert" attrs="{'invisible': ['|', '&amp;', ('cnpjws_situacao_cadastral', '=', False), ('cnpjws_manual_razao_social', '=', False), ('cnpjws_size_legal_name', '&lt;=', 60)]}">
+                    A Razão Social contém <strong><field name="cnpjws_size_legal_name" readonly="True" /></strong> caracteres, e o máximo para emissão de Nota Fiscal é de 60. Por favor, faça  a abreviação antes de seguir com o pedido / faturamento.
+                </div>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button
@@ -36,7 +39,10 @@
             <page name="sales_purchases" position="after">
                 <page name="cnpjws" string="Informações do CNPJ">
                     <group name="cnpjws_info" string="Dados de consulta">
+                        <field name="cnpjws_manual_razao_social" invisible="True" readonly="True"/>
+                        <field name="cnpjws_size_legal_name" readonly="True" />
                         <field name="cnpjws_atualizadoem" />
+                        <field name="cnpjws_razao_social" />
                         <field name="cnpjws_nome_fantasia" />
                         <field name="cnpjws_tipo" />
                         <field name="cnpjws_situacao_cadastral" />
