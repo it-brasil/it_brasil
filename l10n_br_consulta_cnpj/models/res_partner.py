@@ -33,13 +33,13 @@ class Partner(models.Model):
         copy=False
     )
     cnpjws_tipo = fields.Char(
-        string="Tipo de Empresa",
+        string="Tipo de CNPJ",
         readonly=True,
         copy=False
     )
 
     cnpjws_porte = fields.Char(
-        string="Porte",
+        string="Porte da Empresa",
         readonly=True,
         copy=False
     )
