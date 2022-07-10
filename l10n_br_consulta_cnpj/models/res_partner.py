@@ -246,5 +246,8 @@ class Partner(models.Model):
             if len(vals["legal_name"]) <= 60:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
                 self.cnpjws_manual_razao_social = False
+            else:
+                self.cnpjws_size_legal_name = len(vals["legal_name"])
+                self.cnpjws_manual_razao_social = True
 
         return super().write(vals)

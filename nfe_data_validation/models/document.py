@@ -44,6 +44,9 @@ class NFe(spec_models.StackedModel):
                 if not partner.legal_name:
                     msg += '\n    - Razão Social;'
                     count += 1
+                if len(partner.legal_name) > 60:
+                    msg += '\n    - A Razão Social deve ter no máximo 60 Caracteres, edite o contato antes de validar a fatura;'
+                    count += 1
                 if not partner.cnpj_cpf:
                     if partner.country_id.code == 'BR':
                         msg += '\n    - CNPJ;'
@@ -94,7 +97,7 @@ class NFe(spec_models.StackedModel):
                 'Não há Parceiro vinculado ao documento fiscal!')
 
     def valida_dados_produtos(self):
-        if not self.document_type or self.document_type.code != 55:
+        if not self.document_type:
             return True
         products = self.fiscal_line_ids.product_id.product_tmpl_id
         if products:
@@ -133,11 +136,3 @@ class NFe(spec_models.StackedModel):
         else:
             raise ValidationError(
                 'Não há Produto vinculado ao documento fiscal!')
-
-    # def _valida_xml(self, xml_file):
-    #	self.ensure_one()
-    #	self.valida_dados_destinatario()
-    #	self.valida_dados_produtos()
-    #	erros = nfe_sub.schema_validation(StringIO(xml_file))
-    #	erros = "\n".join(erros)
-    #	self.write({"xml_error_message": erros or False})
