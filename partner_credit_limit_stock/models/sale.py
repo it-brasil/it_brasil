@@ -11,7 +11,8 @@ class SaleOrder(models.Model):
 		('defaulter','Cliente Inadimplente'),
 		('credit','Cliente sem Crédito'),
 		('cleared','Liberado'),
-		('unblocked','Desbloqueado')],
+		('unblocked','Desbloqueado'),
+		('invoiced_order','Pedido Faturado')],
 		string = 'Status de Bloqueio',
 		default = 'no_block',
 		tracking = True
@@ -48,25 +49,54 @@ class SaleOrder(models.Model):
 			if faturas_vencidas_id:
 				self.status_bloqueio = 'defaulter'
 				if permissao_confirmacao: 
-					if modo_pagamento.name == 'A VISTA':
+					if modo_pagamento.allow_sales_order:
 						if (self.status_bloqueio != 'no_block') and (self.status_bloqueio != 'cleared'):
 							self.status_bloqueio = 'unblocked'
 					else:
-						self.msg_error = 'Devido a inadimplência do Cliente, essa Cotação só pode ser confirmada caso a condição de pagamento seja \'À VISTA\'.'
+						self.msg_error = 'Essa condição de pagamento não permite confirmar cotações caso o cliente esteja inadimplente.'
 						return None
 				else:	
-					#faturas_vencidas = faturas_vencidas.browse(faturas_vencidas_id)
 					self.msg_error = 'A Cotação não pode ser confirmada pois o Cliente está inadimplente. Para confirmar essa cotação é necessário o mesmo tornar-se solvente ou o Usuário possuir acesso financeiro correspondente (Gerente de Limite de Crédito).'
 					return None			
 		else:
 			self.status_bloqueio = 'cleared'
-		
-		limite_disponivel = self.partner_id._check_limit()
 		bool_credit_limit = self.partner_id.enable_credit_limit
 		if bool_credit_limit:
-			if limite_disponivel == 0: 
+			self.limite_credito()
+			if self.partner_id.credit_rest == 0: 
 				self.status_bloqueio = 'credit'
 				self.passou_limite = True
 				self.msg_error = 'O Cliente não possui crédito suficiente para que outros usuários possam validar as ordens de entrega (PICK e OUT). É necessário liberação da entrega por parte de um usuário com acesso financeiro correspondente (gerente de limite de crédito).'
-
 		return super().action_confirm() 
+
+	def limite_credito(self):
+		self.ensure_one()
+		amount_sales, debit, credit = 0.0, 0.0, 0.0
+		parceiro = self.partner_id
+		confirmed_sale_orders = self.env['sale.order'].search([
+			('partner_id', '=', parceiro.id),
+			('state', 'in', ['sale','done']),
+			('invoice_status', '!=', 'invoiced')
+		])
+		if not confirmed_sale_orders:
+			amount_sales = self.amount_total	
+		invoice_lines = self.env['account.move.line'].search([
+            ('partner_id', '=', parceiro.id),
+            ('account_id.user_type_id.type', 'in',['receivable', 'payable']),
+            ('parent_state','!=','cancel')
+        ])
+		if confirmed_sale_orders:
+			for sale in confirmed_sale_orders:
+				amount_sales += sale.amount_total
+		if invoice_lines:
+			for line in invoice_lines:
+				credit += line.credit
+				debit += line.debit
+		partner_credit_limit = (debit + amount_sales) - credit
+		available_credit_limit = parceiro.credit_limit - partner_credit_limit
+		if available_credit_limit < 0: 
+			parceiro.credit_rest = 0
+			parceiro.credit_negative_margin = available_credit_limit
+		else:
+			parceiro.credit_rest = available_credit_limit
+			parceiro.credit_negative_margin = 0

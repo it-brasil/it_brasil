@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import datetime
 import json
 import re
@@ -5,7 +6,7 @@ import logging
 
 import requests
 
-from odoo import models, _, fields
+from odoo import api, models, _, fields
 from odoo.exceptions import ValidationError, UserError
 
 
@@ -33,13 +34,13 @@ class Partner(models.Model):
         copy=False
     )
     cnpjws_tipo = fields.Char(
-        string="Tipo de Empresa",
+        string="Tipo de CNPJ",
         readonly=True,
         copy=False
     )
 
     cnpjws_porte = fields.Char(
-        string="Porte",
+        string="Porte da Empresa",
         readonly=True,
         copy=False
     )
@@ -51,6 +52,25 @@ class Partner(models.Model):
         copy=False
     )
 
+    cnpjws_razao_social = fields.Char(
+        string="Razão Social Completa",
+        readonly=True,
+        copy=False
+    )
+
+    cnpjws_size_legal_name = fields.Integer(
+        string="Tamanho Razão Social",
+        copy=False,
+        default=0
+    )
+
+    cnpjws_manual_razao_social = fields.Boolean(
+        string="Precisa de ajuste Razão Social",
+        help="Se essa opção estiver marcada, significa que a Razão Social possuí mais de 60 caracteres e você precisa ajustar manualmente.",
+        copy=False,
+        default=False
+    )
+
     def action_consult_cnpj(self):
         cnpjws_url = 'https://publica.cnpj.ws/cnpj/'
         if self.company_type == 'company':
@@ -59,7 +79,13 @@ class Partner(models.Model):
                 response = requests.get(cnpjws_url + cnpj)
                 cnpjws_result = json.loads(response.text)
                 if response.status_code == 200:
+                    if len(cnpjws_result['razao_social']) > 60:
+                        self.cnpjws_manual_razao_social = True
+
                     self.legal_name = cnpjws_result['razao_social']
+                    self.cnpjws_razao_social = cnpjws_result['razao_social']
+
+                    self.cnpjws_size_legal_name = len(self.legal_name)
 
                     cnpjws_estabelecimento = cnpjws_result['estabelecimento']
                     cnpjws_pais = cnpjws_result['estabelecimento']['pais']['comex_id']
@@ -108,7 +134,8 @@ class Partner(models.Model):
                     fiscal_info.append(cnpjws_cnae)
 
                     self.define_fiscal_profile_id(fiscal_info)
-                    self.cnpjws_atualizadoem = datetime.strptime(cnpjws_result['atualizado_em'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    self.cnpjws_atualizadoem = datetime.strptime(
+                        cnpjws_result['atualizado_em'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     self.cnpjws_nome_fantasia = cnpjws_estabelecimento['nome_fantasia']
                     self.cnpjws_tipo = cnpjws_estabelecimento['tipo']
                     self.cnpjws_situacao_cadastral = cnpjws_estabelecimento['situacao_cadastral']
@@ -129,66 +156,33 @@ class Partner(models.Model):
         if result_ie == []:
             self.inscr_est = ''
         else:
-            if len(result_ie) == 1:
-                if result_ie[0]['ativo'] == True:
-                    self.inscr_est = result_ie[0]['inscricao_estadual']
-                else:
-                    self.inscr_est = ''
-            elif len(result_ie) == 2:
-                if result_ie[0]['ativo'] == True:
-                    if self.state_id.code == result_ie[0]['estado']['sigla']:
-                        self.inscr_est = result_ie[0]['inscricao_estadual']
-
-                        if result_ie[1]['ativo'] == True:
+            for ie in result_ie:
+                if ie['ativo'] == True:
+                    if self.state_id.code == ie['estado']['sigla']:
+                        self.inscr_est = ie['inscricao_estadual']
+                    if self.state_id.code != ie['estado']['sigla']:
+                        search_tax_numbers = self.env['state.tax.numbers'].search(
+                            [('partner_id', '=', self.id),
+                             ('inscr_est', '=', ie['inscricao_estadual'])]
+                        )
+                        if not search_tax_numbers:
                             search_state = self.env['res.country.state'].search(
-                                [('ibge_code', '=', result_ie[1]['estado']['ibge_id'])])
+                                [('ibge_code', '=', ie['estado']['ibge_id'])])
                             if search_state:
                                 try:
-                                    incluir_segunda_ie = self.write(
+                                    incluir_outras_ies = self.write(
                                         {"state_tax_number_ids": [(0, 0, {
                                             "state_id": search_state.id,
-                                            "inscr_est": result_ie[1]['inscricao_estadual']
+                                            "inscr_est": ie['inscricao_estadual']
                                         })]}
                                     )
-                                    _logger.warning(incluir_segunda_ie)
+                                    _logger.info(
+                                        "Inscrição estadual adicional incluída.")
                                 except Exception:
-                                    incluir_segunda_ie = False
-                                    raise ValidationError(
-                                        "Erro ao incluir segunda inscrição estadual: %s estado %s", result_ie[1]['inscricao_estadual'], result_ie[1]['estado']['sigla'])
-                    else:
-                        if result_ie[1]['ativo'] == True:
-                            if self.state_id.code == result_ie[1]['estado']['sigla']:
-                                self.inscr_est = result_ie[1]['inscricao_estadual']
-
-                                if result_ie[0]['ativo'] == True:
-                                    search_state = self.env['res.country.state'].search(
-                                        [('ibge_code', '=', result_ie[0]['estado']['ibge_id'])])
-                                if search_state:
-                                    try:
-                                        incluir_segunda_ie = self.write(
-                                            {"state_tax_number_ids": [(0, 0, {
-                                                "state_id": search_state.id,
-                                                "inscr_est": result_ie[0]['inscricao_estadual']
-                                            })]}
-                                        )
-                                        _logger.warning(incluir_segunda_ie)
-                                    except Exception:
-                                        incluir_segunda_ie = False
-                                        raise ValidationError(
-                                            "Erro ao incluir segunda inscrição estadual: %s estado %s", result_ie[1]['inscricao_estadual'], result_ie[1]['estado']['sigla'])
-                            else:
-                                _logger.warning(
-                                    "Estado %s está divergente", self.state_id.name)
-                else:
-                    if self.state_id.code == result_ie[1]['estado']['sigla']:
-                        self.inscr_est = result_ie[1]['inscricao_estadual']
-                    else:
-                        _logger.warning("Estado %s está divergente",
-                                        self.state_id.name)
-            else:
-                _logger.warning("TEM %s IES", len(result_ie))
-                raise ValidationError(
-                    "O CNPJ %s tem %s Inscrições Estaduais, necessário avisar o time de desenvolvimento", self.cnpj_cpf, len(result_ie))
+                                    _logger.warning(
+                                        "Erro ao incluir IE Adicional: %s", ie['inscricao_estadual'])
+                                # raise ValidationError(
+                                # "Erro ao incluir segunda inscrição estadual: %s estado %s", ie['inscricao_estadual'], ie['estado']['sigla'])
 
     def define_fiscal_profile_id(self, fiscal_info):
         module_l10n_br_fiscal = self.env['ir.module.module'].search(
@@ -203,10 +197,14 @@ class Partner(models.Model):
             # NCN - Não Contribuinte
             search_fiscal_profile_id = self.env["l10n_br_fiscal.partner.profile"]
 
-            profile_snc = search_fiscal_profile_id.search([('code', '=', 'SNC')]).id
-            profile_snn = search_fiscal_profile_id.search([('code', '=', 'SNN')]).id
-            profile_cnt = search_fiscal_profile_id.search([('code', '=', 'CNT')]).id
-            profile_ncn = search_fiscal_profile_id.search([('code', '=', 'NCN')]).id
+            profile_snc = search_fiscal_profile_id.search(
+                [('code', '=', 'SNC')]).id
+            profile_snn = search_fiscal_profile_id.search(
+                [('code', '=', 'SNN')]).id
+            profile_cnt = search_fiscal_profile_id.search(
+                [('code', '=', 'CNT')]).id
+            profile_ncn = search_fiscal_profile_id.search(
+                [('code', '=', 'NCN')]).id
 
             self.define_inscricao_estadual(fiscal_info)
             contribuinte_icms = False
@@ -241,7 +239,8 @@ class Partner(models.Model):
                     try:
                         incluir_cnae_principal = self.write(
                             {"cnae_main_id": search_cnae.id})
-                        _logger.warning(incluir_cnae_principal)
+                        _logger.info("CNAE Principal Adicionado: " +
+                                     str(incluir_cnae_principal))
                     except Exception:
                         incluir_cnae_principal = False
                         raise ValidationError(
@@ -249,3 +248,14 @@ class Partner(models.Model):
 
         else:
             self.define_inscricao_estadual(fiscal_info)
+
+    def write(self, vals):
+        if "legal_name" in vals:
+            if len(vals["legal_name"]) <= 60:
+                self.cnpjws_size_legal_name = len(vals["legal_name"])
+                self.cnpjws_manual_razao_social = False
+            else:
+                self.cnpjws_size_legal_name = len(vals["legal_name"])
+                self.cnpjws_manual_razao_social = True
+
+        return super().write(vals)
