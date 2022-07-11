@@ -161,21 +161,28 @@ class Partner(models.Model):
                     if self.state_id.code == ie['estado']['sigla']:
                         self.inscr_est = ie['inscricao_estadual']
                     if self.state_id.code != ie['estado']['sigla']:
-                        search_state = self.env['res.country.state'].search(
-                            [('ibge_code', '=', ie['estado']['ibge_id'])])
-                        if search_state:
-                            try:
-                                incluir_outras_ies = self.write(
-                                    {"state_tax_number_ids": [(0, 0, {
-                                        "state_id": search_state.id,
-                                        "inscr_est": ie['inscricao_estadual']
-                                    })]}
-                                )
-                                _logger.warning(incluir_outras_ies)
-                            except Exception:
-                                incluir_outras_ies = False
-                                raise ValidationError(
-                                    "Erro ao incluir segunda inscrição estadual: %s estado %s", ie['inscricao_estadual'], ie['estado']['sigla'])
+                        search_tax_numbers = self.env['state.tax.numbers'].search(
+                            [('partner_id', '=', self.id),
+                             ('inscr_est', '=', ie['inscricao_estadual'])]
+                        )
+                        if not search_tax_numbers:
+                            search_state = self.env['res.country.state'].search(
+                                [('ibge_code', '=', ie['estado']['ibge_id'])])
+                            if search_state:
+                                try:
+                                    incluir_outras_ies = self.write(
+                                        {"state_tax_number_ids": [(0, 0, {
+                                            "state_id": search_state.id,
+                                            "inscr_est": ie['inscricao_estadual']
+                                        })]}
+                                    )
+                                    _logger.info(
+                                        "Inscrição estadual adicional incluída.")
+                                except Exception:
+                                    _logger.warning(
+                                        "Erro ao incluir IE Adicional: %s", ie['inscricao_estadual'])
+                                # raise ValidationError(
+                                # "Erro ao incluir segunda inscrição estadual: %s estado %s", ie['inscricao_estadual'], ie['estado']['sigla'])
 
     def define_fiscal_profile_id(self, fiscal_info):
         module_l10n_br_fiscal = self.env['ir.module.module'].search(
@@ -232,7 +239,8 @@ class Partner(models.Model):
                     try:
                         incluir_cnae_principal = self.write(
                             {"cnae_main_id": search_cnae.id})
-                        _logger.warning(incluir_cnae_principal)
+                        _logger.info("CNAE Principal Adicionado: " +
+                                     str(incluir_cnae_principal))
                     except Exception:
                         incluir_cnae_principal = False
                         raise ValidationError(
