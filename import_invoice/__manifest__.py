@@ -7,7 +7,14 @@
     "version": "14.0.1.0.0",
     "license": "AGPL-3",
     "author": "Lucas Avila",
-    "depends": ["base", "purchase", "account", "l10n_br"],
+    "depends": [
+            "base", 
+            "purchase", 
+            "account", 
+            "l10n_br", 
+            "l10n_br_purchase", 
+            "l10n_br_nfe"
+        ],
     "data": [
         "security/ir.model.access.csv",
         "wizard/purchase_order.xml",

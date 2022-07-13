@@ -18,7 +18,6 @@ def convert(obj, conversion=None):
         return float(obj)
     raise u"Tipo não implementado %s" % str(type(obj))
 
-
 def get(obj, path, conversion=None):
     paths = path.split(".")
     index = 0
@@ -34,12 +33,10 @@ def get(obj, path, conversion=None):
         return convert(obj, conversion=conversion)
     return None
 
-
 def remove_none_values(dict):
     res = {}
     res.update({k: v for k, v in dict.items() if v})
     return res
-
 
 def cnpj_cpf_format(cnpj_cpf):
     if len(cnpj_cpf) == 14:
@@ -51,15 +48,10 @@ def cnpj_cpf_format(cnpj_cpf):
         cnpj_cpf = (cnpj_cpf[0:3] + "." + cnpj_cpf[3:6] +
                     "." + cnpj_cpf[6:9] + "-" + cnpj_cpf[9:11])
     return cnpj_cpf
- 
-
 
 class AccountMove(models.Model):
     _inherit = "account.move"
-
-    """ ================================================
-                        Validado    
-    ================================================="""
+ 
 
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
@@ -97,7 +89,7 @@ class AccountMove(models.Model):
         else:
             itens = self.invoice_without_payment(nfe, invoice)
             invoice.update({"move_type": "in_refund"})  
-        _logger.info(["Setando Linha", itens])
+
         invoice.line_ids = itens
         return
     
@@ -107,7 +99,7 @@ class AccountMove(models.Model):
 
         for line in nfe.NFe.infNFe.det: 
                 debit_total += line.prod.qCom * line.prod.vUnCom + (line.imposto.IPI.IPITrib.vIPI if hasattr(line.imposto, "IPI") else 0)
-                freight_credit = line.prod.vFrete / line.prod.qCom
+                freight_credit = line.prod.vFrete / line.prod.qCom if hasattr(line.prod, "vFrete") else 0
                 product_credit = self.create_invoice_item_2(line, invoice, freight_credit)
                 itens.append([0,0, product_credit])
 
@@ -137,11 +129,13 @@ class AccountMove(models.Model):
             "quantity": item.prod.qCom,
             "fiscal_quantity": item.prod.qCom,
             "currency_id": invoice.company_id.currency_id.id,
-            "credit": item.prod.qCom * item.prod.vUnCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0) + freight,
+            "credit": (item.prod.vUnCom + freight) * item.prod.qCom + 
+                        (item.imposto.IPI.IPITrib.vIPI 
+                        if hasattr(item.imposto, "IPI") and hasattr(item.imposto.IPI, "IPITrib") 
+                        else 0),
             "exclude_from_invoice_tab": False,
-            "price_unit": item.prod.vUnCom,
+            "price_unit": item.prod.vUnCom + freight,
             "fiscal_price": item.prod.vUnCom + freight,
-            "freight_value": item.prod.vFrete,
             "cfop_id":  self.env["l10n_br_fiscal.cfop"].search([("code","=", item.prod.CFOP)], limit=1).id or False,
             "account_id": product_id.categ_id.property_account_expense_categ_id.id,
             "ncm_id": product_id.ncm_id.id,
@@ -152,7 +146,7 @@ class AccountMove(models.Model):
     def invoice_with_payment(self, nfe, invoice):
         itens = []
         for line in nfe.NFe.infNFe.det: 
-                freight_debit = line.prod.vFrete / line.prod.qCom 
+                freight_debit = line.prod.vFrete / line.prod.qCom if hasattr(line.prod, "vFrete") else 0
                 product_debit = self.create_invoice_item(line, invoice, freight_debit)
                 itens.append([0,0, product_debit])
 
@@ -183,7 +177,10 @@ class AccountMove(models.Model):
             "fiscal_quantity": item.prod.qCom,
             "currency_id": invoice.company_id.currency_id.id,
             "credit": 0,
-            "debit": (item.prod.vUnCom + freight) * item.prod.qCom + (item.imposto.IPI.IPITrib.vIPI if hasattr(item.imposto, "IPI") else 0),
+            "debit": (item.prod.vUnCom + freight) * item.prod.qCom + 
+                    (item.imposto.IPI.IPITrib.vIPI 
+                    if hasattr(item.imposto, "IPI") and hasattr(item.imposto.IPI, "IPITrib") 
+                    else 0),
             "exclude_from_invoice_tab": False,
             "price_unit": item.prod.vUnCom + freight,
             "fiscal_price": item.prod.vUnCom + freight,
@@ -192,7 +189,7 @@ class AccountMove(models.Model):
             "ncm_id": product_id.ncm_id.id, 
             "fiscal_operation_id": self.env["l10n_br_fiscal.operation"].search([("fiscal_type","=","purchase")], limit=1).id,
         }   
-        _logger.info(["Debit", product_debit["debit"], (item.prod.vUnCom + freight) * item.prod.qCom  ])
+
         if hasattr(item.imposto, "ICMS"):
             product_debit.update(self._get_icms(item.imposto)) 
 
