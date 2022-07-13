@@ -56,6 +56,9 @@ class AccountMove(models.Model):
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
         
+        if not hasattr(nfe, "protNFe"):
+            raise ValidationError(_("Arquivo inválido, verifique se o arquivo selecionado é uma nota fiscal eletrônica (NFe)"))
+
         if self.search([("document_key", "=", nfe.protNFe.infProt.chNFe.text)]):
             raise UserError("Documento Eletrônico já importado!")
 
