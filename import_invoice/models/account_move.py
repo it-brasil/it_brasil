@@ -160,6 +160,7 @@ class AccountMove(models.Model):
                 "debit": 0,
                 "credit": line.vDup, 
                 "date_maturity": str(line.dVenc),
+                "price_unit": - line.vDup,
                 "fiscal_price": - line.vDup,
                 "exclude_from_invoice_tab": True,
                 "account_id": invoice.partner_id.property_account_payable_id.id,
@@ -255,7 +256,6 @@ class AccountMove(models.Model):
         
         return dict(partner_id=partner_id.id)
 
-
     def _get_icms(self, imposto):
         csts = ["00", "10", "20", "30", "40", "41", "50",
                 "51", "60", "70", "90"]
@@ -290,9 +290,7 @@ class AccountMove(models.Model):
                     "icms_value": get(
                         icms, "%s%s.vICMS" % (tag_icms, cst)),
                 }
-
         return remove_none_values(vals)
-
     
     def _get_ipi(self, ipi):
         vals = {}
@@ -302,9 +300,7 @@ class AccountMove(models.Model):
                 "ipi_percent": get(ipi, "%s.pIPI" % item.tag[36:]),
                 "ipi_value": get(ipi, "%s.vIPI" % item.tag[36:]), 
             }
-
         return remove_none_values(vals)
-
 
     def _get_pis(self, pis):
         vals = {}
@@ -314,7 +310,6 @@ class AccountMove(models.Model):
                 "pis_percent": get(pis, "%s.pPIS" % item.tag[36:]),
                 "pis_value": get(pis, "%s.vPIS" % item.tag[36:]),
             }
-
         return remove_none_values(vals)
 
     def _get_cofins(self, cofins):
@@ -325,5 +320,4 @@ class AccountMove(models.Model):
                 "cofins_percent": get(cofins, "%s.pCOFINS" % item.tag[36:]),
                 "cofins_value": get(cofins, "%s.vCOFINS" % item.tag[36:]),
             }
-
         return remove_none_values(vals)
