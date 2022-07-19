@@ -1,3 +1,5 @@
 id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
 access_purchase_import_invoice,access.purchase.import.invoice,model_purchase_order_wizard,,1,1,1,1
 access_wizard_import_nfe,access_wizard_import_nfe,model_wizard_import_nfe,account.group_account_invoice,1,1,1,0
+access_nfe_import_declaration,access_nfe_import_declaration,model_nfe_import_declaration,account.group_account_invoice,1,1,1,0
+access_nfe_import_declaration_line,access_nfe_import_declaration_line,model_nfe_import_declaration_line,account.group_account_invoice,1,1,1,0

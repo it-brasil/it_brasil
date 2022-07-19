@@ -1,5 +1,5 @@
 import logging
-from odoo import models, _, api
+from odoo import models, _, api, fields
 from lxml import objectify
 from odoo.exceptions import UserError,ValidationError
 
@@ -200,6 +200,15 @@ class AccountMove(models.Model):
         if hasattr(item.imposto, "IPI"):
             product_debit.update(self._get_ipi(item.imposto.IPI))
 
+        if hasattr(item.imposto, 'II'):
+            product_debit.update(self._get_ii(item.imposto.II))
+        
+        if hasattr(item.prod, 'DI'):
+            di_ids = []
+            for di in item.prod.DI:
+                di_ids.append(self._get_di(item.prod.DI))
+            product_debit.update({'import_declaration_ids': di_ids})
+
         product_debit.update(self._get_pis(item.imposto.PIS))
         product_debit.update(self._get_cofins(item.imposto.COFINS))
 
@@ -324,3 +333,46 @@ class AccountMove(models.Model):
                 "cofins_value": get(cofins, "%s.vCOFINS" % item.tag[36:]),
             }
         return remove_none_values(vals)
+
+    def _get_ii(self, ii):
+        vals = {
+            'ii_base_calculo': get(ii, 'vBC'),
+            'ii_valor_despesas': get(ii, 'vDespAdu'),
+            'ii_valor_iof': get(ii, 'vIOF'),
+            'ii_valor': get(ii, 'vII'),
+        }
+        return remove_none_values(vals)
+    
+    def _get_di(self, di):
+        state_code = get(di, 'UFDesemb')
+        state_id = self.env['res.country.state'].search([
+            ('code', '=', state_code),
+            ('country_id.code', '=', 'BR')
+        ])
+        vals = {
+            'name': get(di, 'nDI'),
+            'date_registration': get(di, 'dDI'),
+            'location': get(di, 'xLocDesemb'),
+            'state_id': state_id.id,
+            'date_release': get(di, 'dDesemb'),
+            'type_transportation': get(di, 'tpViaTransp', str),
+            'type_import': get(di, 'tpIntermedio', str),
+            'exporting_code': get(di, 'cExportador'),
+            'line_ids': []
+        }
+
+        if hasattr(di, 'adi'):
+            for adi in di.adi:
+                adi_vals = {
+                    'sequence': get(di.adi, 'nSeqAdic'),
+                    'name': get(di.adi, 'nAdicao'),
+                    'manufacturer_code': get(di.adi, 'cFabricante'),
+                }
+                adi_vals = remove_none_values(adi_vals)
+                adi = self.env['nfe.import.declaration.line'].create(adi_vals)
+                vals['line_ids'].append((4, adi.id, False))
+
+        vals = remove_none_values(vals)
+        di = self.env['nfe.import.declaration'].create(vals)
+
+        return (4, di.id, False)
