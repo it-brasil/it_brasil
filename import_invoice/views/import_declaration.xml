@@ -4,26 +4,28 @@
         <field name="model">nfe.import.declaration</field>
         <field name="arch" type="xml">
             <form string="Declaração de Importação">
-                <group>
+                <sheet>
                     <group>
-                        <field name="name"/> 
-                        <field name="date_registration"/>
-                        <field name="state_id" options="{'no_create': True, 'no_create_edit': True}"/>
-                        <field name="location"/>
-                        <field name="date_release"/>
-                        <field name="type_transportation" />
+                        <group>
+                            <field name="name"/> 
+                            <field name="date_registration"/>
+                            <field name="state_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="location"/>
+                            <field name="date_release"/>
+                            <field name="type_transportation" />
+                        </group>
+                        <group>
+                            <field name="afrmm_value" />
+                            <field name="type_import" />
+                            <field name="thirdparty_cnpj" />
+                            <field name="thirdparty_state_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="exporting_code"/>
+                        </group>
+                        <group string="Adições" colspan="4">
+                            <field name="line_ids" nolabel="1" />
+                        </group>
                     </group>
-                    <group>
-                        <field name="afrmm_value" />
-                        <field name="type_import" />
-                        <field name="thirdparty_cnpj" />
-                        <field name="thirdparty_state_id" options="{'no_create': True, 'no_create_edit': True}"/>
-                        <field name="exporting_code"/>
-                    </group>
-                    <group string="Adições" colspan="4">
-                        <field name="line_ids" nolabel="1" />
-                    </group>
-                </group>
+                </sheet>
             </form>
         </field>
     </record>
