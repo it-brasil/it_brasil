@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <record id="layout_document_form_inherit" model="ir.ui.view">
-        <field name="name">l10n_br_layout.document.form.inherit</field>
-        <field name="model">l10n_br_fiscal.document</field>
-        <field name="inherit_id" ref="layout_document_form_inherit" />
+    <record id="custom_view" model="ir.ui.view">
+        <field name="name">l10n_br_layout.document.form.inherit (in Import Invoice)</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="l10n_br_account.invoice_form" />
         <field name="arch" type="xml">
-            <page name="amounts" position="inside">
-                <page name="ii" string="II" attrs="{'invisible': [('tipo_produto','==', 'service')]}">
+            <page name="amounts" position="after">
+                <page name="ii" string="II">
                     <group string="Detalhes do Imposto de Importação">
                         <field name="ii_base_calculo"/>
                         <field name="ii_aliquota"/>

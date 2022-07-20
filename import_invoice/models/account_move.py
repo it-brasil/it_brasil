@@ -52,7 +52,6 @@ def cnpj_cpf_format(cnpj_cpf):
 class AccountMove(models.Model):
     _inherit = "account.move"
  
-
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
         
@@ -373,6 +372,18 @@ class AccountMove(models.Model):
                 vals['line_ids'].append((4, adi.id, False))
 
         vals = remove_none_values(vals)
-        di = self.env['nfe.import.declaration'].create(vals)
+        #di = self.env['nfe.import.declaration'].create(vals)
 
         return (4, di.id, False)
+
+class AccountMoveLine(models.Model):
+    _inherit = "account.move.line"
+
+
+    import_declaration_ids = fields.One2many('nfe.import.declaration', 'move_line_id', string='Import Declaration')
+    
+    ii_base_calculo = fields.Monetary(string='Base II', readonly=True)
+    ii_aliquota = fields.Float(string='Alíquota II', digits='Account',readonly=True)
+    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras', readonly=True)
+    ii_valor = fields.Monetary(string='Imposto de Importação', readonly=True)
+    ii_valor_iof = fields.Monetary(string='IOF', readonly=True)

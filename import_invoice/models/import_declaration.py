@@ -1,17 +1,10 @@
-from odoo import fields, models
-
+from odoo import fields, models, _
 
 class ImportDeclaration(models.Model):
     _name = 'nfe.import.declaration'
     _description = "Declaração de Importação"
 
-    move_id = fields.Many2one(
-        'account.move', 'Fatura',
-        ondelete='cascade', index=True)
-    eletronic_document_line_id = fields.Many2one(
-        'eletronic.document.line', 'Linha de Documento Eletrônico',
-        ondelete='cascade', index=True)
-
+    move_line_id = fields.Many2one('account.move.line', 'Linha da Fatura', ondelete='cascade', index=True) 
     name = fields.Char('Número da DI', size=10, required=True)
     date_registration = fields.Date('Data de Registro', required=True)
     state_id = fields.Many2one(

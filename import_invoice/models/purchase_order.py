@@ -7,3 +7,7 @@ class PurchaseOrder(models.Model):
         super(PurchaseOrder, self).action_create_invoice()
         invoice = max([inv.id for inv in self.invoice_ids])
         return invoice
+
+    # TODO
+    def import_di(self):
+        return

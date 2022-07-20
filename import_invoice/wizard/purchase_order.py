@@ -80,4 +80,3 @@ class PurchaseOrderWizard(models.TransientModel):
     def clear_cnpj(self, cnpj):
         return cnpj.replace(".","").replace("/","").replace("-","")
 
-    
