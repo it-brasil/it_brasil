@@ -363,12 +363,13 @@ class AccountMove(models.Model):
             'state_id': state_id.id,
             'date_release': get(di, 'dDesemb'),
             'type_transportation': get(di, 'tpViaTransp', str),
+            'afrmm_value': get(di, 'vAFRMM', str),
             'type_import': get(di, 'tpIntermedio', str),
             'exporting_code': get(di, 'cExportador'),
             'line_ids': []
         }
-        return remove_none_values(vals)
-        """ if hasattr(di, 'adi'):
+
+        if hasattr(di, 'adi'):
             for adi in di.adi:
                 adi_vals = {
                     'sequence': get(di.adi, 'nSeqAdic'),
@@ -379,18 +380,11 @@ class AccountMove(models.Model):
                 adi = self.env['nfe.import.declaration.line'].create(adi_vals)
                 vals['line_ids'].append((4, adi.id, False))
 
-        vals = remove_none_values(vals)
-        di = self.env['nfe.import.declaration'].create(vals) """
-
-        return (4, di.id, False)
+        return remove_none_values(vals)
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
-
-    def create(self, vals):
-        res = super(AccountMoveLine, self).create(vals)
-        _logger.info(["Create", self.ii_base_calculo, self.ii_aliquota])
-        return res
+ 
 
     ii_base_calculo = fields.Monetary(string='Base II')
     ii_aliquota = fields.Float(string='Alíquota II', digits='Account')
