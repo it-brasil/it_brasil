@@ -339,9 +339,10 @@ class Tax(models.Model):
 
         # Get Computed IPI Tax
         tax_dict_ipi = taxes_dict.get("ipi", {})
-
+        # Troquei o ind_final acima pelo q esta no partner
+        # pq passava 3 vezes e na terceira entrava 
         if partner.ind_ie_dest in (NFE_IND_IE_DEST_2, NFE_IND_IE_DEST_9) or (
-            ind_final == FINAL_CUSTOMER_YES
+            partner.ind_final == FINAL_CUSTOMER_YES
         ):
             # Add IPI in ICMS Base
             tax_dict["add_to_base"] += tax_dict_ipi.get("tax_value", 0.00)
