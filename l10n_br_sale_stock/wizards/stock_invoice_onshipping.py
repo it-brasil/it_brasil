@@ -18,9 +18,10 @@ class StockInvoiceOnshipping(models.TransientModel):
 
         pick = fields.first(pickings)
         if pick.sale_id:
+            # Carlos: alterei a linha abaixo, pegava o endereco de faturamento
             values.update(
                 {
-                    "partner_id": pick.sale_id.partner_invoice_id.id,
+                    "partner_id": pick.sale_id.partner_id.id,
                 }
             )
             if "payment_term_id" in values and pick.sale_id.payment_term_id.id != values["payment_term_id"]:

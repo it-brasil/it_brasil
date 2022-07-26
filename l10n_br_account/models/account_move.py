@@ -3,7 +3,7 @@
 
 from dateutil.relativedelta import relativedelta
 
-from odoo import models
+from odoo import api, models
 
 from odoo.addons.l10n_br_fiscal.constants.fiscal import (
     DOCUMENT_ISSUER_COMPANY,
@@ -116,3 +116,19 @@ class AccountMove(models.Model):
         # retidos associada a essa fatura e cancela-las também.
         self._withholding_validate()
         return super().button_cancel()
+
+    # estou replicando aqui para remover o financeiro qdo o CFOP nao tem Financeiro
+    @api.depends("line_ids", "state")
+    def _compute_financial(self):
+        for move in self:
+            lines = move.line_ids.filtered(
+                lambda l: l.account_id.internal_type in ("receivable", "payable")
+            )
+            move.financial_move_line_ids = lines.sorted()
+        # se tem CFOP que nao tem financeiro entao removo
+        # TODO - preciso avalizar se vai ter nota com este CFOP sem financeiro e CFOP com Financeiro
+        for move in self:
+            for line in move.line_ids:
+                if line.cfop_id:
+                    if not line.cfop_id.finance_move:
+                        move.financial_move_line_ids = False

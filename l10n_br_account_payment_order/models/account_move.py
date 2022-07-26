@@ -96,7 +96,9 @@ class AccountMove(models.Model):
                 )
 
             # Criação das Linha na Ordem de Pagamento
-            filtered_invoice_ids.create_account_payment_line()
+            # Carlos : nao permite validar uma fatura com o SEM PAGAMENTO selecionado
+            if self.payment_mode_id.fiscal_payment_mode != "90":
+                filtered_invoice_ids.create_account_payment_line()
 
         return result
 

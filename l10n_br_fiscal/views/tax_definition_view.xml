@@ -70,7 +70,7 @@
         </header>
         <sheet>
           <group>
-            <field 
+            <field
                             name="tax_group_id"
                             options="{'no_create': True, 'no_create_edit': True}"
                         />
@@ -102,9 +102,9 @@
                         attrs="{'invisible': [('icms_regulation_id', '=', False)]}"
                     >
             <field
-                        name="state_from_id"
-                        options="{'no_create': True, 'no_create_edit': True}"
-                    />
+                            name="state_from_id"
+                            options="{'no_create': True, 'no_create_edit': True}"
+                        />
             <field name="state_to_ids" options="{'no_create': True}" />
           </group>
           <notebook>
@@ -122,12 +122,12 @@
                                     />
                 </div>
                 <field
-                        name="ncm_ids"
-                        options="{'no_create': True}"
-                        force_save="1"
-                        nolabel="1"
-                        colspan="2"
-                    />
+                                    name="ncm_ids"
+                                    options="{'no_create': True}"
+                                    force_save="1"
+                                    nolabel="1"
+                                    colspan="2"
+                                />
                 <field name="ncm_exception" />
                 <field name="not_in_ncms" />
               </group>
@@ -146,12 +146,12 @@
                                     />
                 </div>
                 <field
-                        name="nbm_ids"
-                        options="{'no_create': True}"
-                        force_save="1"
-                        nolabel="1"
-                        colspan="2"
-                    />
+                                    name="nbm_ids"
+                                    options="{'no_create': True}"
+                                    force_save="1"
+                                    nolabel="1"
+                                    colspan="2"
+                                />
                 <field name="not_in_nbms" />
               </group>
             </page>
@@ -169,12 +169,12 @@
                                     />
                 </div>
                 <field
-                        name="cest_ids"
-                        options="{'no_create': True}"
-                        force_save="1"
-                        nolabel="1"
-                        colspan="2"
-                    />
+                                    name="cest_ids"
+                                    force_save="1"
+                                    nolabel="1"
+                                    colspan="2"
+                                    options="{'no_create': True}"
+                                />
               </group>
             </page>
             <page name="city_taxation_codes_page" string="City Taxation Code">
@@ -193,16 +193,16 @@
               </group>
             </page>
             <page name="fiscal_profile_page" string="Fiscal Profile">
-              <group name="fiscal_profile" string="Fiscal Profile">
-                  <field name="ind_final" />
-              </group>
-          </page>
+                <group name="fiscal_profile" string="Fiscal Profile">
+                    <field name="ind_final" />
+                </group>
+            </page>
           </notebook>
         </sheet>
         <div class="oe_chatter">
-          <field name="message_follower_ids" groups="base.group_user" />
-          <field name="activity_ids" />
-          <field name="message_ids" />
+            <field name="message_follower_ids" groups="base.group_user" />
+            <field name="activity_ids" />
+            <field name="message_ids" />
         </div>
       </form>
     </field>

@@ -156,8 +156,11 @@ class StockInvoiceOnshipping(models.TransientModel):
     def _search_document_related(self, invoice):
         pickings = self._load_pickings()
         picking = fields.first(pickings)
-        if picking.fiscal_operation_id and picking.fiscal_operation_id.fiscal_type == "purchase_refund":
-            reference = self.env['purchase.order'].search([('name','=',picking.group_id.name)])
+        if picking.fiscal_operation_id and picking.fiscal_operation_id.fiscal_type in ("purchase_refund", "sale_refund"):
+            if picking.fiscal_operation_id.fiscal_type == "purchase_refund":
+                reference = self.env['purchase.order'].search([('name','=',picking.group_id.name)])
+            if picking.fiscal_operation_id.fiscal_type == "sale_refund":
+                reference = self.env['sale.order'].search([('name','=',picking.group_id.name)])
             one_document = True
             for doc_referenced in reference.invoice_ids:
                 if (doc_referenced.fiscal_operation_id.return_fiscal_operation_id == picking.fiscal_operation_id
@@ -206,7 +209,7 @@ class StockInvoiceOnshipping(models.TransientModel):
 
         for invoice_id in invoice:
             
-            if invoice_id.fiscal_operation_id.fiscal_type == "purchase_refund":
+            if invoice_id.fiscal_operation_id.fiscal_type in ("purchase_refund", "sale_refund"):
                 # buscando documento de referencia se existir
                 self._search_document_related(invoice_id)
 
