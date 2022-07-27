@@ -51,7 +51,7 @@ class AccountMoveLine(models.AbstractModel):
         related='company_id.currency_id')
 
     # TODO remover
-    line_ids = fields.Many2many('declaration.line') 
+    line_ids = fields.Char() 
     
     @api.depends('journal_id')
     def _compute_company_id(self):
