@@ -205,10 +205,7 @@ class AccountMove(models.Model):
             product_debit.update(self._get_ii(item.imposto.II))
         
         if hasattr(item.prod, 'DI'):
-            di_ids = []
-            for di in item.prod.DI:
-                di_ids.append(self._get_di(item.prod.DI))
-            #product_debit.update({'import_declaration_ids': di_ids})
+            product_debit.update(self._get_di(item.prod.DI))            
 
         product_debit.update(self._get_pis(item.imposto.PIS))
         product_debit.update(self._get_cofins(item.imposto.COFINS))
@@ -366,18 +363,18 @@ class AccountMove(models.Model):
             'afrmm_value': get(di, 'vAFRMM', str),
             'type_import': get(di, 'tpIntermedio', str),
             'exporting_code': get(di, 'cExportador'),
-            'line_ids': []
+            'di_ids': []
         }
 
         if hasattr(di, 'adi'):
             for adi in di.adi:
                 adi_vals = {
-                    'sequence': get(di.adi, 'nSeqAdic'),
+                    'sequence_di': get(di.adi, 'nSeqAdic'),
                     'name': get(di.adi, 'nAdicao'),
                     'manufacturer_code': get(di.adi, 'cFabricante'),
                 }
                 adi_vals = remove_none_values(adi_vals)
                 adi = self.env['declaration.line'].create(adi_vals)
-                vals['line_ids'].append((4, adi.id, False))
+                vals['di_ids'].append((4, adi.id, False))
 
         return remove_none_values(vals)
