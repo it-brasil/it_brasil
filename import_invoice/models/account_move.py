@@ -377,52 +377,7 @@ class AccountMove(models.Model):
                     'manufacturer_code': get(di.adi, 'cFabricante'),
                 }
                 adi_vals = remove_none_values(adi_vals)
-                adi = self.env['nfe.import.declaration.line'].create(adi_vals)
+                adi = self.env['declaration.line'].create(adi_vals)
                 vals['line_ids'].append((4, adi.id, False))
 
         return remove_none_values(vals)
-
-class AccountMoveLine(models.Model):
-    _inherit = "account.move.line"
- 
-
-    ii_base_calculo = fields.Monetary(string='Base II')
-    ii_aliquota = fields.Float(string='Alíquota II', digits='Account')
-    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras')
-    ii_valor = fields.Monetary(string='Imposto de Importação')
-    ii_valor_iof = fields.Monetary(string='IOF')
-
-    date_registration = fields.Date('Data de Registro', required=True)
-    state_id = fields.Many2one(
-        'res.country.state', 'Estado',
-        domain="[('country_id.code', '=', 'BR')]", required=True)
-    location = fields.Char('Local', required=True, size=60)
-    date_release = fields.Date('Data de Liberação', required=True)
-    type_transportation = fields.Selection([
-        ('1', '1 - Marítima'),
-        ('2', '2 - Fluvial'),
-        ('3', '3 - Lacustre'),
-        ('4', '4 - Aérea'),
-        ('5', '5 - Postal'),
-        ('6', '6 - Ferroviária'),
-        ('7', '7 - Rodoviária'),
-        ('8', '8 - Conduto / Rede Transmissão'),
-        ('9', '9 - Meios Próprios'),
-        ('10', '10 - Entrada / Saída ficta'),
-    ], 'Transporte Internacional', required=True, default="1")
-    afrmm_value = fields.Float(
-        'Valor da AFRMM', digits='Account', default=0.00)
-    type_import = fields.Selection([
-        ('1', '1 - Importação por conta própria'),
-        ('2', '2 - Importação por conta e ordem'),
-        ('3', '3 - Importação por encomenda'),
-    ], 'Tipo de Importação', default='1', required=True)
-    thirdparty_cnpj = fields.Char('CNPJ', size=18)
-    thirdparty_state_id = fields.Many2one(
-        'res.country.state', 'Estado Parceiro',
-        domain="[('country_id.code', '=', 'BR')]")
-    exporting_code = fields.Char(
-        'Código do Exportador', required=True, size=60)
-    line_ids = fields.One2many(
-        'nfe.import.declaration.line',
-        'import_declaration_id', 'Linhas da DI')
