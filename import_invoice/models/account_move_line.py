@@ -12,9 +12,9 @@ class AccountMoveLine(models.AbstractModel):
     ii_valor = fields.Monetary(string='Imposto de Importação', currency_field='company_currency_id')
     ii_valor_iof = fields.Monetary(string='IOF', currency_field='company_currency_id')
     date_registration = fields.Date('Data de Registro')
-    state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]", required=True)
-    location = fields.Char('Local', required=True, size=60)
-    date_release = fields.Date('Data de Liberação', required=True)
+    state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]")
+    location = fields.Char('Local', size=60)
+    date_release = fields.Date('Data de Liberação')
     type_transportation = fields.Selection([
         ('1', '1 - Marítima'),
         ('2', '2 - Fluvial'),
@@ -26,19 +26,19 @@ class AccountMoveLine(models.AbstractModel):
         ('8', '8 - Conduto / Rede Transmissão'),
         ('9', '9 - Meios Próprios'),
         ('10', '10 - Entrada / Saída ficta'),
-    ], 'Transporte Internacional', required=True, default="1")
+    ], 'Transporte Internacional',default="1")
     afrmm_value = fields.Float(
         'Valor da AFRMM', digits='Account', default=0.00)
     type_import = fields.Selection([
         ('1', '1 - Importação por conta própria'),
         ('2', '2 - Importação por conta e ordem'),
         ('3', '3 - Importação por encomenda'),
-    ], 'Tipo de Importação', default='1', required=True)
+    ], 'Tipo de Importação', default='1')
     thirdparty_cnpj = fields.Char('CNPJ', size=18)
     thirdparty_state_id = fields.Many2one(
         'res.country.state', 'Estado Parceiro',
         domain="[('country_id.code', '=', 'BR')]")
-    exporting_code = fields.Char('Código do Exportador', required=True, size=60)
+    exporting_code = fields.Char('Código do Exportador', size=60)
     di_ids = fields.Many2many(
         'declaration.line',
         string='Linhas da DI',
