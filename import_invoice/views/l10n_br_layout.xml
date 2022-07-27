@@ -483,7 +483,7 @@
                         </group>
                         <group string="Declaração de Importação">
                             <group>
-                                <field name="date_registration" force_save="1"/>
+                                <field name="date_registration" force_save="1" required="1"/>
                                 <field name="state_id" options="{'no_create': True, 'no_create_edit': True}" force_save="1"/>
                                 <field name="location" force_save="1"/>
                                 <field name="date_release" force_save="1"/>
