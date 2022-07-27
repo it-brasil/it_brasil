@@ -9,3 +9,5 @@ class ImportDeclarationLine(models.Model):
     manufacturer_code = fields.Char('Código do Fabricante', size=60, required=True)
     amount_discount = fields.Float(string='Valor', digits='Account', default=0.00)
     drawback_number = fields.Char('Número Drawback', size=11)
+    company_id = fields.Many2one(comodel_name='res.company', string='Company', store=True, readonly=True, default=lambda s: s.env.company)
+    
