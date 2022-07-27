@@ -51,7 +51,9 @@ def cnpj_cpf_format(cnpj_cpf):
 
 class AccountMove(models.Model):
     _inherit = "account.move"
- 
+
+    import_declaration_ids = fields.Text('import_declaration_ids')
+    
     def import_nfe(self, company_id, nfe, xml):
         _logger.info(["import_nfe"])
         
@@ -206,7 +208,7 @@ class AccountMove(models.Model):
             di_ids = []
             for di in item.prod.DI:
                 di_ids.append(self._get_di(item.prod.DI))
-            product_debit.update({'import_declaration_ids': di_ids})
+            #product_debit.update({'import_declaration_ids': di_ids})
 
         product_debit.update(self._get_pis(item.imposto.PIS))
         product_debit.update(self._get_cofins(item.imposto.COFINS))
@@ -252,19 +254,25 @@ class AccountMove(models.Model):
         return {"authorization_event_id": authorization_event.id}
 
     def _get_company_invoice(self, nfe):
-        dest_cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.dest.CNPJ.text).zfill(14))
+        if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
+            search = nfe.NFe.infNFe.emit.CNPJ.text 
+        else:
+            search = nfe.NFe.infNFe.emit.idEstrangeiro.text
+        dest_cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         company = self.env["res.company"].sudo().search([("partner_id.cnpj_cpf", "=", dest_cnpj_cpf)])
-
         if not company: 
             raise UserError("XML não destinado nem emitido por esta empresa.")
         return dict(company_id=company.id,)
 
     def get_partner_nfe(self, nfe):
-        cnpj_cpf = cnpj_cpf_format(str(nfe.NFe.infNFe.emit.CNPJ.text).zfill(14))
+        if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
+            search = nfe.NFe.infNFe.dest.idEstrangeiro.text
+        else:
+            search = nfe.NFe.infNFe.dest.CNPJ.text 
+        cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         partner_id = self.env["res.partner"].search([("cnpj_cpf", "=", cnpj_cpf)], limit=1)        
         if not partner_id:
             raise ValidationError(_("Parceiro não cadastrado"))
-        
         return dict(partner_id=partner_id.id)
 
     def _get_icms(self, imposto):
@@ -355,6 +363,7 @@ class AccountMove(models.Model):
             'state_id': state_id.id,
             'date_release': get(di, 'dDesemb'),
             'type_transportation': get(di, 'tpViaTransp', str),
+            'afrmm_value': get(di, 'vAFRMM', str),
             'type_import': get(di, 'tpIntermedio', str),
             'exporting_code': get(di, 'cExportador'),
             'line_ids': []
@@ -371,19 +380,49 @@ class AccountMove(models.Model):
                 adi = self.env['nfe.import.declaration.line'].create(adi_vals)
                 vals['line_ids'].append((4, adi.id, False))
 
-        vals = remove_none_values(vals)
-        #di = self.env['nfe.import.declaration'].create(vals)
-
-        return (4, di.id, False)
+        return remove_none_values(vals)
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
+ 
 
+    ii_base_calculo = fields.Monetary(string='Base II')
+    ii_aliquota = fields.Float(string='Alíquota II', digits='Account')
+    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras')
+    ii_valor = fields.Monetary(string='Imposto de Importação')
+    ii_valor_iof = fields.Monetary(string='IOF')
 
-    import_declaration_ids = fields.One2many('nfe.import.declaration', 'move_line_id', string='Import Declaration')
-    
-    ii_base_calculo = fields.Monetary(string='Base II', readonly=True)
-    ii_aliquota = fields.Float(string='Alíquota II', digits='Account',readonly=True)
-    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras', readonly=True)
-    ii_valor = fields.Monetary(string='Imposto de Importação', readonly=True)
-    ii_valor_iof = fields.Monetary(string='IOF', readonly=True)
+    date_registration = fields.Date('Data de Registro', required=True)
+    state_id = fields.Many2one(
+        'res.country.state', 'Estado',
+        domain="[('country_id.code', '=', 'BR')]", required=True)
+    location = fields.Char('Local', required=True, size=60)
+    date_release = fields.Date('Data de Liberação', required=True)
+    type_transportation = fields.Selection([
+        ('1', '1 - Marítima'),
+        ('2', '2 - Fluvial'),
+        ('3', '3 - Lacustre'),
+        ('4', '4 - Aérea'),
+        ('5', '5 - Postal'),
+        ('6', '6 - Ferroviária'),
+        ('7', '7 - Rodoviária'),
+        ('8', '8 - Conduto / Rede Transmissão'),
+        ('9', '9 - Meios Próprios'),
+        ('10', '10 - Entrada / Saída ficta'),
+    ], 'Transporte Internacional', required=True, default="1")
+    afrmm_value = fields.Float(
+        'Valor da AFRMM', digits='Account', default=0.00)
+    type_import = fields.Selection([
+        ('1', '1 - Importação por conta própria'),
+        ('2', '2 - Importação por conta e ordem'),
+        ('3', '3 - Importação por encomenda'),
+    ], 'Tipo de Importação', default='1', required=True)
+    thirdparty_cnpj = fields.Char('CNPJ', size=18)
+    thirdparty_state_id = fields.Many2one(
+        'res.country.state', 'Estado Parceiro',
+        domain="[('country_id.code', '=', 'BR')]")
+    exporting_code = fields.Char(
+        'Código do Exportador', required=True, size=60)
+    line_ids = fields.One2many(
+        'nfe.import.declaration.line',
+        'import_declaration_id', 'Linhas da DI')

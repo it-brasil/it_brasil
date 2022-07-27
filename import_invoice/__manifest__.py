@@ -19,7 +19,6 @@
         "security/ir.model.access.csv",
         "wizard/purchase_order.xml",
         "wizard/account_import_nfe.xml",
-        "views/import_declaration.xml",
         "views/l10n_br_layout.xml",
     ],
     "demo": [],
