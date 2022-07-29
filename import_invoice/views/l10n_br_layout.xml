@@ -483,19 +483,20 @@
                         </group>
                         <group string="Declaração de Importação">
                             <group>
-                                <field name="date_registration" force_save="1" required="1"/>
-                                <field name="state_id" options="{'no_create': True, 'no_create_edit': True}" force_save="1" required="1"/>
-                                <field name="location" force_save="1" required="1"/>
-                                <field name="date_release" force_save="1" required="1"/>
-                                <field name="type_transportation" force_save="1" required="1"/>
+                                <field name="number_di" force_save="1"/>
+                                <field name="date_registration" force_save="1"/>
+                                <field name="state_id" options="{'no_create': True, 'no_create_edit': True}" force_save="1"/>
+                                <field name="location" force_save="1"/>
+                                <field name="date_release" force_save="1"/>
+                                <field name="type_transportation" force_save="1"/>
                             </group>
                             
                             <group>
                                 <field name="afrmm_value" force_save="1"/>
-                                <field name="type_import" force_save="1" required="1"/>
+                                <field name="type_import" force_save="1"/>
                                 <field name="thirdparty_cnpj" force_save="1"/>
                                 <field name="thirdparty_state_id" options="{'no_create': True, 'no_create_edit': True}" force_save="1"/>
-                                <field name="exporting_code" force_save="1" required="1"/>                             
+                                <field name="exporting_code" force_save="1" />                             
                             </group>
 
                             <group string="Adições" colspan="4">

@@ -11,6 +11,7 @@ class AccountMoveLine(models.AbstractModel):
     ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras', currency_field='company_currency_id')
     ii_valor = fields.Monetary(string='Imposto de Importação', currency_field='company_currency_id')
     ii_valor_iof = fields.Monetary(string='IOF', currency_field='company_currency_id')
+    number_di = fields.Char()
     date_registration = fields.Date('Data de Registro')
     state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]")
     location = fields.Char('Local', size=60)
