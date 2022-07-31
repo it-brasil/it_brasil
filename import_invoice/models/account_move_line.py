@@ -4,13 +4,9 @@ from lxml import etree
 from odoo import models, _, api, fields
 
 class AccountMoveLine(models.AbstractModel):
-    _inherit = "l10n_br_fiscal.document.line.mixin.methods"
+    _inherit = "l10n_br_fiscal.document.line"
 
-    ii_base_calculo = fields.Monetary(string='Base II', currency_field='company_currency_id')
-    ii_aliquota = fields.Float(string='Alíquota II', digits='Account')
-    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras', currency_field='company_currency_id')
-    ii_valor = fields.Monetary(string='Imposto de Importação', currency_field='company_currency_id')
-    ii_valor_iof = fields.Monetary(string='IOF', currency_field='company_currency_id')
+
     number_di = fields.Char()
     date_registration = fields.Date('Data de Registro')
     state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]")
@@ -51,6 +47,8 @@ class AccountMoveLine(models.AbstractModel):
     company_currency_id = fields.Many2one(string='Company Currency', readonly=True,
         related='company_id.currency_id')
 
+class AccountMoveLineMethods(models.AbstractModel):
+    _inherit = "l10n_br_fiscal.document.line.mixin.methods"
     
     @api.depends('journal_id')
     def _compute_company_id(self):
