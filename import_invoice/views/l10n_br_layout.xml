@@ -500,7 +500,6 @@
                         <group>
                             <field name="afrmm_value" force_save="1"/>
                             <field name="tpIntermedio" force_save="1" attrs="{'required': [('cfop_destination', '=', '3')]}"/>                            
-                            <field name="type_import" force_save="1" attrs="{'required': [('cfop_destination', '=', '3')]}"/>
                             <field name="thirdparty_cnpj" force_save="1"/>
                             <field name="thirdparty_state_id" options="{'no_create': True, 'no_create_edit': True}" force_save="1"/>
                             <field name="exporting_code" force_save="1" attrs="{'required': [('cfop_destination', '=', '3')]}"/>                             

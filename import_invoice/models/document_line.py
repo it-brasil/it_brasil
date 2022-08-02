@@ -26,7 +26,7 @@ class NFeLine(spec_models.StackedModel):
                     "nfe40_xLocDesemb" : self.location,
                     "nfe40_UFDesemb" : self.state_id.code,
                     "nfe40_dDesemb": self.date_release,
-                    "nfe40_tpViaTransp" : self.type_import,
+                    "nfe40_tpViaTransp" : self.type_transportation,
                     "nfe40_vAFRMM" : self.afrmm_value,
                     "nfe40_tpIntermedio" : self.tpIntermedio,
                     "nfe40_CNPJ" : self.thirdparty_cnpj,
