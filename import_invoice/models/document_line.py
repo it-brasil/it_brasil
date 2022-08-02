@@ -1,5 +1,3 @@
-import logging
-import sys
 from odoo.addons.spec_driven_model.models import spec_models
 
 
@@ -15,13 +13,10 @@ class NFeLine(spec_models.StackedModel):
     _spec_tab_name = "NFe"
     _stack_skip = "nfe40_det_infNFe_id"
     _stacking_points = {}
-    # all m2o below this level will be stacked even if not required:
     _force_stack_paths = ("det.imposto",)
 
 
     def _export_fields(self, xsd_fields, class_obj, export_dict):
-        logging.info(["Executando Correto"])
-        # TODO Verifica campos Monetary
         if class_obj._name == "nfe.40.prod":
             vals = {
                 "nfe40_DI_prod_id": self.id,
@@ -31,7 +26,7 @@ class NFeLine(spec_models.StackedModel):
                 "nfe40_UFDesemb" : self.state_id.code,
                 "nfe40_dDesemb": self.date_release,
                 "nfe40_tpViaTransp" : self.type_import,
-                "nfe40_vAFRMM" : 0.00, # self.afrmm_value
+                "nfe40_vAFRMM" : self.afrmm_value, 
                 "nfe40_CNPJ" : self.thirdparty_cnpj,
                 "nfe40_UFTerceiro" : self.thirdparty_state_id.code,
                 "nfe40_cExportador" : self.exporting_code,
@@ -43,7 +38,7 @@ class NFeLine(spec_models.StackedModel):
                             "nfe40_nAdicao": line.name,
                             "nfe40_nSeqAdic": line.sequence_di,
                             "nfe40_cFabricante": line.manufacturer_code,
-                            "nfe40_vDescDI": 0.0, # line.amount_discount
+                            "nfe40_vDescDI": line.amount_discount,
                             "nfe40_nDraw": line.drawback_number,
                         }
                     ) for line in self.di_ids
