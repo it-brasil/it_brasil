@@ -11,6 +11,13 @@ class AccountMoveLine(models.AbstractModel):
     state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]")
     location = fields.Char('Local', size=60)
     date_release = fields.Date('Data de Liberação')
+    tpIntermedio = fields.Selection(
+        [("1", "1 - Importação por conta própria"),
+        ("2", "2 - Importação por conta e ordem"),
+        ("3", "3 - Importação por encomenda")],
+        string="Forma de Importação quanto a intermediação",
+        help="Forma de Importação quanto a intermediação"
+        "\n1-por conta propria;2-por conta e ordem;3-encomenda")
     type_transportation = fields.Selection([
         ('1', '1 - Marítima'),
         ('2', '2 - Fluvial'),

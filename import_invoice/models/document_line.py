@@ -28,6 +28,7 @@ class NFeLine(spec_models.StackedModel):
                     "nfe40_dDesemb": self.date_release,
                     "nfe40_tpViaTransp" : self.type_import,
                     "nfe40_vAFRMM" : self.afrmm_value,
+                    "nfe40_tpIntermedio" : self.tpIntermedio,
                     "nfe40_CNPJ" : self.thirdparty_cnpj,
                     "nfe40_UFTerceiro" : self.thirdparty_state_id.code,
                     "nfe40_cExportador" : self.exporting_code,
