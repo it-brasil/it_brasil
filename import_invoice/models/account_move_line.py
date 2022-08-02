@@ -4,8 +4,7 @@ from lxml import etree
 from odoo import models, _, api, fields
 
 class AccountMoveLine(models.AbstractModel):
-    _inherit = "l10n_br_fiscal.document.line"
-
+    _inherit = "l10n_br_fiscal.document.line.mixin"
 
     number_di = fields.Char()
     date_registration = fields.Date('Data de Registro')
@@ -24,8 +23,7 @@ class AccountMoveLine(models.AbstractModel):
         ('9', '9 - Meios Próprios'),
         ('10', '10 - Entrada / Saída ficta'),
     ], 'Transporte Internacional',default="1")
-    afrmm_value = fields.Float(
-        'Valor da AFRMM', digits='Account', default=0.00)
+    afrmm_value = fields.Monetary('Valor da AFRMM')
     type_import = fields.Selection([
         ('1', '1 - Importação por conta própria'),
         ('2', '2 - Importação por conta e ordem'),
@@ -40,12 +38,7 @@ class AccountMoveLine(models.AbstractModel):
         'declaration.line',
         string='Linhas da DI',
         store=True, check_company=True, copy=True,
-        ) 
-    company_id = fields.Many2one(comodel_name='res.company', string='Company',
-                                 store=True, readonly=True,
-                                 compute='_compute_company_id')
-    company_currency_id = fields.Many2one(string='Company Currency', readonly=True,
-        related='company_id.currency_id')
+        )
 
 class AccountMoveLineMethods(models.AbstractModel):
     _inherit = "l10n_br_fiscal.document.line.mixin.methods"

@@ -201,8 +201,8 @@ class AccountMove(models.Model):
         if hasattr(item.imposto, "IPI"):
             product_debit.update(self._get_ipi(item.imposto.IPI))
 
-        if hasattr(item.imposto, 'II'):
-            product_debit.update(self._get_ii(item.imposto.II))
+        #if hasattr(item.imposto, 'II'):
+        #    product_debit.update(self._get_ii(item.imposto.II))
         
         if hasattr(item.prod, 'DI'):
             product_debit.update(self._get_di(item.prod.DI))            
