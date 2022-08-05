@@ -4,26 +4,24 @@
 
 from odoo import api, fields, models
 
-from ...l10n_br_fiscal.constants.fiscal import TAX_FRAMEWORK
-
 
 class SaleOrderLine(models.Model):
-    _name = 'sale.order.line'
-    _inherit = [_name, 'l10n_br_fiscal.document.line.mixin']
+    _name = "sale.order.line"
+    _inherit = [_name, "l10n_br_fiscal.document.line.mixin"]
 
     country_id = fields.Many2one(related="company_id.country_id", store=True)
 
     @api.model
     def _default_fiscal_operation(self):
-        return self.env.user.company_id.sale_fiscal_operation_id
+        return self.env.company.sale_fiscal_operation_id
 
     @api.model
     def _fiscal_operation_domain(self):
-        domain = [('state', '=', 'approved')]
+        domain = [("state", "=", "approved")]
         return domain
 
     fiscal_operation_id = fields.Many2one(
-        comodel_name='l10n_br_fiscal.operation',
+        comodel_name="l10n_br_fiscal.operation",
         default=_default_fiscal_operation,
         domain=lambda self: self._fiscal_operation_domain(),
     )
@@ -38,16 +36,12 @@ class SaleOrderLine(models.Model):
 
     # Adapt Mixin's fields
     fiscal_tax_ids = fields.Many2many(
-        comodel_name='l10n_br_fiscal.tax',
-        relation='fiscal_sale_line_tax_rel',
-        column1='document_id',
-        column2='fiscal_tax_id',
-        string='Fiscal Taxes',
+        comodel_name="l10n_br_fiscal.tax",
+        relation="fiscal_sale_line_tax_rel",
+        column1="document_id",
+        column2="fiscal_tax_id",
+        string="Fiscal Taxes",
     )
-
-    partner_order = fields.Char(string="Ordem de Compra (xPed)", size=15)
-
-    partner_order_line = fields.Char(string="Linha da Ordem de Compra (nItemPed)", size=6)
 
     quantity = fields.Float(
         string="Product Uom Quantity",
@@ -60,37 +54,36 @@ class SaleOrderLine(models.Model):
         compute="_compute_qty_delivered",
         compute_sudo=True,
         store=True,
-        digits='Product Unit of Measure',
+        digits="Product Unit of Measure",
     )
 
     uom_id = fields.Many2one(
-        related='product_uom',
-        depends=['product_uom'],
+        related="product_uom",
+        depends=["product_uom"],
     )
 
     tax_framework = fields.Selection(
-        selection=TAX_FRAMEWORK,
-        related='order_id.company_id.tax_framework',
-        string='Tax Framework',
+        related="order_id.company_id.tax_framework",
+        string="Tax Framework",
     )
 
     partner_id = fields.Many2one(
-        comodel_name='res.partner',
-        related='order_id.partner_id',
-        string='Partner',
+        comodel_name="res.partner",
+        related="order_id.partner_id",
+        string="Partner",
     )
 
     # Add Fields in model sale.order.line
     price_gross = fields.Monetary(
-        compute='_compute_amount', string='Gross Amount', compute_sudo=True
+        compute="_compute_amount", string="Gross Amount", compute_sudo=True
     )
 
     comment_ids = fields.Many2many(
-        comodel_name='l10n_br_fiscal.comment',
-        relation='sale_order_line_comment_rel',
-        column1='sale_line_id',
-        column2='comment_id',
-        string='Comments',
+        comodel_name="l10n_br_fiscal.comment",
+        relation="sale_order_line_comment_rel",
+        column1="sale_line_id",
+        column2="comment_id",
+        string="Comments",
     )
 
     discount_fixed = fields.Boolean(string="Fixed Discount?")
@@ -113,9 +106,9 @@ class SaleOrderLine(models.Model):
         company = self.env.company
         domain = []
         if company.cnae_main_id and company.cnae_secondary_ids:
-            cnae_main_id = company.cnae_main_id.id,
+            cnae_main_id = (company.cnae_main_id.id,)
             cnae_secondary_ids = company.cnae_secondary_ids.ids
-            domain = ['|', ('id', 'in', cnae_secondary_ids), ('id', '=', cnae_main_id)]
+            domain = ["|", ("id", "in", cnae_secondary_ids), ("id", "=", cnae_main_id)]
         return domain
 
     cnae_id = fields.Many2one(
@@ -127,9 +120,9 @@ class SaleOrderLine(models.Model):
     def _get_protected_fields(self):
         protected_fields = super()._get_protected_fields()
         return protected_fields + [
-            'fiscal_tax_ids', 
-            'fiscal_operation_id',
-            'fiscal_operation_line_id',
+            "fiscal_tax_ids",
+            "fiscal_operation_id",
+            "fiscal_operation_line_id",
         ]
 
     @api.depends(
@@ -145,7 +138,7 @@ class SaleOrderLine(models.Model):
         "tax_id",
     )
     def _compute_amount(self):
-        """Compute the amounts of the PO line."""
+        """Compute the amounts of the SO line."""
         super()._compute_amount()
         for line in self:
             # Update taxes fields
@@ -167,19 +160,11 @@ class SaleOrderLine(models.Model):
         result = self._prepare_br_fiscal_dict()
         if self.product_id and self.product_id.invoice_policy == "delivery":
             self._compute_qty_delivered()
-            result["fiscal_quantity"] = self.qty_to_invoice
-
-        # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
-        # fica errado e na linha do diario tbem (ipi)
-        if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
-                result["uot_id"] = self.product_id.uot_id
-                result["fiscal_price"] = self.price_unit / (self.product_id.uot_factor or 1.0)
-                result["fiscal_quantity"] = self.qty_to_invoice * (self.product_id.uot_factor or 1.0)
-
+            result["fiscal_quantity"] = self.fiscal_qty_delivered
         result.update(super()._prepare_invoice_line(**optional_values))
         return result
 
-    @api.onchange('product_uom', 'product_uom_qty')
+    @api.onchange("product_uom", "product_uom_qty")
     def _onchange_product_uom(self):
         """To call the method in the mixin to update
         the price and fiscal quantity."""
@@ -205,7 +190,7 @@ class SaleOrderLine(models.Model):
                     line.qty_delivered * line.product_id.uot_factor
                 )
 
-    @api.onchange('discount')
+    @api.onchange("discount")
     def _onchange_discount_percent(self):
         """Update discount value"""
         if not self.env.user.has_group("l10n_br_sale.group_discount_per_value"):
@@ -213,10 +198,10 @@ class SaleOrderLine(models.Model):
                 self.discount / 100
             )
 
-    @api.onchange('discount_value')
+    @api.onchange("discount_value")
     def _onchange_discount_value(self):
         """Update discount percent"""
-        if self.env.user.has_group('l10n_br_sale.group_discount_per_value'):
+        if self.env.user.has_group("l10n_br_sale.group_discount_per_value"):
             self.discount = (self.discount_value * 100) / (
                 self.product_uom_qty * self.price_unit or 1
             )
@@ -224,7 +209,6 @@ class SaleOrderLine(models.Model):
     @api.onchange("fiscal_tax_ids")
     def _onchange_fiscal_tax_ids(self):
         super()._onchange_fiscal_tax_ids()
-        self._compute_tax_id()
         self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale")
         if self.order_id.fiscal_operation_id.deductible_taxes:
             self.tax_id |= self.fiscal_tax_ids.account_taxes(
