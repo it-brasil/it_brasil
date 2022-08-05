@@ -9,11 +9,9 @@
     "author": "Lucas Avila",
     "depends": [
             "base", 
-            "purchase", 
-            "account", 
+            "l10n_br_nfe",
             "l10n_br", 
             "l10n_br_purchase", 
-            "l10n_br_nfe"
         ],
     "data": [
         "security/ir.model.access.csv",
