@@ -254,7 +254,7 @@ class AccountMove(models.Model):
         if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
             search = nfe.NFe.infNFe.emit.CNPJ.text 
         else:
-            search = nfe.NFe.infNFe.emit.idEstrangeiro.text
+            search = nfe.NFe.infNFe.dest.CNPJ.text
         dest_cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         company = self.env["res.company"].sudo().search([("partner_id.cnpj_cpf", "=", dest_cnpj_cpf)])
         if not company: 
@@ -265,7 +265,7 @@ class AccountMove(models.Model):
         if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
             search = nfe.NFe.infNFe.dest.idEstrangeiro.text
         else:
-            search = nfe.NFe.infNFe.dest.CNPJ.text 
+            search = nfe.NFe.infNFe.emit.CNPJ.text 
         cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         partner_id = self.env["res.partner"].search([("cnpj_cpf", "=", cnpj_cpf)], limit=1)        
         if not partner_id:
