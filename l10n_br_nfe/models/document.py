@@ -768,9 +768,9 @@ class NFe(spec_models.StackedModel):
         fat_id = self.env["nfe.40.fat"].create(
             {
                 "nfe40_nFat": inv.name,
-                "nfe40_vOrig": inv.amount_financial_total_gross,
-                "nfe40_vDesc": inv.amount_financial_discount_value,
-                "nfe40_vLiq": inv.amount_financial_total,
+                "nfe40_vOrig": float(inv.amount_financial_total_gross),
+                "nfe40_vDesc": float(inv.amount_financial_discount_value),
+                "nfe40_vLiq": float(inv.amount_financial_total),
             }
         )
         duplicatas = self.env["nfe.40.dup"]

@@ -1,7 +1,6 @@
 # Copyright (C) 2009  Renato Lima - Akretion
 # Copyright (C) 2012  Raphaël Valyi - Akretion
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
-
 from functools import partial
 
 from odoo import api, fields, models
@@ -9,59 +8,58 @@ from odoo.tools import float_is_zero
 from odoo.tools.misc import formatLang
 
 
-
 class SaleOrder(models.Model):
-    _name = 'sale.order'
-    _inherit = [_name, 'l10n_br_fiscal.document.mixin']
+    _name = "sale.order"
+    _inherit = [_name, "l10n_br_fiscal.document.mixin"]
 
     @api.model
     def _default_fiscal_operation(self):
-        return self.env.user.company_id.sale_fiscal_operation_id
+        return self.env.company.sale_fiscal_operation_id
 
     @api.model
     def _default_copy_note(self):
-        return self.env.user.company_id.copy_note
+        return self.env.company.copy_note
 
     @api.model
     def _fiscal_operation_domain(self):
-        domain = [('state', '=', 'approved')]
+        domain = [("state", "=", "approved")]
         return domain
 
     fiscal_operation_id = fields.Many2one(
-        comodel_name='l10n_br_fiscal.operation',
+        comodel_name="l10n_br_fiscal.operation",
         readonly=True,
-        states={'draft': [('readonly', False)]},
+        states={"draft": [("readonly", False)]},
         default=_default_fiscal_operation,
         domain=lambda self: self._fiscal_operation_domain(),
     )
 
     ind_pres = fields.Selection(
         readonly=True,
-        states={'draft': [('readonly', False)]},
+        states={"draft": [("readonly", False)]},
     )
 
     copy_note = fields.Boolean(
-        string='Copiar Observação no documentos fiscal',
+        string="Copy Sale note on invoice",
         default=_default_copy_note,
     )
 
     cnpj_cpf = fields.Char(
-        string='CNPJ/CPF',
-        related='partner_id.cnpj_cpf',
+        string="CNPJ/CPF",
+        related="partner_id.cnpj_cpf",
     )
 
     legal_name = fields.Char(
-        string='Legal Name',
-        related='partner_id.legal_name',
+        string="Legal Name",
+        related="partner_id.legal_name",
     )
 
     ie = fields.Char(
-        string='State Tax Number/RG',
-        related='partner_id.inscr_est',
+        string="State Tax Number/RG",
+        related="partner_id.inscr_est",
     )
 
     discount_rate = fields.Float(
-        string='Discount',
+        string="Discount",
         readonly=True,
         states={"draft": [("readonly", False)], "sent": [("readonly", False)]},
     )
@@ -264,9 +262,8 @@ class SaleOrder(models.Model):
                     line.discount = order.discount_rate
                     line._onchange_discount_percent()
 
-    @api.onchange('fiscal_operation_id')
+    @api.onchange("fiscal_operation_id")
     def _onchange_fiscal_operation_id(self):
-        # TODO rodar o SUPER abaixo primeiro...
         super()._onchange_fiscal_operation_id()
         self.fiscal_position_id = self.fiscal_operation_id.fiscal_position_id
 
@@ -309,12 +306,6 @@ class SaleOrder(models.Model):
         document_type_list = []
 
         for invoice_id in inv_ids:
-
-            # In the case of partial deliveries, recalculates the calculation
-            # base and tax amounts
-            for line in invoice_id.invoice_line_ids:
-                line._onchange_fiscal_tax_ids()
-
             invoice_created_by_super = invoice_id
 
             # Identify how many Document Types exist
@@ -358,6 +349,7 @@ class SaleOrder(models.Model):
                             if grouped
                             else (order.partner_invoice_id.id, order.currency_id.id)
                         )
+
                         if group_key not in invoices:
                             inv_data = order.with_context(
                                 document_type_id=document_type.id
@@ -386,10 +378,21 @@ class SaleOrder(models.Model):
                             )
                         )
                         if fiscal_document_type.id == document_type.id:
-                            # TODO: Migração 14.0 precisa de alguma forma forçar o
-                            #  recalculo das linhas do movimento e não funciona apenas
-                            #  mudar o move_id da linha do movimento
-                            inv_line.move_id = invoice.id
+                            copied_vals = inv_line.copy_data()[0]
+                            copied_vals["move_id"] = invoice.id
+                            copied_vals["recompute_tax_line"] = True
+                            new_line = self.env["account.move.line"].new(copied_vals)
+                            invoice.invoice_line_ids += new_line
+                            order_line = self.order_line.filtered(
+                                lambda x: x.invoice_lines in inv_line
+                            )
+                            if len(order_line.invoice_lines) > 1:
+                                # TODO: É valido tratar isso no caso de já ter mais
+                                #  faturas geradas e vinvuladas a linha
+                                continue
+                            else:
+                                order_line.invoice_lines = invoice.invoice_line_ids
+                            invoice_id.invoice_line_ids -= inv_line
 
             invoice_created_by_super.document_serie_id = (
                 fiscal_document_type.get_document_serie(

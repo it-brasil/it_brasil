@@ -1,16 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
     <!--Search by cnpj / cpf in the SOs -->
     <record id="view_l10n_br_sale_partner_filter" model="ir.ui.view">
         <field name="name">l10n_br_sale.partner.filter</field>
         <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="inherit_id" ref="sale.view_sales_order_filter" />
         <field name="arch" type="xml">
             <field name="name" position="after">
-                <field name="legal_name" string="Razão Social"/>
-                <field name="cnpj_cpf" string="CNPJ/CPF"/>
-                <field name="ie" string="Inscr. Estadual"/>
+                <field name="legal_name" string="Razão Social" />
+                <field name="cnpj_cpf" string="CNPJ/CPF" />
+                <field name="ie" string="Inscr. Estadual" />
             </field>
         </field>
     </record>
@@ -18,7 +17,7 @@
     <record id="l10n_br_sale_order_form" model="ir.ui.view">
         <field name="name">l10n_br_sale.order.form</field>
         <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="inherit_id" ref="sale.view_order_form" />
         <field name="priority">99</field>
         <field name="arch" type="xml">
             <field name="amount_untaxed" position="before">
@@ -64,8 +63,8 @@
             </field>
             <field name="validity_date" position="after">
                 <field name="fiscal_operation_id" required="True" />
-                <field name="ind_pres" required="True" />
                 <field name="ind_final" required="True" />
+                <field name="ind_pres" required="True" />
             </field>
             <field name="note" position="replace">
                 <group>
@@ -186,11 +185,11 @@
             <xpath
                 expr="//field[@name='order_line']/form//field[@name='price_unit']"
                 position="after"
-            > 
+            >
                 <label
                     for="fiscal_quantity"
                     string="Fiscal Quantity"
-                     attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}"
+                    attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}"
                 />
                 <div attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}">
                     <field

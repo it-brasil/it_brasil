@@ -18,6 +18,7 @@ class NfeSpecMixin(models.AbstractModel):
     brl_currency_id = fields.Many2one(
         comodel_name="res.currency",
         string="Moeda",
+        store=True,
         compute="_compute_brl_currency_id",
         default=lambda self: self.env.ref('base.BRL').id,
     )

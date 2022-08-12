@@ -4,18 +4,13 @@ from lxml import etree
 from odoo import models, _, api, fields
 
 class AccountMoveLine(models.AbstractModel):
-    _inherit = "l10n_br_fiscal.document.line.mixin.methods"
+    _inherit = "l10n_br_fiscal.document.line.mixin"
 
-    ii_base_calculo = fields.Monetary(string='Base II', currency_field='company_currency_id')
-    ii_aliquota = fields.Float(string='Alíquota II', digits='Account')
-    ii_valor_despesas = fields.Monetary(string='Despesas Aduaneiras', currency_field='company_currency_id')
-    ii_valor = fields.Monetary(string='Imposto de Importação', currency_field='company_currency_id')
-    ii_valor_iof = fields.Monetary(string='IOF', currency_field='company_currency_id')
     number_di = fields.Char()
     date_registration = fields.Date('Data de Registro')
     state_id = fields.Many2one('res.country.state', 'Estado',domain="[('country_id.code', '=', 'BR')]")
     location = fields.Char('Local', size=60)
-    date_release = fields.Date('Data de Liberação')
+    date_release = fields.Date('Data de Liberação') 
     type_transportation = fields.Selection([
         ('1', '1 - Marítima'),
         ('2', '2 - Fluvial'),
@@ -28,9 +23,8 @@ class AccountMoveLine(models.AbstractModel):
         ('9', '9 - Meios Próprios'),
         ('10', '10 - Entrada / Saída ficta'),
     ], 'Transporte Internacional',default="1")
-    afrmm_value = fields.Float(
-        'Valor da AFRMM', digits='Account', default=0.00)
-    type_import = fields.Selection([
+    afrmm_value = fields.Monetary('Valor da AFRMM')
+    tpIntermedio = fields.Selection([
         ('1', '1 - Importação por conta própria'),
         ('2', '2 - Importação por conta e ordem'),
         ('3', '3 - Importação por encomenda'),
@@ -44,13 +38,10 @@ class AccountMoveLine(models.AbstractModel):
         'declaration.line',
         string='Linhas da DI',
         store=True, check_company=True, copy=True,
-        ) 
-    company_id = fields.Many2one(comodel_name='res.company', string='Company',
-                                 store=True, readonly=True,
-                                 compute='_compute_company_id')
-    company_currency_id = fields.Many2one(string='Company Currency', readonly=True,
-        related='company_id.currency_id')
+        )
 
+class AccountMoveLineMethods(models.AbstractModel):
+    _inherit = "l10n_br_fiscal.document.line.mixin.methods"
     
     @api.depends('journal_id')
     def _compute_company_id(self):
