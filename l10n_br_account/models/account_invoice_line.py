@@ -152,12 +152,6 @@ class AccountMoveLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        move = ""
-        if len(vals_list):
-            move = self.env['account.move'].browse(vals_list[0].get('move_id'))
-            if move.is_invoice(include_receipts=True):
-                if vals_list[0].get('exclude_from_invoice_tab'):
-                    return vals_list
         dummy_doc = self.env.company.fiscal_dummy_id
         dummy_line = fields.first(dummy_doc.fiscal_line_ids)
         new_vals_list = []
