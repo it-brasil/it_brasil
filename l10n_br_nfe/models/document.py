@@ -836,6 +836,42 @@ class NFe(spec_models.StackedModel):
                             # Se der problema que apareça quando
                             # o usuário clicar no gera PDF novamente.
                             _logger.error("DANFE Error \n {}".format(e))
+                elif processo.resposta.protNFe.infProt.cStat in AUTORIZADO: 
+                    # Qdo a NFe ja foi enviada e deu algum erro no retorno
+                    # qdo tenta enviar novamente entra aqui.
+                    if not self.authorization_file_id:
+                        arquivo = self.send_file_id
+                        xml_string = base64.b64decode(arquivo.datas).decode()
+                        root = etree.fromstring(xml_string)
+                        ns = {None: "http://www.portalfiscal.inf.br/nfe"}
+                        new_root = etree.Element("nfeProc", nsmap=ns)
+
+                        protNFe_node = etree.Element("protNFe")
+                        infProt = etree.SubElement(protNFe_node, "infProt")
+                        etree.SubElement(infProt, "tpAmb").text = processo.resposta.protNFe.infProt.tpAmb
+                        etree.SubElement(infProt, "verAplic").text = processo.resposta.protNFe.infProt.verAplic
+                        etree.SubElement(infProt, "dhRecbto").text = fields.Datetime.to_string(
+                            processo.resposta.protNFe.infProt.dhRecbto)
+                        etree.SubElement(infProt, "nProt").text = processo.resposta.protNFe.infProt.nProt
+                        # etree.SubElement(infProt, "digVal").text = processo.resposta.protNFe.infProt.digVal
+                        etree.SubElement(infProt, "cStat").text = processo.resposta.protNFe.infProt.cStat
+                        etree.SubElement(infProt, "xMotivo").text = processo.resposta.protNFe.infProt.xMotivo
+
+                        new_root.append(root)
+                        new_root.append(protNFe_node)
+                        file = etree.tostring(new_root)
+                    record.atualiza_status_nfe(
+                        processo.resposta.protNFe.infProt, file.decode("utf-8")
+                    )
+                    try:
+                        record.make_pdf()
+                    except Exception as e:
+                        # Não devemos interromper o fluxo
+                        # E dar rollback em um documento
+                        # autorizado, podendo perder dados.
+                        # Se der problema que apareça quando
+                        # o usuário clicar no gera PDF novamente.
+                       _logger.error("DANFE Error \n {}".format(e))
                 else:
                     # Entra aqui qdo a nota ja foi enviada
                     # TODO : na verdade era pra dar erro de Duplicidade
