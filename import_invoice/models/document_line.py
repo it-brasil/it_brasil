@@ -40,10 +40,11 @@ class NFeLine(spec_models.StackedModel):
                         "nfe40_nAdicao": line.name,
                         "nfe40_nSeqAdic": line.sequence_di,
                         "nfe40_cFabricante": line.manufacturer_code,
-                        "nfe40_vDescDI": line.amount_discount,
+                        "nfe40_vDescDI": "{:.2f}".format(line.amount_discount) if line.amount_discount != 0.0 else False,
                         "nfe40_nDraw": line.drawback_number,
                     }
-                    list_adi.append(self.env["nfe.40.adi"].create(vals_adi).id)
+                    obj = self.env["nfe.40.adi"].create(vals_adi)
+                    list_adi.append(obj.id)
 
                 vals_di["nfe40_adi"] = [(6, 0, list_adi)]
                         
