@@ -201,8 +201,8 @@ class AccountMove(models.Model):
         if hasattr(item.imposto, "IPI"):
             product_debit.update(self._get_ipi(item.imposto.IPI))
 
-        #if hasattr(item.imposto, 'II'):
-        #    product_debit.update(self._get_ii(item.imposto.II))
+        # if hasattr(item.imposto, 'II'):
+            # product_debit.update(self._get_ii(item.imposto.II))
         
         if hasattr(item.prod, 'DI'):
             product_debit.update(self._get_di(item.prod.DI))            
@@ -254,7 +254,7 @@ class AccountMove(models.Model):
         if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
             search = nfe.NFe.infNFe.emit.CNPJ.text 
         else:
-            search = nfe.NFe.infNFe.emit.idEstrangeiro.text
+            search = nfe.NFe.infNFe.dest.CNPJ.text
         dest_cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         company = self.env["res.company"].sudo().search([("partner_id.cnpj_cpf", "=", dest_cnpj_cpf)])
         if not company: 
@@ -265,7 +265,7 @@ class AccountMove(models.Model):
         if hasattr(nfe.NFe.infNFe.dest, "idEstrangeiro"):
             search = nfe.NFe.infNFe.dest.idEstrangeiro.text
         else:
-            search = nfe.NFe.infNFe.dest.CNPJ.text 
+            search = nfe.NFe.infNFe.emit.CNPJ.text 
         cnpj_cpf = cnpj_cpf_format(str(search).zfill(14))
         partner_id = self.env["res.partner"].search([("cnpj_cpf", "=", cnpj_cpf)], limit=1)        
         if not partner_id:
@@ -338,14 +338,16 @@ class AccountMove(models.Model):
             }
         return remove_none_values(vals)
 
-    def _get_ii(self, ii):
-        vals = {
-            'ii_base_calculo': get(ii, 'vBC'),
-            'ii_valor_despesas': get(ii, 'vDespAdu'),
-            'ii_valor_iof': get(ii, 'vIOF'),
-            'ii_valor': get(ii, 'vII'),
-        }
-        return remove_none_values(vals)
+    # def _get_ii(self, ii):
+    #     vals = {}
+    #     for item in ii.getchildren():
+    #         vals = { 
+    #             "ii_base": get(ii, "%s.vBC" % item.tag[36:]),
+    #             "ii_value": get(ii, "%s.vII" % item.tag[36:]),
+    #             "ii_value_desp_adu": get(ii, "%s.vDespAdu" % item.tag[36:]),
+    #             "ii_iof": get(ii, "%s.vIOF" % item.tag[36:]),
+    #         }
+    #     return remove_none_values(vals)
     
     def _get_di(self, di):
         state_code = get(di, 'UFDesemb')
