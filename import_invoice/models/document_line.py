@@ -15,7 +15,6 @@ class NFeLine(spec_models.StackedModel):
     _stacking_points = {}
     _force_stack_paths = ("det.imposto",)
 
-
     def _export_fields(self, xsd_fields, class_obj, export_dict):
         if class_obj._name == "nfe.40.prod":
             if self.account_line_ids.move_id.move_type == "in_invoice":
@@ -51,4 +50,12 @@ class NFeLine(spec_models.StackedModel):
                 obj_di = self.env["nfe.40.di"].create(vals_di).id
                 self.nfe40_DI = [(6, 0, [obj_di])]
 
+                # vals_ii = {
+                #     "nfe40_vBC": "{:.2f}".format(self.ii_base),
+                #     "nfe40_vDespAdu": "{:.2f}".format(self.ii_customhouse_charges),
+                #     "nfe40_vII": "{:.2f}".format(self.ii_value),
+                #     "nfe40_vIOF": "{:.2f}".format(self.ii_iof_value),
+                # }
+                # obj_ii = self.env["nfe.40.ii"].create(vals_ii).id
+                # self.nfe40_II = [(6, 0, [vals_ii])]
         return super()._export_fields(xsd_fields, class_obj, export_dict)
