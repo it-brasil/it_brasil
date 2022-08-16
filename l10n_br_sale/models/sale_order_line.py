@@ -4,24 +4,26 @@
 
 from odoo import api, fields, models
 
+from ...l10n_br_fiscal.constants.fiscal import TAX_FRAMEWORK
+
 
 class SaleOrderLine(models.Model):
-    _name = "sale.order.line"
-    _inherit = [_name, "l10n_br_fiscal.document.line.mixin"]
+    _name = 'sale.order.line'
+    _inherit = [_name, 'l10n_br_fiscal.document.line.mixin']
 
     country_id = fields.Many2one(related="company_id.country_id", store=True)
 
     @api.model
     def _default_fiscal_operation(self):
-        return self.env.company.sale_fiscal_operation_id
+        return self.env.user.company_id.sale_fiscal_operation_id
 
     @api.model
     def _fiscal_operation_domain(self):
-        domain = [("state", "=", "approved")]
+        domain = [('state', '=', 'approved')]
         return domain
 
     fiscal_operation_id = fields.Many2one(
-        comodel_name="l10n_br_fiscal.operation",
+        comodel_name='l10n_br_fiscal.operation',
         default=_default_fiscal_operation,
         domain=lambda self: self._fiscal_operation_domain(),
     )
@@ -42,6 +44,10 @@ class SaleOrderLine(models.Model):
         column2="fiscal_tax_id",
         string="Fiscal Taxes",
     )
+
+    partner_order = fields.Char(string="Ordem de Compra (xPed)", size=15)
+
+    partner_order_line = fields.Char(string="Linha da Ordem de Compra (nItemPed)", size=6)
 
     quantity = fields.Float(
         string="Product Uom Quantity",
@@ -161,6 +167,15 @@ class SaleOrderLine(models.Model):
         if self.product_id and self.product_id.invoice_policy == "delivery":
             self._compute_qty_delivered()
             result["fiscal_quantity"] = self.fiscal_qty_delivered
+            result["fiscal_quantity"] = self.qty_to_invoice
+
+        # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
+        # fica errado e na linha do diario tbem (ipi)
+        if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
+                result["uot_id"] = self.product_id.uot_id
+                result["fiscal_price"] = self.price_unit / (self.product_id.uot_factor or 1.0)
+                result["fiscal_quantity"] = self.qty_to_invoice * (self.product_id.uot_factor or 1.0)
+
         result.update(super()._prepare_invoice_line(**optional_values))
         return result
 
@@ -183,11 +198,11 @@ class SaleOrderLine(models.Model):
             line.fiscal_qty_delivered = 0.0
             if line.product_id.invoice_policy == "delivery":
                 if line.uom_id == line.uot_id:
-                    line.fiscal_qty_delivered = line.qty_delivered
+                    line.fiscal_qty_delivered = line.qty_delivered - line.qty_invoiced
 
             if line.uom_id != line.uot_id:
                 line.fiscal_qty_delivered = (
-                    line.qty_delivered * line.product_id.uot_factor
+                    (line.qty_delivered - line.qty_invoiced) * line.product_id.uot_factor
                 )
 
     @api.onchange("discount")
