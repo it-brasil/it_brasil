@@ -161,6 +161,7 @@ class AccountMoveLine(models.Model):
                 # move = self.env['account.move'].browse(values.get('move_id'))
                 if not move.is_invoice(include_receipts=True):
                     # if vals_list[0].get('exclude_from_invoice_tab'):
+                    values['fiscal_document_line_id'] = dummy_line.id
                     new_vals_list.append(values)
                     continue
             fiscal_doc_id = move.fiscal_document_id.id
@@ -185,7 +186,7 @@ class AccountMoveLine(models.Model):
                 )
             new_vals_list.append(values)
 
-        lines = super().create(vals_list)
+        lines = super().create(new_vals_list)
         # for line in lines:
         #     self._onchange_fiscal_operation_line_id()
 
