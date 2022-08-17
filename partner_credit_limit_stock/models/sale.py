@@ -28,9 +28,10 @@ class SaleOrder(models.Model):
 		self.passou_limite = False
 
 	def action_cancel(self):
-		super().action_cancel()
+		res = super().action_cancel()
 		if self.state == 'cancel':
 			self.status_bloqueio = 'no_block'
+		return res
 
 	def action_confirm(self):
 		self.ensure_one()

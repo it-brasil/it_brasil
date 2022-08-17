@@ -3,6 +3,7 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 from ast import literal_eval
+import logging
 
 from erpbrasil.base.fiscal.edoc import ChaveEdoc
 
@@ -25,7 +26,7 @@ from ..constants.fiscal import (
     SITUACAO_EDOC_DENEGADA,
     SITUACAO_EDOC_INUTILIZADA,
 )
-
+_logger = logging.getLogger(__name__)
 
 class Document(models.Model):
     """Implementação base dos documentos fiscais
@@ -560,7 +561,15 @@ class Document(models.Model):
         """Open a window to compose an email, with the fiscal document_type
         template message loaded by default
         """
+
         self.ensure_one()
+        #attachment pdf and xml from attachment table
+        attachment_ids = self.env["ir.attachment"].search([("res_id", "=", self.id), ("res_model", "=", "l10n_br_fiscal.document")]) 
+        #attachment xml from event model
+        #search xml file attachment by document_key + xml extension 
+        attachment_ids += self.env["ir.attachment"].search([("name", "=", "NFe" + self.document_key + "-env.xml")])
+
+     
         template = self._get_email_template(self.state)
         compose_form = self.env.ref("mail.email_compose_message_wizard_form", False)
         lang = self.env.context.get("lang")
@@ -575,6 +584,8 @@ class Document(models.Model):
             default_composition_mode="comment",
             model_description=self.document_type_id.name or self._name,
             force_email=True,
+            default_attachment_ids=[(6, 0, attachment_ids.ids)],
+
         )
         return {
             "name": _("Send Fiscal Document Email Notification"),

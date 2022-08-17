@@ -18,6 +18,6 @@ class ImportDeclarationLine(models.Model):
     name = fields.Char('Adição', size=3)
     sequence_di = fields.Integer('Sequência', default=1, required=True)
     manufacturer_code = fields.Char('Código do Fabricante', size=60, required=True)
-    amount_discount = fields.Monetary(string='Valor', currency_field="brl_currency_id")
+    amount_discount = fields.Monetary(string='Valor', currency_field="brl_currency_id", required=True)
     drawback_number = fields.Char('Número Drawback', size=11)
     company_id = fields.Many2one(comodel_name='res.company', string='Company', store=True, readonly=True, default=lambda s: s.env.company)
