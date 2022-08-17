@@ -152,19 +152,19 @@ class AccountMoveLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        move = ""
-        if len(vals_list):
-            move = self.env['account.move'].browse(vals_list[0].get('move_id'))
-            if move.is_invoice(include_receipts=True):
-                if vals_list[0].get('exclude_from_invoice_tab'):
-                    return vals_list
         dummy_doc = self.env.company.fiscal_dummy_id
         dummy_line = fields.first(dummy_doc.fiscal_line_ids)
-        # fiscal_doc_id = False
+        new_vals_list = []
         for values in vals_list:
-            fiscal_doc_id = (
-                self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-            )
+            move = self.env['account.move'].browse(values.get('move_id'))
+            if len(values):
+                # move = self.env['account.move'].browse(values.get('move_id'))
+                if not move.is_invoice(include_receipts=True):
+                    # if vals_list[0].get('exclude_from_invoice_tab'):
+                    values['fiscal_document_line_id'] = dummy_line.id
+                    new_vals_list.append(values)
+                    continue
+            fiscal_doc_id = move.fiscal_document_id.id
             if fiscal_doc_id == dummy_doc.id or values.get("exclude_from_invoice_tab"):
                 if len(dummy_line) < 1:
                     raise UserError(
@@ -173,19 +173,20 @@ class AccountMoveLine(models.Model):
                             "your system administrator."
                         )
                     )                
-                values["fiscal_document_line_id"] = dummy_line.id
-
-            values.update(
-                self._update_fiscal_quantity(
-                    values.get("product_id"),
-                    values.get("price_unit"),
-                    values.get("quantity"),
-                    values.get("uom_id"),
-                    values.get("uot_id"),
+                values['fiscal_document_line_id'] = dummy_line.id
+            else:
+                values.update(
+                    self._update_fiscal_quantity(
+                        values.get("product_id"),
+                        values.get("price_unit"),
+                        values.get("quantity"),
+                        values.get("uom_id"),
+                        values.get("uot_id"),
+                    )
                 )
-            )
+            new_vals_list.append(values)
 
-        lines = super().create(vals_list)
+        lines = super().create(new_vals_list)
         # for line in lines:
         #     self._onchange_fiscal_operation_line_id()
 

@@ -41,6 +41,8 @@
                 <button name="%(import_invoice.custom_purchase_action)d" type="action" 
                 string="Import Invoice" class="btn-primary" context="{'create_bill':True}" 
                 attrs="{'invisible': [('state', 'not in', ('purchase', 'done'))]}"></button>
+                <!-- <button name="import_di" type="object" string="Import DI" class="btn-primary"
+                attrs="{'invisible': [('state', 'not in', ('purchase', 'done'))]}"></button> -->
             </button>
         </field>
     </record>

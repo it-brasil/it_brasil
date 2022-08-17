@@ -1,5 +1,5 @@
 # generated from manifests external_dependencies
-erpbrasil.assinatura==1.2.0
+erpbrasil.assinatura
 erpbrasil.base
 erpbrasil.edoc
 erpbrasil.transmissao
@@ -13,3 +13,4 @@ xmldiff
 lxml==4.6.5
 git+https://github.com/it-brasil/PyTrustNFe.git@itbrasil#egg=pytrustnfe3
 git+https://github.com/it-brasil/erpbrasil.edoc.pdf.git@itbrasil#egg=erpbrasil.edoc.pdf
+# git+https://github.com/it-brasil/erpbrasil.edoc.git@temp-nfe-ms#egg=erpbrasil.edoc

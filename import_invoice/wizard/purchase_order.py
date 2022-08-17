@@ -39,8 +39,6 @@ class PurchaseOrderWizard(models.TransientModel):
                 src = src.replace("T"," ").replace("-03:00","")
             itens[item] = src
         
-        _logger.info(["[DEBUG]", itens])
-
         vals = {
             "document_number": itens["nNF"],
             "document_key": itens["chNFe"],
@@ -52,7 +50,13 @@ class PurchaseOrderWizard(models.TransientModel):
             "edoc_purpose": itens["finNFe"],
         } 
 
-        if "{:.2f}".format(purchase.amount_total) != itens["vNF"]:
+        # Verifica 1 centavo a mais ou a menos
+        one_cent_dif = False
+        if (round(float(itens["vNF"]) - purchase.amount_total, 2) == 0.01 
+         or round(purchase.amount_total - float(itens["vNF"]), 2) == 0.01):
+            one_cent_dif = True
+
+        if "{:.2f}".format(purchase.amount_total) != itens["vNF"] and not one_cent_dif:
             vals_activity = {
                 "summary": f"Valores Divergentes (PO {purchase.name})",
                 "note": f"Valor total do xml difere do total do pedido de compras (PO {purchase.name})" +
@@ -80,4 +84,3 @@ class PurchaseOrderWizard(models.TransientModel):
     def clear_cnpj(self, cnpj):
         return cnpj.replace(".","").replace("/","").replace("-","")
 
-    

@@ -43,10 +43,6 @@ class SaleOrderLine(models.Model):
         string="Fiscal Taxes",
     )
 
-    partner_order = fields.Char(string="Ordem de Compra (xPed)", size=15)
-
-    partner_order_line = fields.Char(string="Linha da Ordem de Compra (nItemPed)", size=6)
-
     quantity = fields.Float(
         string="Product Uom Quantity",
         related="product_uom_qty",
@@ -164,7 +160,7 @@ class SaleOrderLine(models.Model):
         result = self._prepare_br_fiscal_dict()
         if self.product_id and self.product_id.invoice_policy == "delivery":
             self._compute_qty_delivered()
-            result["fiscal_quantity"] = self.fiscal_qty_delivered
+
             result["fiscal_quantity"] = self.qty_to_invoice
 
         # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
@@ -222,7 +218,6 @@ class SaleOrderLine(models.Model):
     @api.onchange("fiscal_tax_ids")
     def _onchange_fiscal_tax_ids(self):
         super()._onchange_fiscal_tax_ids()
-        self._compute_tax_id()
         self.tax_id |= self.fiscal_tax_ids.account_taxes(user_type="sale")
         if self.order_id.fiscal_operation_id.deductible_taxes:
             self.tax_id |= self.fiscal_tax_ids.account_taxes(
