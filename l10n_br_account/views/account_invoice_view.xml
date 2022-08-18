@@ -95,9 +95,10 @@
                     name="document_type_id"
                     attrs="{'invisible': [('create_date', '!=', False), ('document_type_id', '=', False)], 'readonly': [('state', '!=', 'draft')]}"
                 />
+                <field name="fiscal_operation_type" attrs="{'invisible': ['|', ('document_type_id', '=', False), ('move_type', '!=', 'entry')], 'readonly': [('state', '!=', 'draft')]}" />
                 <field
                     name="fiscal_operation_id"
-                    attrs="{'invisible': [('document_type_id', '=', False)], 'required': [('document_type_id', '!=', False)], 'readonly': [('state', '!=', 'draft')]}"
+                    attrs="{'invisible': [('document_type_id', '=', False)], 'required': [('document_type_id', '!=', False), ('move_type', '!=', 'entry')], 'readonly': [('state', '!=', 'draft')]}"
                 />
                 <field
                     name="issuer"
