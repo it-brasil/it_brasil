@@ -174,6 +174,10 @@ class NFeLine(spec_models.StackedModel):
         related="freight_value",
     )
 
+    nfe40_vOutro = fields.Monetary(
+        related="other_value",
+    )
+
     nfe40_vTotTrib = fields.Monetary(
         related="estimate_tax",
     )
@@ -465,7 +469,8 @@ class NFeLine(spec_models.StackedModel):
         if xsd_field == "nfe40_vDeducao":
             return self.issqn_deduction_amount
         if xsd_field == "nfe40_vOutro":
-            return self.issqn_other_amount
+            # import pudb;pu.db
+            return self.issqn_other_amount or self.other_value
         if xsd_field == "nfe40_vDescIncond":
             return self.issqn_desc_incond_amount
         if xsd_field == "nfe40_vDescCond":
