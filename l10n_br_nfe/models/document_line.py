@@ -228,6 +228,18 @@ class NFeLine(spec_models.StackedModel):
     nfe40_modBCST = fields.Selection(related="icmsst_base_type")
     nfe40_vICMSST = fields.Monetary(related="icmsst_value")
 
+    nfe40_vDespAdu = fields.Monetary(related="ii_customhouse_charges")
+    nfe40_vIOF = fields.Monetary(related="ii_iof_value")
+    nfe40_vII = fields.Monetary(related="ii_value")
+
+        # def _export_fields_ii(self):
+    #     ii = {
+    #         "nfe40_vBC": "{:.2f}".format(self.ii_base),
+    #         "nfe40_vDespAdu": "{:.2f}".format(self.ii_customhouse_charges),
+    #         "nfe40_vII": "{:.2f}".format(self.ii_value),
+    #         "nfe40_vIOF": "{:.2f}".format(self.ii_iof_value),
+    #     }
+
     @api.depends("additional_data")
     def _compute_nfe40_infAdProd(self):
         for record in self:
@@ -461,7 +473,6 @@ class NFeLine(spec_models.StackedModel):
         self.nfe40_pPIS = self.pis_percent
         self.nfe40_pCOFINS = self.cofins_percent
         self.nfe40_cEnq = str(self.ipi_guideline_id.code or "999").zfill(3)
-        # self.nfe40_vOutro = str("%.02f" % self.other_value)
         self.nfe40_vSeg = str("%.02f" % self.insurance_value)
         return super()._export_fields(xsd_fields, class_obj, export_dict)
 
@@ -475,8 +486,10 @@ class NFeLine(spec_models.StackedModel):
         if xsd_field == "nfe40_vDeducao":
             return self.issqn_deduction_amount
         if xsd_field == "nfe40_vOutro":
-            # TODO qdo NFe esta entrando aqui
-            return self.issqn_other_amount or str("%.02f" % self.other_value)
+            if self.tax_icms_or_issqn == "icms":
+                return str("%.02f" % self.other_value)
+            else:
+                return self.issqn_other_amount
         if xsd_field == "nfe40_vDescIncond":
             return self.issqn_desc_incond_amount
         if xsd_field == "nfe40_vDescCond":
@@ -557,8 +570,14 @@ class NFeLine(spec_models.StackedModel):
                 return False
             # TODO add condition
             elif field_name in ["nfe40_II", "nfe40_PISST", "nfe40_COFINSST"]:
+                # import pudb;pu.db
+                # if field_name == "nfe40_II":
+                #     binding_module = sys.modules[self._binding_module]
+                #     ii_binding = getattr(binding_module, '' + "Type")
+                #     icms_dict = self._export_fields_icms()
+                #     export_dict[icms_tag] = icms_binding(**icms_dict)
+                # else:    
                 return False
-
             elif (not xsd_required) and field_name not in [
                 "nfe40_PIS",
                 "nfe40_COFINS",
