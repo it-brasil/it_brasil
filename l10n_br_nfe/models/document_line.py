@@ -178,6 +178,10 @@ class NFeLine(spec_models.StackedModel):
         related="other_value",
     )
 
+    nfe40_vSeg = fields.Monetary(
+        related="insurance_value",
+    )
+
     nfe40_vTotTrib = fields.Monetary(
         related="estimate_tax",
     )
@@ -457,6 +461,8 @@ class NFeLine(spec_models.StackedModel):
         self.nfe40_pPIS = self.pis_percent
         self.nfe40_pCOFINS = self.cofins_percent
         self.nfe40_cEnq = str(self.ipi_guideline_id.code or "999").zfill(3)
+        # self.nfe40_vOutro = str("%.02f" % self.other_value)
+        self.nfe40_vSeg = str("%.02f" % self.insurance_value)
         return super()._export_fields(xsd_fields, class_obj, export_dict)
 
     # flake8: noqa: C901
@@ -469,8 +475,8 @@ class NFeLine(spec_models.StackedModel):
         if xsd_field == "nfe40_vDeducao":
             return self.issqn_deduction_amount
         if xsd_field == "nfe40_vOutro":
-            # import pudb;pu.db
-            return self.issqn_other_amount or self.other_value
+            # TODO qdo NFe esta entrando aqui
+            return self.issqn_other_amount or str("%.02f" % self.other_value)
         if xsd_field == "nfe40_vDescIncond":
             return self.issqn_desc_incond_amount
         if xsd_field == "nfe40_vDescCond":
