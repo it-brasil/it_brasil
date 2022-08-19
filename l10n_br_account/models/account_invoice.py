@@ -285,7 +285,6 @@ class AccountMove(models.Model):
                 tax_type == "purchase" and base_line.credit
             )
             price_unit_wo_discount = base_line.amount_currency
-
         balance_taxes_res = base_line.tax_ids._origin.with_context(
             force_sign=move._get_tax_force_sign()
         ).compute_all(
@@ -298,6 +297,7 @@ class AccountMove(models.Model):
             handle_price_include=handle_price_include,
             fiscal_taxes=base_line.fiscal_tax_ids,
             operation_line=base_line.fiscal_operation_line_id,
+            cfop=base_line.cfop_id,
             ncm=base_line.ncm_id,
             nbs=base_line.nbs_id,
             nbm=base_line.nbm_id,
@@ -476,9 +476,8 @@ class AccountMove(models.Model):
         """Sets fiscal document to draft state and cancel and set to draft
         the related invoice for both documents remain equivalent state."""
         for i in self.filtered(lambda d: d.document_type_id):
-            i.button_cancel
-            i.button_draft
-            # i.fiscal_document_id._change_state('em_digitacao')
+            i.button_draft()
+            i.fiscal_document_id.state_edoc = SITUACAO_EDOC_EM_DIGITACAO
 
     def action_invoice_cancel(self):
         for i in self.filtered(lambda d: d.document_type_id):
