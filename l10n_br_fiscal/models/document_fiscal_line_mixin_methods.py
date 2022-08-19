@@ -168,7 +168,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
                 and record.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
             ):
                 record.amount_total = (
-                    record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount + record.icms_value
+                    record.amount_untaxed + record.amount_tax + record.icms_value
                 )
 
             # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
