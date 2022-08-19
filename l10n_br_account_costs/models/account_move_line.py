@@ -14,6 +14,9 @@ class AccountMoveLine(models.Model):
 
     @api.model
     def _get_price_total_and_subtotal_model(self, price_unit, quantity, discount, currency, product, partner, taxes, move_type):
+        self._compute_amounts()
+        # self._update_taxes()
+
         res = super()._get_price_total_and_subtotal_model(price_unit, quantity, discount, currency, product, partner, taxes, move_type)
         line_discount_price_unit = price_unit * (1 - (discount / 100.0))
         subtotal = quantity * line_discount_price_unit
@@ -26,54 +29,6 @@ class AccountMoveLine(models.Model):
             res['price_total'] = taxes_res['total_included'] + self.freight_value + self.insurance_value + self.other_value
         else:
             res['price_total'] = subtotal + self.freight_value + self.insurance_value + self.other_value
-    
+        # TODO 
+        # nao esta calculando no total qdo insere pela linha do item
         return res
-
-    # @api.depends(
-    #     "fiscal_price",
-    #     "discount_value",
-    #     "insurance_value",
-    #     "other_value",
-    #     "freight_value",
-    #     "fiscal_quantity",
-    #     "amount_tax_not_included",
-    #     "uot_id",
-    #     "product_id",
-    #     "partner_id",
-    #     "company_id",
-    # )
-    # def _compute_amounts(self):
-    #     super._compute_amounts()
-    #     for record in self:
-    #         round_curr = record.currency_id or self.env.ref("base.BRL")
-    #         # Valor dos produtos
-    #         record.price_gross = round_curr.round(record.price_unit * record.quantity)
-
-    #         record.amount_untaxed = record.price_gross - record.discount_value
-
-    #         record.amount_fiscal = (
-    #             round_curr.round(record.fiscal_price * record.fiscal_quantity)
-    #             - record.discount_value
-    #         )
-
-    #         record.amount_tax = record.amount_tax_not_included
-
-    #         add_to_amount = sum([record[a] for a in record._add_fields_to_amount()])
-    #         rm_to_amount = sum([record[r] for r in record._rm_fields_to_amount()])
-
-    #         # Valor do documento (NF)
-    #         record.amount_total = (
-    #             record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount
-    #         )
-
-    #         # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
-    #         record.amount_taxed = record.amount_total - record.amount_tax_withholding
-            #     if (
-            #     record.cfop_id
-            #     and record.cfop_id.destination == CFOP_DESTINATION_EXPORT
-            #     and record.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
-            # ):
-            #     record.amount_total = (
-            #         record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount + record.icms_value
-            #     )
-            

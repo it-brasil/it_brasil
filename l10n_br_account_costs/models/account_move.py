@@ -160,51 +160,81 @@ class AccountMove(models.Model):
                     }
                 )
 
-    @api.depends(
-        'line_ids.matched_debit_ids.debit_move_id.move_id.payment_id.is_matched',
-        'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual',
-        'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual_currency',
-        'line_ids.matched_credit_ids.credit_move_id.move_id.payment_id.is_matched',
-        'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual',
-        'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual_currency',
-        'line_ids.debit',
-        'line_ids.credit',
-        'line_ids.currency_id',
-        'line_ids.amount_currency',
-        'line_ids.amount_residual',
-        'line_ids.amount_residual_currency',
-        'line_ids.payment_id.state',
-        'line_ids.full_reconcile_id')
-    def _compute_amount(self):
-        total_tax = 0.0
-        super()._compute_amount()
-        # coloquei o len abaixo pq tem hora q traz todas as faturas do sistema
-        if len(self) == 1:
-            # total do ICMS
-            for line in self.line_ids:
-                if (
-                    line.cfop_id
-                    and line.cfop_id.destination == CFOP_DESTINATION_EXPORT
-                    and line.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
-                ):
-                    total_tax += line.icms_value
-            dif = 0.0
-            total = 0.0
-            # Corrige a conta de ICMS Importacao
-            for line in self.line_ids:
-                if (
-                    line.name and 'ICMS Entrada Importa' in line.name 
-                    and total_tax
-                    and not self.purchase_id
-                ):
-                    dif = total_tax - line.debit
-                    line.debit = total_tax
-                if (
-                    line.account_id and dif
-                    and 'Fornecedor' in line.account_id.name
-                ):
-                    line.credit = line.credit + dif
-                    # menos pq o amount currency e negativo
-                    line.amount_currency = line.amount_currency - dif
-                    total += line.amount_currency + total_tax
-                line._update_taxes()
+    # @api.depends(
+    #     'line_ids.matched_debit_ids.debit_move_id.move_id.payment_id.is_matched',
+    #     'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual',
+    #     'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual_currency',
+    #     'line_ids.matched_credit_ids.credit_move_id.move_id.payment_id.is_matched',
+    #     'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual',
+    #     'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual_currency',
+    #     'line_ids.debit',
+    #     'line_ids.credit',
+    #     'line_ids.currency_id',
+    #     'line_ids.amount_currency',
+    #     'line_ids.amount_residual',
+    #     'line_ids.amount_residual_currency',
+    #     'line_ids.payment_id.state',
+    #     'line_ids.full_reconcile_id')
+    # def _compute_amount(self):
+    #     total_tax = 0.0
+    #     # coloquei o len abaixo pq tem hora q traz todas as faturas do sistema
+    #     # import pudb;pu.db
+    #     if len(self) == 1:
+    #         for move in self:
+    #             for line in move.line_ids.filtered(lambda l: l.tax_line_id):
+    #                 # Create Wh Invoice only for supplier invoice
+    #                 # if line.move_id and line.move_id.type != "in_invoice":
+    #                 #     continue
+                    
+    #                 account_tax_group = line.tax_line_id.tax_group_id
+    #                 if account_tax_group and account_tax_group.fiscal_tax_group_id:
+    #                     fiscal_group = account_tax_group.fiscal_tax_group_id
+    #                     if fiscal_group.tax_withholding:
+    #                         invoice = self.env["account.move"].create(
+    #                             self._prepare_wh_invoice(line, fiscal_group)
+    #                         )
+
+    #                         self.env["account.move.line"].create(
+    #                             self._prepare_wh_invoice_line(invoice, line)
+    #                         )
+
+
+    #         # total do ICMS
+    #         for line in self.line_ids:
+    #             line._onchange_fiscal_taxes()
+    #         #     if line.purchase_line_id:
+    #         #         continue
+    #         #     if (
+    #         #         line.cfop_id
+    #         #         and line.cfop_id.destination == CFOP_DESTINATION_EXPORT
+    #         #         and line.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
+    #         #     ):
+    #         #         total_tax += line.icms_value
+    #         # dif = 0.0
+    #         # total = 0.0
+    #         # # Corrige a conta de ICMS Importacao
+    #         # for line in self.line_ids:
+    #         #     if line.purchase_line_id:
+    #         #         continue
+    #         #     if (
+    #         #         line.name and 'ICMS Entrada Importa' in line.name 
+    #         #         and total_tax
+    #         #         and not self.purchase_id
+    #         #     ):
+    #         #         dif = total_tax - line.debit
+    #         #         line.debit = total_tax
+    #         #     if (
+    #         #         line.account_id and dif
+    #         #         and 'Fornecedor' in line.account_id.name
+    #         #     ):
+    #         #         line.credit = line.credit + dif
+    #         #         # menos pq o amount currency e negativo
+    #         #         line.amount_currency = line.amount_currency - dif
+    #         #         total += line.amount_currency + total_tax
+    #             line._update_taxes()
+    #     super()._compute_amount()
+
+    # @api.model
+    # def _compute_taxes_mapped(self, base_line):
+    #     import pudb;pu.db
+    #     super()._compute_taxes_mapped(base_line)
