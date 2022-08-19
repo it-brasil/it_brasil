@@ -376,6 +376,7 @@ class Tax(models.Model):
             # Add IPI in ICMS Base
             tax_dict["add_to_base"] += tax_dict_ipi.get("tax_value", 0.00)
 
+        tax_dict.update(self._compute_tax(tax, taxes_dict, **kwargs))
         # Adiciona na base de calculo do ICMS nos casos de entrada de importação
         if (
             cfop
@@ -394,26 +395,6 @@ class Tax(models.Model):
 
             tax_dict["add_to_base"] += kwargs.get("ii_customhouse_charges", 0.00)
 
-            tax_dict.update(
-                {'icms_value': tax_dict.get("tax_value")}
-            )
-
-            # tax_dict["add_to_base"] += kwargs.get("freight_value", 0.00)
-            # tax_dict["add_to_base"] += kwargs.get("insurance_value", 0.00)
-            # tax_dict["add_to_base"] += kwargs.get("other_value", 0.00)
-            # Calcula a base do ICMS
-            # TODO Tem que incluir o próprio valor do ICMS na base de calculo
-            # Tem que ser criado um parametro no _compute_tax_base para fazer
-            # esse calculo.
-            # icms_perc = tax_dict.get("percent_amount")
-            # if icms_perc:
-            #     icms_base = tax_dict.get("base")
-            #     icms_perc_ii = 1 - (icms_perc / 100)
-            #     icms_base_total = round_currency(icms_base / icms_perc_ii)
-            #     icms_value = round_currency(icms_base_total * (icms_perc / 100))
-            #     tax_dict.update({"base": icms_base_total, "tax_value": icms_value})
-
-
             # Difal - Base
             
             # difal_icms_base = 0.00
@@ -426,7 +407,6 @@ class Tax(models.Model):
 
             # tax_dict = self._compute_tax(tax, taxes_dict, **kwargs)
 
-        tax_dict.update(self._compute_tax(tax, taxes_dict, **kwargs))
         # tax_dict.update({"icms_base_type": tax.icms_base_type})
 
         # DIFAL
@@ -520,9 +500,7 @@ class Tax(models.Model):
         # taxes_dict.update(
         #     self._compute_tax_base(tax, taxes_dict.get(tax.tax_domain), **kwargs)
         # )
-
         # return self._compute_tax(tax, taxes_dict, **kwargs)
-
         return tax_dict
 
     def _compute_icmsfcp(self, tax, taxes_dict, **kwargs):
