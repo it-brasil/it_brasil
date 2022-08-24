@@ -161,8 +161,15 @@ class Partner(models.Model):
                     self.district = cnpjws_estabelecimento['bairro']
                     self.street2 = cnpjws_estabelecimento['complemento']
 
+                    telefonecadastral = str(cnpjws_estabelecimento['ddd1']) + str(cnpjws_estabelecimento['telefone1'])
+
                     self.cnpjws_email = cnpjws_estabelecimento['email']
-                    self.cnpjws_telefone = cnpjws_estabelecimento['ddd1'] + " " + cnpjws_estabelecimento['telefone1']
+                    self.email = cnpjws_estabelecimento['email']
+                    self.cnpjws_telefone = telefonecadastral if cnpjws_estabelecimento['ddd1'] else False 
+
+                    if self._fields.get('x_studio_telefone_1_1'):
+                        self.x_studio_telefone_1_1 = telefonecadastral if cnpjws_estabelecimento['ddd1'] else False 
+
 
                     cnpjws_socios = cnpjws_result['socios']
 
@@ -184,10 +191,13 @@ class Partner(models.Model):
                     self.define_cnae_sec(fiscal_info)
                     self.define_inscricao_estadual(fiscal_info)
                     self.define_socios(fiscal_info)
+
+                    oriname = self.name 
                     
                     self.cnpjws_atualizadoem = datetime.strptime(
                         cnpjws_result['atualizado_em'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     self.cnpjws_nome_fantasia = cnpjws_estabelecimento['nome_fantasia']
+                    self.name = cnpjws_estabelecimento['nome_fantasia'] if cnpjws_estabelecimento['nome_fantasia'] else oriname
                     self.cnpjws_tipo = cnpjws_estabelecimento['tipo']
                     self.cnpjws_situacao_cadastral = cnpjws_estabelecimento['situacao_cadastral']
                     self.cnpjws_porte = cnpjws_result['porte']['descricao']
@@ -247,7 +257,6 @@ class Partner(models.Model):
     #define socios da empresa
     def define_socios(self, fiscal_info):
         result = fiscal_info[4]
-        _logger.warning("Socios: %s", result)
         search_cnpj_socios_del = self.env['cnpj.socios'].search(
                 [('partner_id', '=', self.id)]
             )
