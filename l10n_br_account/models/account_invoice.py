@@ -298,6 +298,7 @@ class AccountMove(models.Model):
             handle_price_include=handle_price_include,
             fiscal_taxes=base_line.fiscal_tax_ids,
             operation_line=base_line.fiscal_operation_line_id,
+            cfop=base_line.cfop_id,
             ncm=base_line.ncm_id,
             nbs=base_line.nbs_id,
             nbm=base_line.nbm_id,

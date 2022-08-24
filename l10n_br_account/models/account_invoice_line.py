@@ -129,7 +129,6 @@ class AccountMoveLine(models.Model):
 
     @api.onchange('product_id')
     def _onchange_product_id(self):
-        # import pudb;pu.db
         super()._onchange_product_id()
         if self.product_id:
             self._onchange_fiscal_tax_ids()
@@ -440,6 +439,7 @@ class AccountMoveLine(models.Model):
                 handle_price_include=True, # FIXME
                 fiscal_taxes=self.env.context.get("fiscal_tax_ids"),
                 operation_line=self.env.context.get("fiscal_operation_line_id"),
+                cfop=self.cfop_id,
                 ncm=self.env.context.get("ncm_id"),
                 nbs=self.env.context.get("nbs_id"),
                 nbm=self.env.context.get("nbm_id"),
