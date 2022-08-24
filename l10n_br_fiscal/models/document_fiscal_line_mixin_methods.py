@@ -10,6 +10,11 @@ from odoo import api, models
 from ..constants.icms import ICMS_BASE_TYPE_DEFAULT, ICMS_ST_BASE_TYPE_DEFAULT
 from .tax import TAX_DICT_VALUES
 
+from ..constants.fiscal import (
+    CFOP_DESTINATION_EXPORT,
+    FISCAL_IN
+)
+
 FISCAL_TAX_ID_FIELDS = [
     "cofins_tax_id",
     "cofins_wh_tax_id",
@@ -157,9 +162,17 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
                 record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount
             )
 
+            if (
+                record.cfop_id
+                and record.cfop_id.destination == CFOP_DESTINATION_EXPORT
+                and record.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
+            ):
+                record.amount_total = (
+                    record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount + record.icms_value
+                )
+
             # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
             record.amount_taxed = record.amount_total - record.amount_tax_withholding
-
             # Valor financeiro
             if (
                 record.fiscal_operation_line_id
