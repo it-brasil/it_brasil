@@ -257,26 +257,89 @@ class Partner(models.Model):
     #define socios da empresa
     def define_socios(self, fiscal_info):
         result = fiscal_info[4]
-        search_cnpj_socios_del = self.env['cnpj.socios'].search(
-                [('partner_id', '=', self.id)]
-            )
-        if search_cnpj_socios_del:
-            for socio_del in search_cnpj_socios_del:
-                socio_del.unlink()
 
-        if result:
-            for socio in result:
-                qualificacao = str(socio['qualificacao_socio']['id']) + " - " + socio['qualificacao_socio']['descricao']
-                try:
-                    self.write(
-                       {"cnpj_socios_id": [(0, 0, {
-                           "name": socio['nome'],
-                           "qualificacao": qualificacao,
-                        })]}
-                        )
-                    _logger.info("Socio incluido")
-                except Exception:
-                    _logger.warning("Erro ao incluir socio: %s", socio['nome'])
+        #if not result return
+        if not result:
+            return
+        #if socio exists in result, search in child_ids by name update function if not exists, create with name and function contact type
+        
+        for socio in result:
+            search_socio = self.env['res.partner'].search(
+                [('name', '=', socio['nome']),( 'parent_id', '=', self.id)], limit=1)
+            qualificacao = str(socio['qualificacao_socio']['id']) + "-" + socio['qualificacao_socio']['descricao']
+            if search_socio:
+                search_socio.write({
+                    'function': qualificacao,
+                    'type': 'contact',
+                })
+                
+            else:
+                self.env['res.partner'].create({
+                    'name': socio['nome'],
+                    'function': qualificacao,
+                    'type': 'contact',
+                    'parent_id': self.id,
+                    'is_company': False,
+                })
+
+
+
+
+
+
+
+
+
+        # if self.child_ids:
+        #     for child in self.child_ids:
+        #         if child.type == 'contact':
+        #             for i in range(len(result)):
+        #                 qualificacao = str(result[i]['qualificacao_socio']['id']) + "-" + result[i]['qualificacao_socio']['descricao']
+        #                 _logger.warning(qualificacao)
+        #                 if child.name == result[i]['nome']:
+        #                     _logger.warning("socio ja existe %s", child.name)
+        #                     child.write({
+        #                         'function': qualificacao,
+        #                     })
+        #                 else:
+        #                     _logger.warning("socio nao existe %s", result[i]['nome'])
+        #                     incluir_socio = self.write({
+        #                         'child_ids': [(0, 0, {
+        #                             'name': result[i]['nome'],
+        #                             'type': 'contact',
+        #                             'parent_id': self.id,
+        #                             'is_company': False,
+        #                             'function': qualificacao,
+        #                         })]
+        #                     })
+        #                     if incluir_socio:
+        #                         _logger.info("Socio Adicionado: " + str(incluir_socio))
+        #                     else:
+        #                         _logger.warning("Socio não foi adicionado:")
+                            # if i == len(result) - 1:
+                            #     child.create()
+
+
+        # search_cnpj_socios_del = self.env['cnpj.socios'].search(
+        #         [('partner_id', '=', self.id)]
+        #     )
+        # if search_cnpj_socios_del:
+        #     for socio_del in search_cnpj_socios_del:
+        #         socio_del.unlink()
+
+        # if result:
+        #     for socio in result:
+        #         qualificacao = str(socio['qualificacao_socio']['id']) + " - " + socio['qualificacao_socio']['descricao']
+        #         try:
+        #             self.write(
+        #                {"cnpj_socios_id": [(0, 0, {
+        #                    "name": socio['nome'],
+        #                    "qualificacao": qualificacao,
+        #                 })]}
+        #                 )
+        #             _logger.info("Socio incluido")
+        #         except Exception:
+        #             _logger.warning("Erro ao incluir socio: %s", socio['nome'])
 
     def define_inscricao_estadual(self, fiscal_info):
         result_ie = fiscal_info[1]
