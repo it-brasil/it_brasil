@@ -19,14 +19,17 @@ class AccountMove(models.Model):
     _inherit = "account.move"
 
     amount_freight_value = fields.Monetary(
+        compute="_compute_freight_value",
         inverse="_inverse_amount_freight",
     )
 
     amount_insurance_value = fields.Monetary(
+        compute="_compute_insurance_value",
         inverse="_inverse_amount_insurance",
     )
 
     amount_other_value = fields.Monetary(
+        compute="_compute_other_value",
         inverse="_inverse_amount_other",
     )
 
@@ -35,6 +38,27 @@ class AccountMove(models.Model):
     delivery_costs = fields.Selection(
         related="company_id.delivery_costs",
     )
+
+    @api.depends("amount_freight_value")
+    def _compute_freight_value(self):
+        total_freight = 0.0
+        for record in self.invoice_line_ids:
+            total_freight += record.freight_value
+        self.amount_freight_value = total_freight
+
+    @api.depends("amount_insurance_value")
+    def _compute_insurance_value(self):
+        total_insurance = 0.0
+        for record in self.invoice_line_ids:
+            total_insurance += record.insurance_value
+        self.amount_insurance_value = total_insurance
+
+    @api.depends("amount_other_value")
+    def _compute_other_value(self):
+        total_other = 0.0
+        for record in self.invoice_line_ids:
+            total_other += record.other_value
+        self.amount_other_value = total_other
 
     def _inverse_amount_freight(self):
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
@@ -64,6 +88,7 @@ class AccountMove(models.Model):
                     line.update(line._get_fields_onchange_subtotal())
                     line._onchange_fiscal_taxes()
                 record._recompute_dynamic_lines(recompute_all_taxes=True)
+                record._fields["amount_total"].compute_value(record)
 
                 record.write(
                     {
@@ -149,7 +174,6 @@ class AccountMove(models.Model):
                     line.update(line._get_fields_onchange_subtotal())
                     line._onchange_fiscal_taxes()
                 record._recompute_dynamic_lines(recompute_all_taxes=True)
-
                 record._fields["amount_total"].compute_value(record)
                 record.write(
                     {

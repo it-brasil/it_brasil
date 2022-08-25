@@ -51,7 +51,7 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                             ] += 0  # line.financial_discount_value
                         else:
                             values[field] += line[field.replace("amount_", "")]
-            doc.update(values)
+            doc.update(values) 
 
     def __document_comment_vals(self):
         return {

@@ -10,8 +10,8 @@
     "depends": [
             "base", 
             "l10n_br_nfe",
-            "l10n_br", 
-            "l10n_br_purchase", 
+            "l10n_br_purchase",
+            "l10n_br_stock_account", 
         ],
     "data": [
         "security/ir.model.access.csv",

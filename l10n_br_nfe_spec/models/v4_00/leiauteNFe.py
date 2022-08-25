@@ -3851,7 +3851,7 @@ class Imposto(models.AbstractModel):
     _generateds_type = 'impostoType'
     nfe40_choice10 = fields.Selection([
         ('nfe40_ICMS', 'ICMS'),
-        ('nfe40_II', 'II'),
+        ('nfe40_II', 'II'),        
         ('nfe40_IPI', 'IPI'),
         ('nfe40_ISSQN', 'ISSQN')],
         "ICMS/II/IPI/ISSQN")
@@ -3866,14 +3866,14 @@ class Imposto(models.AbstractModel):
         choice='10',
         string="Dados do ICMS Normal e ST",
         xsd_required=True)
-    nfe40_II = fields.Many2one(
-        "nfe.40.ii",
-        choice='10',
-        string="Dados do Imposto de Importação")
     nfe40_IPI = fields.Many2one(
         "nfe.40.tipi",
         choice='10',
         string="IPI")
+    nfe40_II = fields.Many2one(
+        "nfe.40.ii",
+        choice='10',
+        string="Dados do Imposto de Importação")        
     nfe40_ISSQN = fields.Many2one(
         "nfe.40.issqn",
         choice='10',

@@ -225,13 +225,19 @@ class AccountMove(models.Model):
             if not vals.get("document_type_id"):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
-
         invoice._write_shadowed_fields()
         return invoice
 
     def write(self, values):
         result = super().write(values)
         self._write_shadowed_fields()
+        # # import pudb;pu.db
+        # if not "amount_total" in values:
+        #     amount_total = 0.0
+        #     for line in self.invoice_line_ids:
+        #         amount_total += line.amount_untaxed + line.freight_value + line.insurance_value + line.other_value + line.amount_tax
+        #     if amount_total != self.amount_total:
+        #         self.amount_total = amount_total
         return result
 
     def unlink(self):
@@ -352,30 +358,29 @@ class AccountMove(models.Model):
         return True
 
 
-    # def _recompute_payment_terms_lines(self):
-    #     """Compute the dynamic payment term lines of the journal entry.
-    #     overwritten this method to change aml's field name.
-    #     """
+    def _recompute_payment_terms_lines(self):
+        """Compute the dynamic payment term lines of the journal entry.
+        overwritten this method to change aml's field name.
+        """
 
-    #     # TODO - esse método é executado em um onchange, na emissão de um novo
-    #     # documento fiscal o numero do documento pode estar em branco
-    #     # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
-    #     # antes de salva-la.
-    #     result = super()._recompute_payment_terms_lines()
-    #     if self.document_number:
-    #         terms_lines = self.line_ids.filtered(
-    #             lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
-    #             and l.move_id.document_type_id
-    #         )
-    #         terms_lines.sorted(lambda line: line.date_maturity)
-    #         for idx, terms_line in enumerate(terms_lines):
-    #             # TODO TODO pegar o método do self.fiscal_document_id.with_context(
-    #             # fiscal_document_no_company=True
-    #             # )._compute_document_name()
-    #             terms_line.name = "{}/{}-{}".format(
-    #                 self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
-    #             )
-    #     return result
+        # TODO - esse método é executado em um onchange, na emissão de um novo
+        # documento fiscal o numero do documento pode estar em branco
+        # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
+        # antes de salva-la.
+        super()._recompute_payment_terms_lines()
+        if self.document_number:
+            terms_lines = self.line_ids.filtered(
+                lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
+                and l.move_id.document_type_id
+            )
+            terms_lines.sorted(lambda line: line.date_maturity)
+            for idx, terms_line in enumerate(terms_lines):
+                # TODO TODO pegar o método do self.fiscal_document_id.with_context(
+                # fiscal_document_no_company=True
+                # )._compute_document_name()
+                terms_line.name = "{}/{}-{}".format(
+                    self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
+                )
 
     # @api.model
     # def invoice_line_move_line_get(self):
