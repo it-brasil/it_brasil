@@ -174,10 +174,21 @@ class AccountMoveLine(models.Model):
                     )                
                 values['fiscal_document_line_id'] = dummy_line.id
             else:
+                # rotina necessaria para Fatura com pedido em outra moeda
+                price = values.get("price_unit")
+                if move and values.get("currency_id") != move.company_id.currency_id.id:
+                    values.update({"currency_id": move.company_id.currency_id.id})
+                    if price:
+                        price = move.currency_id._convert(
+                            price,
+                            move.company_id.currency_id,
+                            move.company_id or self.env.company,
+                            move.date or fields.Date.today(),
+                        )
                 values.update(
                     self._update_fiscal_quantity(
                         values.get("product_id"),
-                        values.get("price_unit"),
+                        price,
                         values.get("quantity"),
                         values.get("uom_id"),
                         values.get("uot_id"),
@@ -186,8 +197,6 @@ class AccountMoveLine(models.Model):
             new_vals_list.append(values)
 
         lines = super().create(new_vals_list)
-        # for line in lines:
-        #     self._onchange_fiscal_operation_line_id()
 
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
@@ -425,7 +434,6 @@ class AccountMoveLine(models.Model):
         # Compute 'price_subtotal'.
         line_discount_price_unit = price_unit * (1 - (discount / 100.0))
         subtotal = quantity * line_discount_price_unit
-
         # Compute 'price_total'.
         if taxes:
             force_sign = -1 if move_type in ('out_invoice', 'in_refund', 'out_receipt') else 1
