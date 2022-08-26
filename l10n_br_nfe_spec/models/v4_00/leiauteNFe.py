@@ -3005,8 +3005,7 @@ class Adi(models.AbstractModel):
         xsd_type="cFabricanteType",
         help="Código do fabricante estrangeiro (usado nos sistemas internos"
         "\nde informação do emitente da NF-e)")
-    nfe40_vDescDI = fields.Monetary(
-        currency_field="brl_currency_id",
+    nfe40_vDescDI = fields.Char(
         string="Valor do desconto do item da DI – adição",
         xsd_type="TDec_1302Opc")
     nfe40_nDraw = fields.Char(

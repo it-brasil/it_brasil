@@ -289,9 +289,19 @@ class Tax(models.Model):
         )
 
         if tax.tax_group_id.base_without_icms:
-            # Get Computed ICMS Tax
-            tax_dict_icms = taxes_dict.get("icms", {})
-            tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
+            # Se Entrada Importacao nao remove da base
+            operation_line = kwargs.get("operation_line")
+            cfop = kwargs.get("cfop")
+            fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT          
+            if not (
+                cfop
+                and cfop.destination == CFOP_DESTINATION_EXPORT
+                and fiscal_operation_type == FISCAL_IN
+                and tax_dict["tax_domain"] in ("pis", "cofins")
+            ):
+                # Get Computed ICMS Tax
+               tax_dict_icms = taxes_dict.get("icms", {})
+               tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
 
         # TODO futuramente levar em consideração outros tipos de base de calculo
         if float_is_zero(tax_dict.get("base", 0.00), currency.decimal_places):

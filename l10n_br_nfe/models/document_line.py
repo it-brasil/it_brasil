@@ -511,7 +511,8 @@ class NFeLine(spec_models.StackedModel):
             return self.issqn_deduction_amount
         if xsd_field == "nfe40_vOutro":
             if self.tax_icms_or_issqn == "icms":
-                return str("%.02f" % self.other_value)
+                if self.other_value:
+                    return str("%.02f" % self.other_value or 0.0)
             else:
                 return self.issqn_other_amount
         if xsd_field == "nfe40_vDescIncond":
