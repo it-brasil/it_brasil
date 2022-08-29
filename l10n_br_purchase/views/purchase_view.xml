@@ -107,19 +107,16 @@
               <xpath expr="//field[@name='amount_untaxed']" position="after">
                   <field
                     name="amount_freight_value"
-                    force_save="1"
                     widget="monetary"
                     options="{'currency_field': 'currency_id'}"
                 />
                   <field
                     name="amount_insurance_value"
-                    force_save="1"
                     widget="monetary"
                     options="{'currency_field': 'currency_id'}"
                 />
                   <field
                     name="amount_other_value"
-                    force_save="1"
                     widget="monetary"
                     options="{'currency_field': 'currency_id'}"
                 />

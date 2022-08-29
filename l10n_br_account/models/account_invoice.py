@@ -231,13 +231,6 @@ class AccountMove(models.Model):
     def write(self, values):
         result = super().write(values)
         self._write_shadowed_fields()
-        # # import pudb;pu.db
-        # if not "amount_total" in values:
-        #     amount_total = 0.0
-        #     for line in self.invoice_line_ids:
-        #         amount_total += line.amount_untaxed + line.freight_value + line.insurance_value + line.other_value + line.amount_tax
-        #     if amount_total != self.amount_total:
-        #         self.amount_total = amount_total
         return result
 
     def unlink(self):
@@ -273,7 +266,6 @@ class AccountMove(models.Model):
 
     @api.model
     def _compute_taxes_mapped(self, base_line):
-
         move = base_line.move_id
         if move.is_invoice(include_receipts=True):
             handle_price_include = True

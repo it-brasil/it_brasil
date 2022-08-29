@@ -427,7 +427,6 @@ class AccountMoveLine(models.Model):
         # Compute 'price_subtotal'.
         line_discount_price_unit = price_unit * (1 - (discount / 100.0))
         subtotal = quantity * line_discount_price_unit
-        # import pudb;pu.db
         # Compute 'price_total'.
         if taxes:
             force_sign = -1 if move_type in ('out_invoice', 'in_refund', 'out_receipt') else 1

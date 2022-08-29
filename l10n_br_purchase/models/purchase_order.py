@@ -100,7 +100,6 @@ class PurchaseOrder(models.Model):
                         and not record._fields[name].inverse
                     }
                 )
-            # record.amount_freight_value = amount_freight_value
 
     def _inverse_amount_insurance(self):
         for record in self.filtered(lambda so: so.order_line):
@@ -142,7 +141,6 @@ class PurchaseOrder(models.Model):
                         and not record._fields[name].inverse
                     }
                 )
-            # record.amount_insurance_value = amount_insurance_value
 
     def _inverse_amount_other(self):
         for record in self.filtered(lambda so: so.order_line):
@@ -177,7 +175,6 @@ class PurchaseOrder(models.Model):
                         and not record._fields[name].inverse
                     }
                 )
-            # record.amount_other_value = amount_other_value
 
     @api.model
     def fields_view_get(
@@ -262,9 +259,6 @@ class PurchaseOrder(models.Model):
             {
                 "fiscal_operation_id": self.fiscal_operation_id.id,
                 "document_type_id": self.company_id.document_type_id.id,
-                # "amount_freight_value": self.amount_freight_value,
-                # "amount_insurance_value": self.amount_insurance_value,
-                # "amount_other_value": self.amount_other_value
             }
         )
         return invoice_vals
