@@ -18,7 +18,7 @@ class NFeLine(spec_models.StackedModel):
     def _export_fields(self, xsd_fields, class_obj, export_dict):
         if class_obj._name == "nfe.40.prod":
             if self.account_line_ids.move_id.move_type == "in_invoice":
-                vals_di = {
+                vals_di_di = {
                     "nfe40_DI_prod_id": self.id,
                     "nfe40_nDI" : self.number_di,
                     "nfe40_dDI" : self.date_registration,
