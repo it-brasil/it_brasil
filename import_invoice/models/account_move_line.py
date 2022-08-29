@@ -47,7 +47,7 @@ class AccountMoveLineMethods(models.AbstractModel):
     def _compute_company_id(self):
         for move in self:
             move.company_id = move.journal_id.company_id or move.company_id or self.env.company
- 
+
     @api.model
     def inject_fiscal_fields(
         self,
@@ -101,3 +101,12 @@ class AccountMoveLineMethods(models.AbstractModel):
                             field.attrib["invisible"] = "1"
                         target_node.append(field)
         return doc
+
+    def write(self, values):
+        if "number_di" in values and not "price_unit" in values:
+            import pudb;pu.db
+            if self.price_unit != self.price_fiscal:
+                # adicionado aqui pq qdo cria uma fatura pelo pedido de compra
+                # o sistema esta alterando o preco se tem frete ou outros
+                values["price_unit"] = self.fiscal_price
+            return super().write(values)

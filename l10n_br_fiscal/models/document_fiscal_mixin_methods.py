@@ -39,20 +39,21 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
         fields = self._get_amount_fields()
         # import pudb;pu.db
         for doc in self:
-            total_others = 0.0
-            total_geral = 0.0
+            # total_others = 0.0
+            # total_geral = 0.0
             values = {key: 0.0 for key in fields}
             for line in doc._get_amount_lines():
                 for field in fields:
                     if field in line._fields.keys():
                         values[field] += line[field]
                     if field.replace("amount_", "") in line._fields.keys():
-                        if field in ("amount_other_value", "amount_freight_value"):
-                            # import pudb;pu.db
-                            total_others += line[field.replace("amount_", "")]
-                        if field == "amount_financial_total":
-                            # import pudb;pu.db
-                            total_geral += line[field.replace("amount_", "")]
+                        # import pudb;pu.db
+                        # if field in ("amount_other_value", "amount_freight_value"):
+                        #     # import pudb;pu.db
+                        #     total_others += line[field.replace("amount_", "")]
+                        # if field == "amount_financial_total":
+                        #     # import pudb;pu.db
+                        #     total_geral += line[field.replace("amount_", "")]
                         # FIXME this field creates an error in invoice form
                         if field == "amount_financial_discount_value":
                             values[

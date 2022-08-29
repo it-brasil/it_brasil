@@ -61,6 +61,7 @@ class AccountMove(models.Model):
         self.amount_other_value = total_other
 
     def _inverse_amount_freight(self):
+        import pudb;pu.db
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
             if record.company_id.delivery_costs == "total":
                 amount_freight_value = record.amount_freight_value
