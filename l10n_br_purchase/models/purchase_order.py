@@ -70,7 +70,6 @@ class PurchaseOrder(models.Model):
     def _inverse_amount_freight(self):
         for record in self.filtered(lambda so: so.order_line):
             if record.company_id.delivery_costs == "total":
-
                 amount_freight_value = record.amount_freight_value
                 if all(record.order_line.mapped("freight_value")):
                     amount_freight_old = sum(record.order_line.mapped("freight_value"))

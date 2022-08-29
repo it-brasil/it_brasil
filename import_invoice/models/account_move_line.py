@@ -47,7 +47,7 @@ class AccountMoveLineMethods(models.AbstractModel):
     def _compute_company_id(self):
         for move in self:
             move.company_id = move.journal_id.company_id or move.company_id or self.env.company
- 
+
     @api.model
     def inject_fiscal_fields(
         self,
