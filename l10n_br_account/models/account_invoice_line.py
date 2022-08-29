@@ -174,10 +174,21 @@ class AccountMoveLine(models.Model):
                     )                
                 values['fiscal_document_line_id'] = dummy_line.id
             else:
+                # rotina necessaria para Fatura com pedido em outra moeda
+                price = values.get("price_unit")
+                if move and values.get("currency_id") != move.company_id.currency_id.id:
+                    values.update({"currency_id": move.company_id.currency_id.id})
+                    if price:
+                        price = move.currency_id._convert(
+                            price,
+                            move.company_id.currency_id,
+                            move.company_id or self.env.company,
+                            move.date or fields.Date.today(),
+                        )
                 values.update(
                     self._update_fiscal_quantity(
                         values.get("product_id"),
-                        values.get("price_unit"),
+                        price,
                         values.get("quantity"),
                         values.get("uom_id"),
                         values.get("uot_id"),

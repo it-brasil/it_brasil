@@ -184,3 +184,49 @@ class AccountMove(models.Model):
                         and not record._fields[name].inverse
                     }
                 )
+
+    @api.depends(
+        'line_ids.matched_debit_ids.debit_move_id.move_id.payment_id.is_matched',
+        'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual',
+        'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual_currency',
+        'line_ids.matched_credit_ids.credit_move_id.move_id.payment_id.is_matched',
+        'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual',
+        'line_ids.matched_credit_ids.credit_move_id.move_id.line_ids.amount_residual_currency',
+        'line_ids.debit',
+        'line_ids.credit',
+        'line_ids.currency_id',
+        'line_ids.amount_currency',
+        'line_ids.amount_residual',
+        'line_ids.amount_residual_currency',
+        'line_ids.payment_id.state',
+        'line_ids.full_reconcile_id')
+    def _compute_amount(self):
+        total_tax = 0.0
+        super()._compute_amount()
+        # coloquei o len abaixo pq tem hora q traz todas as faturas do sistema
+        if len(self) == 1:
+            # total do ICMS
+            for line in self.line_ids:
+                if (
+                    line.cfop_id
+                    and line.cfop_id.destination == CFOP_DESTINATION_EXPORT
+                    and line.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
+                ):
+                    total_tax += line.icms_value
+            dif = 0.0
+            total = 0.0
+            # Corrige a conta de ICMS Importacao
+            for line in self.line_ids:
+                if (line.name and 'ICMS Entrada Importa' in line.name 
+                    and total_tax):
+                    dif = total_tax - line.debit
+                    line.debit = total_tax
+                if (
+                    line.account_id and dif
+                    and 'Fornecedor' in line.account_id.name
+                ):
+                    line.credit = line.credit + dif
+                    # menos pq o amount currency e negativo
+                    line.amount_currency = line.amount_currency - dif
+                    total += line.amount_currency + total_tax
+                line._update_taxes()
