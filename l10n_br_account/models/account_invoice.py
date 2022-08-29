@@ -225,7 +225,6 @@ class AccountMove(models.Model):
             if not vals.get("document_type_id"):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         invoice = super().create(values)
-
         invoice._write_shadowed_fields()
         return invoice
 
@@ -267,7 +266,6 @@ class AccountMove(models.Model):
 
     @api.model
     def _compute_taxes_mapped(self, base_line):
-
         move = base_line.move_id
         if move.is_invoice(include_receipts=True):
             handle_price_include = True
@@ -285,7 +283,6 @@ class AccountMove(models.Model):
                 tax_type == "purchase" and base_line.credit
             )
             price_unit_wo_discount = base_line.amount_currency
-
         balance_taxes_res = base_line.tax_ids._origin.with_context(
             force_sign=move._get_tax_force_sign()
         ).compute_all(
@@ -298,6 +295,7 @@ class AccountMove(models.Model):
             handle_price_include=handle_price_include,
             fiscal_taxes=base_line.fiscal_tax_ids,
             operation_line=base_line.fiscal_operation_line_id,
+            cfop=base_line.cfop_id,
             ncm=base_line.ncm_id,
             nbs=base_line.nbs_id,
             nbm=base_line.nbm_id,
@@ -352,30 +350,29 @@ class AccountMove(models.Model):
         return True
 
 
-    # def _recompute_payment_terms_lines(self):
-    #     """Compute the dynamic payment term lines of the journal entry.
-    #     overwritten this method to change aml's field name.
-    #     """
+    def _recompute_payment_terms_lines(self):
+        """Compute the dynamic payment term lines of the journal entry.
+        overwritten this method to change aml's field name.
+        """
 
-    #     # TODO - esse método é executado em um onchange, na emissão de um novo
-    #     # documento fiscal o numero do documento pode estar em branco
-    #     # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
-    #     # antes de salva-la.
-    #     result = super()._recompute_payment_terms_lines()
-    #     if self.document_number:
-    #         terms_lines = self.line_ids.filtered(
-    #             lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
-    #             and l.move_id.document_type_id
-    #         )
-    #         terms_lines.sorted(lambda line: line.date_maturity)
-    #         for idx, terms_line in enumerate(terms_lines):
-    #             # TODO TODO pegar o método do self.fiscal_document_id.with_context(
-    #             # fiscal_document_no_company=True
-    #             # )._compute_document_name()
-    #             terms_line.name = "{}/{}-{}".format(
-    #                 self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
-    #             )
-    #     return result
+        # TODO - esse método é executado em um onchange, na emissão de um novo
+        # documento fiscal o numero do documento pode estar em branco
+        # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
+        # antes de salva-la.
+        super()._recompute_payment_terms_lines()
+        if self.document_number:
+            terms_lines = self.line_ids.filtered(
+                lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
+                and l.move_id.document_type_id
+            )
+            terms_lines.sorted(lambda line: line.date_maturity)
+            for idx, terms_line in enumerate(terms_lines):
+                # TODO TODO pegar o método do self.fiscal_document_id.with_context(
+                # fiscal_document_no_company=True
+                # )._compute_document_name()
+                terms_line.name = "{}/{}-{}".format(
+                    self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
+                )
 
     # @api.model
     # def invoice_line_move_line_get(self):
@@ -476,9 +473,8 @@ class AccountMove(models.Model):
         """Sets fiscal document to draft state and cancel and set to draft
         the related invoice for both documents remain equivalent state."""
         for i in self.filtered(lambda d: d.document_type_id):
-            i.button_cancel
-            i.button_draft
-            # i.fiscal_document_id._change_state('em_digitacao')
+            i.button_draft()
+            i.fiscal_document_id.state_edoc = SITUACAO_EDOC_EM_DIGITACAO
 
     def action_invoice_cancel(self):
         for i in self.filtered(lambda d: d.document_type_id):

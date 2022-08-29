@@ -5,6 +5,8 @@ from odoo import api, fields, models
 from odoo.tools import float_is_zero
 
 from ..constants.fiscal import (
+    CFOP_DESTINATION_EXPORT,
+    CFOP_DESTINATION_EXTERNAL,
     FINAL_CUSTOMER_NO,
     FINAL_CUSTOMER_YES,
     FISCAL_IN,
@@ -182,7 +184,7 @@ class Tax(models.Model):
     def _compute_tax_base(self, tax, tax_dict, **kwargs):
         company = kwargs.get("company", tax.env.company)
         currency = kwargs.get("currency", company.currency_id)
-        precision = currency.decimal_places
+        round_currency = currency.round
         fiscal_price = kwargs.get("fiscal_price", 0.00)
         fiscal_quantity = kwargs.get("fiscal_quantity", 0.00)
         compute_reduction = kwargs.get("compute_reduction", True)
@@ -190,6 +192,9 @@ class Tax(models.Model):
         insurance_value = kwargs.get("insurance_value", 0.00)
         freight_value = kwargs.get("freight_value", 0.00)
         other_value = kwargs.get("other_value", 0.00)
+        operation_line = kwargs.get("operation_line")
+        cfop = kwargs.get("cfop")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT        
 
         if tax.tax_group_id.base_with_additional_values:
             tax_dict["add_to_base"] += sum(
@@ -201,11 +206,13 @@ class Tax(models.Model):
 
         if not tax_dict.get("percent_amount") and tax.percent_amount:
             tax_dict["percent_amount"] = tax.percent_amount
+
+        if not tax_dict.get("value_amount") and tax.value_amount:
             tax_dict["value_amount"] = tax.value_amount
 
         if tax_dict["base_type"] == "percent":
             # Compute initial Tax Base for base_type Percent
-            base = round(fiscal_price * fiscal_quantity, precision)
+            base = round_currency(fiscal_price * fiscal_quantity)
 
         if tax_dict["base_type"] == "quantity":
             # Compute initial Tax Base for base_type Quantity
@@ -213,22 +220,36 @@ class Tax(models.Model):
 
         if tax_dict["base_type"] == "fixed":
             # Compute initial Tax Base
-            base = round(fiscal_price * fiscal_quantity, precision)
+            base = round_currency(fiscal_price * fiscal_quantity)
 
         # Update Base Value
-        base_amount = (base + tax_dict["add_to_base"]) - tax_dict["remove_from_base"]
+        base_amount = round_currency(
+            (base + tax_dict["add_to_base"]) - tax_dict["remove_from_base"]
+        )
 
         # Compute Tax Base Reduction
-        base_reduction = round(
-            base_amount * abs(tax.percent_reduction / 100), precision
-        )
+        base_reduction = round_currency(base_amount * abs(tax.percent_reduction / 100))
 
         # Compute Tax Base Amount
         if compute_reduction:
-            base_amount -= base_reduction
+            base_amount = round_currency(base_amount - base_reduction)
 
         if tax_dict.get("icmsst_mva_percent"):
-            base_amount *= 1 + (tax_dict["icmsst_mva_percent"] / 100)
+            base_amount = round_currency(
+                base_amount * (1 + (tax_dict["icmsst_mva_percent"] / 100))
+            )
+        # Compute Base II
+        if (
+            cfop
+            and cfop.destination == CFOP_DESTINATION_EXPORT
+            and fiscal_operation_type == FISCAL_IN
+            and tax_dict["tax_domain"] == "icms"
+        ):
+            icms_perc = tax_dict.get("percent_amount")
+            if icms_perc:
+                icms_base = base_amount
+                icms_perc_ii = 1 - (icms_perc / 100)
+                base_amount = round_currency(icms_base / icms_perc_ii)
 
         if (
             not tax.percent_amount
@@ -244,29 +265,46 @@ class Tax(models.Model):
 
     def _compute_tax(self, tax, taxes_dict, **kwargs):
         """Generic calculation of Brazilian taxes"""
-        tax_dict = taxes_dict.get(tax.tax_domain)
-        tax_dict["name"] = tax.name
-        tax_dict["base_type"] = tax.tax_base_type
-        tax_dict["tax_include"] = tax.tax_group_id.tax_include
-        tax_dict["tax_withholding"] = tax.tax_group_id.tax_withholding
-        tax_dict["fiscal_tax_id"] = tax.id
-        tax_dict["tax_domain"] = tax.tax_domain
-        tax_dict["percent_reduction"] = tax.percent_reduction
-        tax_dict["percent_amount"] = tax_dict.get("percent_amount", tax.percent_amount)
 
         company = kwargs.get("company", tax.env.company)
-        # partner = kwargs.get("partner")
         currency = kwargs.get("currency", company.currency_id)
-        precision = currency.decimal_places
+        round_currency = currency.round
+
         operation_line = kwargs.get("operation_line")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
+
+        tax_dict = taxes_dict.get(tax.tax_domain)
+        tax_dict.update(
+            {
+                "name": tax.name,
+                "base_type": tax.tax_base_type,
+                "tax_include": tax.tax_group_id.tax_include,
+                "tax_withholding": tax.tax_group_id.tax_withholding,
+                "fiscal_tax_id": tax.id,
+                "tax_domain": tax.tax_domain,
+                "percent_reduction": tax.percent_reduction,
+                "percent_amount": tax_dict.get("percent_amount", tax.percent_amount),
+                "cst_id": tax.cst_from_tax(fiscal_operation_type),
+            }
+        )
 
         if tax.tax_group_id.base_without_icms:
-            # Get Computed ICMS Tax
-            tax_dict_icms = taxes_dict.get("icms", {})
-            tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
+            # Se Entrada Importacao nao remove da base
+            operation_line = kwargs.get("operation_line")
+            cfop = kwargs.get("cfop")
+            fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT          
+            if not (
+                cfop
+                and cfop.destination == CFOP_DESTINATION_EXPORT
+                and fiscal_operation_type == FISCAL_IN
+                and tax_dict["tax_domain"] in ("pis", "cofins")
+            ):
+                # Get Computed ICMS Tax
+               tax_dict_icms = taxes_dict.get("icms", {})
+               tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
 
         # TODO futuramente levar em consideração outros tipos de base de calculo
-        if float_is_zero(tax_dict.get("base", 0.00), precision):
+        if float_is_zero(tax_dict.get("base", 0.00), currency.decimal_places):
             tax_dict = self._compute_tax_base(tax, tax_dict, **kwargs)
 
         fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
@@ -276,16 +314,13 @@ class Tax(models.Model):
 
         if tax_dict["base_type"] == "percent":
             # Compute Tax Value
-            tax_value = round(
-                base_amount * (tax_dict["percent_amount"] / 100), precision
+            tax_dict["tax_value"] = round_currency(
+                base_amount * (tax_dict["percent_amount"] / 100)
             )
 
-            tax_dict["tax_value"] = tax_value
-
         if tax_dict["base_type"] in ("quantity", "fixed"):
-
-            tax_dict["tax_value"] = round(
-                base_amount * tax_dict["value_amount"], precision
+            tax_dict["tax_value"] = round_currency(
+                base_amount * tax_dict["value_amount"]
             )
 
         return tax_dict
@@ -296,30 +331,30 @@ class Tax(models.Model):
         fiscal_price = kwargs.get("fiscal_price")
         fiscal_quantity = kwargs.get("fiscal_quantity")
         currency = kwargs.get("currency", company.currency_id)
-        precision = currency.decimal_places
+        round_currency = currency.round
         ncm = kwargs.get("ncm") or product.ncm_id
         nbs = kwargs.get("nbs") or product.nbs_id
         icms_origin = kwargs.get("icms_origin") or product.icms_origin
         op_line = kwargs.get("operation_line")
         amount_estimate_tax = 0.00
-        amount_total = round(fiscal_price * fiscal_quantity, precision)
+        amount_total = round_currency(fiscal_price * fiscal_quantity)
 
         if op_line and (
             op_line.fiscal_operation_type == FISCAL_OUT
             and op_line.fiscal_operation_id.fiscal_type == "sale"
         ):
             if nbs:
-                amount_estimate_tax = round(
-                    amount_total * (nbs.estimate_tax_national / 100), precision
+                amount_estimate_tax = round_currency(
+                    amount_total * (nbs.estimate_tax_national / 100)
                 )
             elif ncm:
                 if icms_origin in ICMS_ORIGIN_TAX_IMPORTED:
-                    amount_estimate_tax = round(
-                        amount_total * (ncm.estimate_tax_imported / 100), precision
+                    amount_estimate_tax = round_currency(
+                        amount_total * (ncm.estimate_tax_imported / 100)
                     )
                 else:
-                    amount_estimate_tax = round(
-                        amount_total * (ncm.estimate_tax_national / 100), precision
+                    amount_estimate_tax = round_currency(
+                        amount_total * (ncm.estimate_tax_national / 100)
                     )
 
         return amount_estimate_tax
@@ -330,15 +365,19 @@ class Tax(models.Model):
         company = kwargs.get("company")
         product = kwargs.get("product")
         currency = kwargs.get("currency", company.currency_id)
+        round_currency = currency.round
         precision = currency.decimal_places
         ncm = kwargs.get("ncm")
         nbm = kwargs.get("nbm")
         cest = kwargs.get("cest")
         operation_line = kwargs.get("operation_line")
+        cfop = kwargs.get("cfop")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
         ind_final = kwargs.get("ind_final", FINAL_CUSTOMER_NO)
 
         # Get Computed IPI Tax
         tax_dict_ipi = taxes_dict.get("ipi", {})
+        tax_dict_icms = taxes_dict.get("icms", {})
         # Troquei o ind_final acima pelo q esta no partner
         # pq passava 3 vezes e na terceira entrava 
         if partner.ind_ie_dest in (NFE_IND_IE_DEST_2, NFE_IND_IE_DEST_9) or (
@@ -347,9 +386,36 @@ class Tax(models.Model):
             # Add IPI in ICMS Base
             tax_dict["add_to_base"] += tax_dict_ipi.get("tax_value", 0.00)
 
-        # tax_dict.update(self._compute_tax_base(tax, tax_dict, **kwargs))
-
         tax_dict.update(self._compute_tax(tax, taxes_dict, **kwargs))
+        # Adiciona na base de calculo do ICMS nos casos de entrada de importação
+        if (
+            cfop
+            and cfop.destination == CFOP_DESTINATION_EXPORT
+            and fiscal_operation_type == FISCAL_IN
+        ):
+            # tax_dict = self._compute_tax_base(tax, tax_dict, **kwargs)
+            tax_dict_ii = taxes_dict.get("ii", {})
+            tax_dict["add_to_base"] += tax_dict_ii.get("tax_value", 0.00)
+
+            tax_dict_pis = taxes_dict.get("pis", {})
+            tax_dict["add_to_base"] += tax_dict_pis.get("tax_value", 0.00)
+
+            tax_dict_cofins = taxes_dict.get("cofins", {})
+            tax_dict["add_to_base"] += tax_dict_cofins.get("tax_value", 0.00)
+
+            tax_dict["add_to_base"] += kwargs.get("ii_customhouse_charges", 0.00)
+
+            # Difal - Base
+            
+            # difal_icms_base = 0.00
+
+            # Difal - ICMS Dest Value
+            # icms_dest_value = round_currency(icms_base * (icms_dest_perc / 100))
+            # taxes_dict[tax.tax_domain].update(
+            #     self._compute_tax_base(tax, taxes_dict.get(tax.tax_domain), **kwargs)
+            # )
+
+            # tax_dict = self._compute_tax(tax, taxes_dict, **kwargs)
 
         # tax_dict.update({"icms_base_type": tax.icms_base_type})
 
@@ -358,6 +424,8 @@ class Tax(models.Model):
         # and operation_line.ind_final == FINAL_CUSTOMER_YES):
         if (
             company.state_id != partner.state_id
+            and cfop
+            and cfop.destination == CFOP_DESTINATION_EXTERNAL
             and operation_line.fiscal_operation_type == FISCAL_OUT
             and partner.ind_ie_dest == NFE_IND_IE_DEST_9
             and not partner.is_company
@@ -391,20 +459,19 @@ class Tax(models.Model):
             difal_icms_base = 0.00
 
             # Difal - ICMS Dest Value
-            icms_dest_value = round(icms_base * (icms_dest_perc / 100), precision)
+            icms_dest_value = round_currency(icms_base * (icms_dest_perc / 100))
 
             if partner.state_id.code in ICMS_DIFAL_UNIQUE_BASE:
                 difal_icms_base = icms_base
 
             if partner.state_id.code in ICMS_DIFAL_DOUBLE_BASE:
-                difal_icms_base = round(
+                difal_icms_base = round_currency(
                     (icms_base - icms_origin_value)
                     / (1 - ((icms_dest_perc + icmsfcp_perc) / 100)),
-                    precision,
                 )
 
-                icms_dest_value = round(
-                    difal_icms_base * (icms_dest_perc / 100), precision
+                icms_dest_value = round_currency(
+                    difal_icms_base * (icms_dest_perc / 100)
                 )
 
             difal_value = icms_dest_value - icms_origin_value
@@ -426,10 +493,8 @@ class Tax(models.Model):
 
             difal_share_dest = tax_dict.get("difal_dest_perc")
 
-            difal_origin_value = round(
-                difal_value * difal_share_origin / 100, precision
-            )
-            difal_dest_value = round(difal_value * difal_share_dest / 100, precision)
+            difal_origin_value = round_currency(difal_value * difal_share_origin / 100)
+            difal_dest_value = round_currency(difal_value * difal_share_dest / 100)
 
             tax_dict.update(
                 {
@@ -442,7 +507,11 @@ class Tax(models.Model):
                 }
             )
 
-        return taxes_dict
+        # taxes_dict.update(
+        #     self._compute_tax_base(tax, taxes_dict.get(tax.tax_domain), **kwargs)
+        # )
+        # return self._compute_tax(tax, taxes_dict, **kwargs)
+        return tax_dict
 
     def _compute_icmsfcp(self, tax, taxes_dict, **kwargs):
         """Compute ICMS FCP"""
@@ -477,20 +546,14 @@ class Tax(models.Model):
         return self._compute_tax(tax, taxes_dict, **kwargs)
 
     def _compute_icmsst(self, tax, taxes_dict, **kwargs):
+        tax_dict = taxes_dict.get(tax.tax_domain)
         # partner = kwargs.get("partner")
         # company = kwargs.get("company")
-        add_to_base = []
 
         # Get Computed IPI Tax
         tax_dict_ipi = taxes_dict.get("ipi", {})
-        add_to_base.append(tax_dict_ipi.get("tax_value", 0.00))
+        tax_dict["add_to_base"] += tax_dict_ipi.get("tax_value", 0.00)
 
-        kwargs.update(
-            {
-                "add_to_base": sum(add_to_base),
-                "icmsst_base_type": tax.icmsst_base_type,
-            }
-        )
         if taxes_dict.get(tax.tax_domain):
             taxes_dict[tax.tax_domain]["icmsst_mva_percent"] = tax.icmsst_mva_percent
 
@@ -508,6 +571,8 @@ class Tax(models.Model):
         tax_dict = taxes_dict.get(tax.tax_domain)
         partner = kwargs.get("partner")
         company = kwargs.get("company")
+        currency = kwargs.get("currency", company.currency_id)
+        round_currency = currency.round
         cst = kwargs.get("cst", self.env["l10n_br_fiscal.cst"])
         icmssn_range = kwargs.get("icmssn_range")
 
@@ -519,25 +584,18 @@ class Tax(models.Model):
         # Partner not ICMS's Contributor
         if partner.ind_ie_dest == NFE_IND_IE_DEST_9:
             # Add IPI in ICMS Base
-            add_to_base.append(tax_dict_ipi.get("tax_value", 0.00))
+            tax_dict["add_to_base"] += tax_dict_ipi.get("tax_value", 0.00)
 
         # Partner ICMS's Contributor
         if partner.ind_ie_dest in (NFE_IND_IE_DEST_1, NFE_IND_IE_DEST_2):
             if cst.code in ICMS_SN_CST_WITH_CREDIT:
-                icms_sn_percent = round(
+                icms_sn_percent = round_currency(
                     company.simplifed_tax_percent
                     * (icmssn_range.tax_icms_percent / 100),
-                    2,
                 )
 
                 tax_dict["percent_amount"] = icms_sn_percent
                 tax_dict["value_amount"] = icms_sn_percent
-
-        kwargs.update(
-            {
-                "add_to_base": sum(add_to_base),
-            }
-        )
 
         taxes_dict.update(
             self._compute_tax_base(tax, taxes_dict.get(tax.tax_domain), **kwargs)
@@ -570,18 +628,54 @@ class Tax(models.Model):
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_ipi(self, tax, taxes_dict, **kwargs):
+        tax_dict = taxes_dict.get(tax.tax_domain)
+        cfop = kwargs.get("cfop")
+        operation_line = kwargs.get("operation_line")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
+        # Se for entrada de importação o II entra na base de calculo do IPI
+        if (
+            cfop
+            and cfop.destination == CFOP_DESTINATION_EXPORT
+            and fiscal_operation_type == FISCAL_IN
+        ):
+            tax_dict_ii = taxes_dict.get("ii", {})
+            tax_dict["add_to_base"] += tax_dict_ii.get("tax_value", 0.00)
+
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_ii(self, tax, taxes_dict, **kwargs):
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_pis(self, tax, taxes_dict, **kwargs):
+        tax_dict = taxes_dict.get(tax.tax_domain)
+        cfop = kwargs.get("cfop")
+        operation_line = kwargs.get("operation_line")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
+        # Se for entrada de importação o II entra na base de calculo do IPI
+        if (
+            cfop
+            and cfop.destination == CFOP_DESTINATION_EXPORT
+            and fiscal_operation_type == FISCAL_IN
+        ):
+            tax_dict["add_to_base"] -= kwargs.get("other_value")
+
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_pis_wh(self, tax, taxes_dict, **kwargs):
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_cofins(self, tax, taxes_dict, **kwargs):
+        tax_dict = taxes_dict.get(tax.tax_domain)
+        cfop = kwargs.get("cfop")
+        operation_line = kwargs.get("operation_line")
+        fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
+        if (
+            cfop
+            and cfop.destination == CFOP_DESTINATION_EXPORT
+            and fiscal_operation_type == FISCAL_IN
+        ):
+            tax_dict["add_to_base"] -= kwargs.get("other_value")
+
         return self._compute_generic(tax, taxes_dict, **kwargs)
 
     def _compute_cofins_wh(self, tax, taxes_dict, **kwargs):
@@ -606,11 +700,14 @@ class Tax(models.Model):
             insurance_value,
             other_value,
             freight_value,
+            ii_customhouse_charges,
+            ii_iof_value,
             ncm,
             nbs,
             nbm,
             cest,
             operation_line,
+            cfop,
             icmssn_range,
             icms_origin,
             ind_final,

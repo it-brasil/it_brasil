@@ -37,13 +37,23 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
 
     def _compute_amount(self):
         fields = self._get_amount_fields()
+        # import pudb;pu.db
         for doc in self:
+            # total_others = 0.0
+            # total_geral = 0.0
             values = {key: 0.0 for key in fields}
             for line in doc._get_amount_lines():
                 for field in fields:
                     if field in line._fields.keys():
                         values[field] += line[field]
                     if field.replace("amount_", "") in line._fields.keys():
+                        # import pudb;pu.db
+                        # if field in ("amount_other_value", "amount_freight_value"):
+                        #     # import pudb;pu.db
+                        #     total_others += line[field.replace("amount_", "")]
+                        # if field == "amount_financial_total":
+                        #     # import pudb;pu.db
+                        #     total_geral += line[field.replace("amount_", "")]
                         # FIXME this field creates an error in invoice form
                         if field == "amount_financial_discount_value":
                             values[
@@ -51,7 +61,13 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                             ] += 0  # line.financial_discount_value
                         else:
                             values[field] += line[field.replace("amount_", "")]
-            doc.update(values)
+            # if total_others:
+            #     import pudb;pu.db
+            #     values["amount_total"] = values["amount_total"] + total_others
+            #     values["amount_financial_total"] = values["amount_financial_total"] + total_others
+            #     values["amount_financial_total_gross"] = values["amount_financial_total_gross"] + total_others
+            # import pudb;pu.db
+            doc.update(values) 
 
     def __document_comment_vals(self):
         return {
