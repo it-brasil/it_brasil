@@ -163,10 +163,15 @@ class Partner(models.Model):
 
                     telefonecadastral = str(cnpjws_estabelecimento['ddd1']) + str(cnpjws_estabelecimento['telefone1'])
 
+
                     self.cnpjws_email = cnpjws_estabelecimento['email']
                     self.email = cnpjws_estabelecimento['email']
                     self.cnpjws_telefone = telefonecadastral if cnpjws_estabelecimento['ddd1'] else False 
 
+                    if self._fields.get('x_studio_data_da_fundao'):
+                        self.x_studio_data_da_fundao = cnpjws_estabelecimento['data_inicio_atividade']
+                    
+                    
                     if self._fields.get('x_studio_telefone_1_1'):
                         self.x_studio_telefone_1_1 = telefonecadastral if cnpjws_estabelecimento['ddd1'] else False 
 
