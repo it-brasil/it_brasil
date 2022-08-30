@@ -339,7 +339,6 @@ class NFeLine(spec_models.StackedModel):
 
     @api.model
     def _prepare_import_dict(self, values, model=None):
-        import pudb;pu.db
         values = super()._prepare_import_dict(values, model)
         if not values.get("name"):
             values["name"] = values.get("nfe40_xProd")
@@ -399,7 +398,6 @@ class NFeLine(spec_models.StackedModel):
         if class_obj._name == "nfe.40.imposto":
             xsd_fields = [i for i in xsd_fields]
             if self.nfe40_choice10 == "nfe40_ICMS":
-                # import pudb;pu.db
                 xsd_fields.remove("nfe40_ISSQN")
                 # xsd_fields.append("nfe40_II")
             else:
@@ -408,7 +406,6 @@ class NFeLine(spec_models.StackedModel):
         elif class_obj._name == "nfe.40.icms":
             # adicionei este if pra conseguir CONFIRMAR a fatura
             if self.nfe40_choice11:
-                # import pudb;pu.db
                 xsd_fields = [self.nfe40_choice11]
                 icms_tag = self.nfe40_choice11.replace("nfe40_", "")  # FIXME
                 binding_module = sys.modules[self._binding_module]
@@ -448,12 +445,10 @@ class NFeLine(spec_models.StackedModel):
         elif class_obj._name == "nfe.40.pis":
             xsd_fields = [self.nfe40_choice12]
         elif class_obj._name == "nfe.40.cofins":
-            # import pudb;pu.db
             # self._export_many2one("nfe40_II", False, "nfe.40.imposto", True)
             # self._export_fields_ii(export_dict)
             xsd_fields = [self.nfe40_choice15]
         elif class_obj._name == "nfe.40.ipitrib":
-            import pudb;pu.db
             xsd_fields = [i for i in xsd_fields]
             if self.nfe40_choice20 == "nfe40_pIPI":
                 xsd_fields.remove("nfe40_qUnid")
@@ -462,7 +457,6 @@ class NFeLine(spec_models.StackedModel):
                 xsd_fields.remove("nfe40_vBC")
                 xsd_fields.remove("nfe40_pIPI")
         # elif class_obj._name == "nfe.40.ii":
-        #     import pudb;pu.db
         #     self.nfe40_vII = str("%.02f" % 0.00)
         #     self.nfe40_vDespAdu = str("%.02f" % self.ii_customhouse_charges)
         elif class_obj._name == "nfe.40.pisoutr":
@@ -483,7 +477,6 @@ class NFeLine(spec_models.StackedModel):
                 xsd_fields.remove("nfe40_pCOFINS")
         # elif class_obj._name == "nfe.40.ii":
         #     xsd_fields = [i for i in xsd_fields]
-        #     import pudb;pu.db
         self.nfe40_NCM = self.ncm_id.code_unmasked or False
         self.nfe40_CEST = self.cest_id and self.cest_id.code_unmasked or False
         self.nfe40_qCom = self.quantity
@@ -553,17 +546,14 @@ class NFeLine(spec_models.StackedModel):
         elif xsd_field == "nfe40_vBC":
             field_name = "nfe40_vBC"
             if class_obj._name.startswith("nfe.40.icms"):
-                import pudb;pu.db
                 field_name = "icms_base"
             elif class_obj._name.startswith("nfe.40.ipi"):
-                import pudb;pu.db
                 field_name = "ipi_base"
             elif class_obj._name.startswith("nfe.40.pis"):
                 field_name = "pis_base"
             elif class_obj._name.startswith("nfe.40.cofins"):
                 field_name = "cofins_base"
             # elif class_obj._name.startswith("nfe.40.ii"):
-            #     # import pudb;pu.db
             #     field_name = "ii_base"
 
             return self._export_float_monetary(
@@ -587,7 +577,6 @@ class NFeLine(spec_models.StackedModel):
 
     def _export_many2one(self, field_name, xsd_required, class_obj=None):
         self.ensure_one()
-        # import pudb;pu.db
         if field_name in self._stacking_points.keys():
             if field_name == "nfe40_ISSQN" and not self.service_type_id:
                 return False
@@ -602,7 +591,6 @@ class NFeLine(spec_models.StackedModel):
                 return False
             # TODO add condition
             elif field_name in ["nfe40_PISST", "nfe40_COFINSST"]:
-                # import pudb;pu.db
                 # elif field_name in ["nfe40_II", "nfe40_PISST", "nfe40_COFINSST"]:
                 # if field_name == "nfe40_II":
                 #     binding_module = sys.modules[self._binding_module]
@@ -659,7 +647,6 @@ class NFeLine(spec_models.StackedModel):
             vals["nfe40_choice11"] = key
 
         if key.startswith("nfe40_IPI") and key != "nfe40_IPI":
-            import pudb;pu.db
             vals["nfe40_choice3"] = key
 
         # if key.startswith("nfe40_II") and key not in ["nfe40_II"]:
@@ -752,7 +739,6 @@ class NFeLine(spec_models.StackedModel):
             # elif node.original_tagname_.startswith("II"):
             #     vals["ii_base"] = value
         # elif key == "nfe40_II":
-        #     import pudb;pu.db
         #     vals["vBC"] = 0.00
         #     vals["vDespAdu"] = 0.00
         #     vals["vII"] = 0.00
@@ -901,7 +887,6 @@ class NFeLine(spec_models.StackedModel):
 
             # TODO
         # elif key == "nfe40_II":
-        #     import pudb;pu.db
         #     ii_value = {}
         #     ii_value["vBC"] = 0.00
         #     ii_value["vDespAdu"] = 0.00
