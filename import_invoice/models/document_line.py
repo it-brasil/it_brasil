@@ -45,9 +45,9 @@ class NFeLine(spec_models.StackedModel):
                     obj = self.env["nfe.40.adi"].create(vals_adi)
                     list_adi.append(obj.id)
 
-                vals_di["nfe40_adi"] = [(6, 0, list_adi)]
+                vals_di_di["nfe40_adi"] = [(6, 0, list_adi)]
                         
-                obj_di = self.env["nfe.40.di"].create(vals_di).id
+                obj_di = self.env["nfe.40.di"].create(vals_di_di).id
                 self.nfe40_DI = [(6, 0, [obj_di])]
 
                 # vals_ii = {
