@@ -158,18 +158,20 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             rm_to_amount = sum([record[r] for r in record._rm_fields_to_amount()])
 
             # Valor do documento (NF)
-            record.amount_total = (
-                record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount
-            )
-
+ 
             if (
                 record.cfop_id
                 and record.cfop_id.destination == CFOP_DESTINATION_EXPORT
                 and record.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
             ):
-                record.amount_total = (
-                    record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount + record.icms_value
-                )
+                # record.amount_total = (
+                #     record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount + record.icms_value
+                # )
+                record.amount_tax = record.icms_value
+
+            record.amount_total = (
+                record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount
+            )
 
             # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
             record.amount_taxed = record.amount_total - record.amount_tax_withholding
