@@ -15,6 +15,11 @@ from ..constants.fiscal import (
     FISCAL_IN
 )
 
+from ..constants.fiscal import (
+    CFOP_DESTINATION_EXPORT,
+    FISCAL_IN
+)
+
 FISCAL_TAX_ID_FIELDS = [
     "cofins_tax_id",
     "cofins_wh_tax_id",
@@ -143,6 +148,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
         for record in self:
             round_curr = record.currency_id or self.env.ref("base.BRL")
             # Valor dos produtos
+            
             record.price_gross = round_curr.round(record.price_unit * record.quantity)
 
             record.amount_untaxed = record.price_gross - record.discount_value
@@ -158,7 +164,6 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             rm_to_amount = sum([record[r] for r in record._rm_fields_to_amount()])
 
             # Valor do documento (NF)
- 
             if (
                 record.cfop_id
                 and record.cfop_id.destination == CFOP_DESTINATION_EXPORT
@@ -175,6 +180,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
 
             # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
             record.amount_taxed = record.amount_total - record.amount_tax_withholding
+            
             # Valor financeiro
             if (
                 record.fiscal_operation_line_id

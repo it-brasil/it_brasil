@@ -61,6 +61,7 @@ class AccountMove(models.Model):
         self.amount_other_value = total_other
 
     def _inverse_amount_freight(self):
+        # account_costs
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
             if record.company_id.delivery_costs == "total":
                 amount_freight_value = record.amount_freight_value
@@ -174,7 +175,6 @@ class AccountMove(models.Model):
                     line.update(line._get_fields_onchange_subtotal())
                     line._onchange_fiscal_taxes()
                 record._recompute_dynamic_lines(recompute_all_taxes=True)
-
                 record._fields["amount_total"].compute_value(record)
                 record.write(
                     {

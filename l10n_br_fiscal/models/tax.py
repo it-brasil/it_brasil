@@ -250,12 +250,6 @@ class Tax(models.Model):
                 icms_base = base_amount
                 icms_perc_ii = 1 - (icms_perc / 100)
                 base_amount = round_currency(icms_base / icms_perc_ii)
-                # import pudb;pu.db
-                tax_dict_pis = tax_dict.get("pis", {})
-                base_amount += tax_dict_pis.get("tax_value", 0.00)
-
-                tax_dict_cofins = tax_dict.get("cofins", {})
-                base_amount += tax_dict_cofins.get("tax_value", 0.00)
 
         if (
             not tax.percent_amount
@@ -304,10 +298,10 @@ class Tax(models.Model):
                 and cfop.destination == CFOP_DESTINATION_EXPORT
                 and fiscal_operation_type == FISCAL_IN
                 and tax_dict["tax_domain"] in ("pis", "cofins")
-            ):            
+            ):
                 # Get Computed ICMS Tax
-                tax_dict_icms = taxes_dict.get("icms", {})
-                tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
+               tax_dict_icms = taxes_dict.get("icms", {})
+               tax_dict["remove_from_base"] += tax_dict_icms.get("tax_value", 0.00)
 
         # TODO futuramente levar em consideração outros tipos de base de calculo
         if float_is_zero(tax_dict.get("base", 0.00), currency.decimal_places):

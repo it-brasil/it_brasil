@@ -198,6 +198,9 @@ class AccountMoveLine(models.Model):
 
         lines = super().create(new_vals_list)
 
+        # for line in lines:
+        #     self._onchange_fiscal_operation_line_id()
+
         for line in lines.filtered(lambda l: l.fiscal_document_line_id != dummy_line):
             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
             if shadowed_fiscal_vals:
@@ -239,6 +242,7 @@ class AccountMoveLine(models.Model):
                 shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
                 if shadowed_fiscal_vals:
                     line.fiscal_document_line_id.write(shadowed_fiscal_vals)
+
         return result
 
     def unlink(self):
