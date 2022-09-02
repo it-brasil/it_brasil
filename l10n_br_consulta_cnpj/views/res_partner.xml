@@ -26,6 +26,9 @@
                 <div class="alert alert-warning mb-0" role="alert" attrs="{'invisible': ['|', '&amp;', ('cnpjws_situacao_cadastral', '=', False), ('cnpjws_manual_razao_social', '=', False), ('cnpjws_size_legal_name', '&lt;=', 60)]}">
                     A Razão Social contém <strong><field name="cnpjws_size_legal_name" readonly="True" /></strong> caracteres, e o máximo para emissão de Nota Fiscal é de 60. Por favor, faça  a abreviação antes de seguir com o pedido / faturamento.
                 </div>
+                <div class="alert alert-warning mb-0" role="alert" attrs="{'invisible': ['|', '&amp;', ('cnpjws_situacao_cadastral', '=', False), ('cnpjws_manual_adress', '=', False), ('cnpjws_size_adress', '&lt;=', 60)]}">
+                    O Endereço contém <strong><field name="cnpjws_size_adress" readonly="True" /></strong> caracteres, e o máximo para emissão de Nota Fiscal é de 60. Por favor, faça  a abreviação antes de seguir com o pedido / faturamento. A contagem de caracteres leva em conta os 3 campos de endereço. (Logradouro/Nome da Rua, Número, Complemento)
+                </div>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button
@@ -48,6 +51,8 @@
                         <field name="cnpjws_situacao_cadastral" />
                         <field name="cnpjws_porte" />
                         <field name="cnpjws_atualizado_odoo" />
+                        <field name="cnpjws_size_adress" invisible="True" readonly="True" />
+                        <field name="cnpjws_manual_adress" invisible="True" readonly="True" />
                     </group>
                 </page>
             </page>
