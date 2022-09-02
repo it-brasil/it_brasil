@@ -135,6 +135,9 @@ class Partner(models.Model):
                         
 
                     self.street_number = cnpjws_estabelecimento['numero']
+                    
+                    if self.street_number == "S/N":
+                        self.street_number = False
 
                     self.district = cnpjws_estabelecimento['bairro']
                     
