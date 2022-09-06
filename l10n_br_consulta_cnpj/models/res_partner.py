@@ -71,6 +71,20 @@ class Partner(models.Model):
         default=False
     )
 
+    cnpjws_size_adress = fields.Integer(
+        string="Tamanho Endereço",
+        copy=False,
+        default=0   
+    )
+
+    cnpjws_manual_adress = fields.Boolean(
+        string="Precisa de ajuste Endereço",
+        help="Se essa opção estiver marcada, significa que o Endereço possuí mais de 60 caracteres e você precisa ajustar manualmente.",
+        copy=False, 
+        default=False
+    )
+
+
     def action_consult_cnpj(self):
         cnpjws_url = 'https://publica.cnpj.ws/cnpj/'
         if self.company_type == 'company':
@@ -111,17 +125,37 @@ class Partner(models.Model):
                             self.city_id = search_city.id
 
                     self.zip = cnpjws_estabelecimento['cep']
+                    fulladress = ""
 
                     if cnpjws_estabelecimento['tipo_logradouro']:
                         cnpj_t_logra = cnpjws_estabelecimento['tipo_logradouro']
                         cnpj_logra = cnpjws_estabelecimento['logradouro']
 
                         self.street_name = cnpj_t_logra + " " + cnpj_logra
+                        
 
                     self.street_number = cnpjws_estabelecimento['numero']
+                    
+                    if self.street_number == "S/N":
+                        self.street_number = False
 
                     self.district = cnpjws_estabelecimento['bairro']
+                    
                     self.street2 = cnpjws_estabelecimento['complemento']
+                    self.street2 = ' '.join(self.street2.split())
+
+                    if self.street_name:
+                        fulladress = self.street_name 
+                    if self.street_number:
+                        fulladress += ", " + self.street_number
+                    if self.street2:
+                        fulladress += " - " + self.street2
+
+
+                    self.cnpjws_size_adress = len(fulladress)
+                    if self.cnpjws_size_adress > 60:
+                        self.cnpjws_manual_adress = True
+
 
                     cnpjws_simples = cnpjws_result['simples']
                     cnpjws_ie = cnpjws_estabelecimento['inscricoes_estaduais']
@@ -250,6 +284,7 @@ class Partner(models.Model):
             self.define_inscricao_estadual(fiscal_info)
 
     def write(self, vals):
+
         if "legal_name" in vals:
             if len(vals["legal_name"]) <= 60:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
@@ -257,5 +292,11 @@ class Partner(models.Model):
             else:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
                 self.cnpjws_manual_razao_social = True
+
+
+        if "street" in vals:
+            if vals["street"] != False and len(vals["street"]) <= 60:
+                self.cnpjws_size_adress = len(vals["street"])
+                self.cnpjws_manual_adress = False
 
         return super().write(vals)
