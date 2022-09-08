@@ -399,7 +399,8 @@ class NFeLine(spec_models.StackedModel):
             xsd_fields = [i for i in xsd_fields]
             if self.nfe40_choice10 == "nfe40_ICMS":
                 xsd_fields.remove("nfe40_ISSQN")
-                # xsd_fields.append("nfe40_II")
+                if self.cfop_id.destination != '3':
+                    xsd_fields.remove("nfe40_II")
             else:
                 xsd_fields.remove("nfe40_ICMS")
                 xsd_fields.remove("nfe40_II")
