@@ -142,7 +142,7 @@ class Partner(models.Model):
                     self.district = cnpjws_estabelecimento['bairro']
                     
                     self.street2 = cnpjws_estabelecimento['complemento']
-                    self.street2 = ' '.join(self.street2.split())
+                    #self.street2 = ' '.join(self.street2.split())
 
                     if self.street_name:
                         fulladress = self.street_name 
