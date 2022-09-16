@@ -458,11 +458,16 @@ class Document(models.Model):
             order="state_edoc, document_type_id",
         ).mapped("email_template_id")
 
+
     def send_email(self, state):
         self.ensure_one()
         email_template = self._get_email_template(state)
         if email_template:
-            email_template.send_mail(self.id)
+             
+            email_template.with_context(
+                default_attachment_ids=self._get_mail_attachment()
+            ).send_mail(self.id)
+             
 
     def _after_change_state(self, old_state, new_state):
         self.ensure_one()
@@ -556,6 +561,17 @@ class Document(models.Model):
                 "associated documents have already been authorized."
             )
             raise UserWarning(message)
+    # 
+    def _get_mail_attachment(self):
+        self.ensure_one()
+        attachment_ids = []
+        if self.state_edoc == SITUACAO_EDOC_AUTORIZADA:
+            if self.file_report_id:
+                attachment_ids.append(self.file_report_id.id)
+            if self.authorization_file_id:
+                attachment_ids.append(self.authorization_file_id.id)
+        return attachment_ids
+    # 
 
     def action_send_email(self):
         """Open a window to compose an email, with the fiscal document_type
@@ -580,12 +596,11 @@ class Document(models.Model):
             default_model="l10n_br_fiscal.document",
             default_res_id=self.id,
             default_use_template=bool(template),
+            default_attachment_ids=self._get_mail_attachment(), 
             default_template_id=template and template.id or False,
             default_composition_mode="comment",
             model_description=self.document_type_id.name or self._name,
             force_email=True,
-            default_attachment_ids=[(6, 0, attachment_ids.ids)],
-
         )
         return {
             "name": _("Send Fiscal Document Email Notification"),
