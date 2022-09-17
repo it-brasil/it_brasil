@@ -763,6 +763,24 @@ class NFe(spec_models.StackedModel):
         )
         self._change_state(state)
 
+
+        ######
+
+    def _exec_after_SITUACAO_EDOC_AUTORIZADA(self, old_state, new_state):
+        self.ensure_one()
+        try:
+            self.make_pdf()
+        except Exception as e:
+            # Não devemos interromper o fluxo
+            # E dar rollback em um documento
+            # autorizado, podendo perder dados.
+            # Se der problema que apareça quando
+            # o usuário clicar no gerar PDF novamente.
+            _logger.error("DANFE Error \n {}".format(e))
+
+
+        #######
+
     def _export_fields_faturas(self):
         inv = self.move_ids
         fat_id = self.env["nfe.40.fat"].create(
@@ -825,17 +843,28 @@ class NFe(spec_models.StackedModel):
                     record.atualiza_status_nfe(
                         processo.protocolo.infProt, processo.processo_xml.decode("utf-8")
                     )
-                    if processo.protocolo.infProt.cStat in AUTORIZADO:
-                        try:
-                            record.make_pdf()
-                        except Exception as e:
+
+
+                    ###################################
+                    # if processo.protocolo.infProt.cStat in AUTORIZADO:
+                    #     try:
+                    #         record.make_pdf()
+                    #     except Exception as e:
                             # Não devemos interromper o fluxo
                             # E dar rollback em um documento
                             # autorizado, podendo perder dados.
 
                             # Se der problema que apareça quando
                             # o usuário clicar no gera PDF novamente.
-                            _logger.error("DANFE Error \n {}".format(e))
+                            #_logger.error("DANFE Error \n {}".format(e))
+
+
+                    ###################################
+
+
+
+
+
                 elif processo.resposta.protNFe.infProt.cStat in AUTORIZADO: 
                     # Qdo a NFe ja foi enviada e deu algum erro no retorno
                     # qdo tenta enviar novamente entra aqui.
