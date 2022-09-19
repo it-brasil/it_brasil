@@ -40,7 +40,7 @@
         id="menu_nfe_tax_report"
         name="Relatorio Impostos"
         action="l10n_br_tax_report.action_report_nfe_tax_view"
-        parent="l10n_br_fiscal.document_menu"
-        sequence="1"/>
-
+        parent="l10n_br_fiscal.accountant_menu"
+        groups="l10n_br_fiscal.group_manager"
+        sequence="99"/>
 </odoo>
