@@ -21,7 +21,6 @@ class DocumentCancelWizard(models.TransientModel):
                 raise models.ValidationError("A justificativa deve ter no mínimo 15 caracteres.")
         else:
             raise models.ValidationError("A justificativa é obrigatória.")
-        _logger.warning("sei la %s", len(self.justification))
         for wizard in self:
             if wizard.document_id:
                 wizard.do_cancel()
