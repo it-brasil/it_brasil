@@ -1119,6 +1119,9 @@ class NFe(spec_models.StackedModel):
 
         sequence = str(int(max(numeros)) + 1) if numeros else "1"
 
+        if not justificative:
+            raise UserError(_("Justificativa é obrigatória!"))
+            
         evento = processador.carta_correcao(
             chave=self.document_key,
             sequencia=sequence,
