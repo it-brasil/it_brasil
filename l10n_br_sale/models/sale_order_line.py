@@ -4,26 +4,24 @@
 
 from odoo import api, fields, models
 
-from ...l10n_br_fiscal.constants.fiscal import TAX_FRAMEWORK
-
 
 class SaleOrderLine(models.Model):
-    _name = 'sale.order.line'
-    _inherit = [_name, 'l10n_br_fiscal.document.line.mixin']
+    _name = "sale.order.line"
+    _inherit = [_name, "l10n_br_fiscal.document.line.mixin"]
 
     country_id = fields.Many2one(related="company_id.country_id", store=True)
 
     @api.model
     def _default_fiscal_operation(self):
-        return self.env.user.company_id.sale_fiscal_operation_id
+        return self.env.company.sale_fiscal_operation_id
 
     @api.model
     def _fiscal_operation_domain(self):
-        domain = [('state', '=', 'approved')]
+        domain = [("state", "=", "approved")]
         return domain
 
     fiscal_operation_id = fields.Many2one(
-        comodel_name='l10n_br_fiscal.operation',
+        comodel_name="l10n_br_fiscal.operation",
         default=_default_fiscal_operation,
         domain=lambda self: self._fiscal_operation_domain(),
     )
