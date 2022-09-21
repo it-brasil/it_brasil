@@ -481,6 +481,8 @@ class NFeLine(spec_models.StackedModel):
         # elif class_obj._name == "nfe.40.ii":
         #     xsd_fields = [i for i in xsd_fields]
         self.nfe40_NCM = self.ncm_id.code_unmasked or False
+        if self.ncm_id.exception:
+            self.nfe40_EXTIPI = self.ncm_id.exception.zfill(2)
         self.nfe40_CEST = self.cest_id and self.cest_id.code_unmasked or False
         self.nfe40_qCom = self.quantity
         self.nfe40_qTrib = self.fiscal_quantity
