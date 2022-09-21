@@ -25,6 +25,15 @@ class TaxesReportNfe(models.Model):
     icms_base = fields.Float(string="ICMS Base", readonly=True)
     icms_percent = fields.Float(string="ICMS %", readonly=True)
     icms_value = fields.Float(string="ICMS Valor", readonly=True)
+    ipi_base = fields.Float(string="IPI Base", readonly=True)
+    ipi_percent = fields.Float(string="IPI %", readonly=True)
+    ipi_value = fields.Float(string="IPI Valor", readonly=True)
+    pis_base = fields.Float(string="PIS Base", readonly=True)
+    pis_percent = fields.Float(string="PIS %", readonly=True)
+    pis_value = fields.Float(string="PIS Valor", readonly=True)
+    cofins_base = fields.Float(string="COFINS Base", readonly=True)
+    cofins_percent = fields.Float(string="COFINS %", readonly=True)
+    cofins_value = fields.Float(string="COFINS Valor", readonly=True)
     # amount_ipi_base = fields.Monetary(string="IPI Base", readonly=True)
     # amount_pis_base = fields.Monetary(string="PIS Base", readonly=True)
     # amount_cofins_base = fields.Monetary(string="COFINS Base", readonly=True)
@@ -58,7 +67,22 @@ class TaxesReportNfe(models.Model):
 		  ELSE SUM(dl.icms_base) * (-1) END AS icms_base,
         dl.icms_percent,
         CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.icms_value) 
-			ELSE SUM(dl.icms_value) * (-1) END AS icms_value
+			ELSE SUM(dl.icms_value) * (-1) END AS icms_value,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.ipi_base) 
+		  ELSE SUM(dl.ipi_base) * (-1) END AS ipi_base,
+        dl.ipi_percent,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.ipi_value) 
+			ELSE SUM(dl.ipi_value) * (-1) END AS ipi_value,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.pis_base) 
+		  ELSE SUM(dl.pis_base) * (-1) END AS pis_base,
+        dl.pis_percent,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.pis_value) 
+			ELSE SUM(dl.pis_value) * (-1) END AS pis_value,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.cofins_base) 
+		  ELSE SUM(dl.cofins_base) * (-1) END AS cofins_base,
+        dl.cofins_percent,
+        CASE WHEN am.move_type = 'out_invoice' THEN SUM(dl.cofins_value) 
+			ELSE SUM(dl.cofins_value) * (-1) END AS cofins_value
     FROM l10n_br_fiscal_document d
     INNER JOIN account_move am ON am.fiscal_document_id = d.id
     LEFT JOIN l10n_br_fiscal_document_line dl ON dl.document_id = d.id 
@@ -77,6 +101,9 @@ class TaxesReportNfe(models.Model):
         d.document_number,
         cfop.code,
         dl.icms_percent,
+        dl.ipi_percent,
+        dl.pis_percent,
+        dl.cofins_percent,
         d.fiscal_operation_id,
         am.move_type,
         dl.id,
