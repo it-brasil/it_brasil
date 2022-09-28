@@ -6,6 +6,10 @@
             <div class="page">
                 <t t-set="saldo_entrada" t-value="0.0" />
                 <t t-set="saldo_saida" t-value="0.0" />
+                <t t-set="base_entrada" t-value="0.0" />
+                <t t-set="base_saida" t-value="0.0" />
+                <t t-set="total_entrada" t-value="0.0" />
+                <t t-set="total_saida" t-value="0.0" />
                 <div style="page-break-after: always;"/>
                 <div class="row text-center">
                         <div class="o_offer col-lg-12">
@@ -55,6 +59,18 @@
                             </t>
                             <t t-if="line['cofins_value'] &gt; 0">
                                 <t t-set="saldo_saida" t-value="saldo_saida + line['cofins_value']"/>
+                            </t>
+                            <t t-if="line['cofins_base'] &lt; 0">
+                                <t t-set="base_entrada" t-value="base_entrada + line['cofins_base']"/>
+                            </t>
+                            <t t-if="line['cofins_base'] &gt; 0">
+                                <t t-set="base_saida" t-value="base_saida + line['cofins_base']"/>
+                            </t>
+                            <t t-if="line['amount_total'] &lt; 0">
+                                <t t-set="total_entrada" t-value="total_entrada + line['amount_total']"/>
+                            </t>
+                            <t t-if="line['amount_total'] &gt; 0">
+                                <t t-set="total_saida" t-value="total_saida + line['amount_total']"/>
                             </t>
                             <tr style="border: 1px solid black;">
                                 <td><span t-esc="line['document_date']" t-options='{"widget": "date","format": "dd-MM-yyyy"}'/></td>
@@ -121,14 +137,14 @@
                         </t>
                         <tr style="border:1;border-top:0;">
                             <td class="col-xs-1" style="text-align:left;border:none;width:25%"><strong>Total Saida:</strong></td>
-                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_geral" t-options='{"widget": "float", "precision": 2}'/></strong></td>
-                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_base" t-options='{"widget": "float", "precision": 2}'/></strong></td>
+                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_saida" t-options='{"widget": "float", "precision": 2}'/></strong></td>
+                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="base_saida" t-options='{"widget": "float", "precision": 2}'/></strong></td>
                             <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="saldo_saida" t-options='{"widget": "float", "precision": 2}'/></strong></td>
                         </tr>
                         <tr style="border:1;border-top:0;">
                             <td class="col-xs-1" style="text-align:left;border:none;width:25%"><strong>Total Entrada:</strong></td>
-                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_geral" t-options='{"widget": "float", "precision": 2}'/></strong></td>
-                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_base" t-options='{"widget": "float", "precision": 2}'/></strong></td>
+                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="total_entrada" t-options='{"widget": "float", "precision": 2}'/></strong></td>
+                            <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="base_entrada" t-options='{"widget": "float", "precision": 2}'/></strong></td>
                             <td class="col-xs-1" style="text-align:right;border:none;width:25%"><strong><span t-esc="saldo_entrada" t-options='{"widget": "float", "precision": 2}'/></strong></td>
                         </tr>
                         <tr style="border:1;border-top:0;">
