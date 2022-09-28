@@ -52,7 +52,7 @@ class AccountMoveLineMethods(models.AbstractModel):
     def inject_fiscal_fields(
         self,
         view_arch,
-        view_ref="import_invoice.document_fiscal_line_mixin_form",
+        view_ref="l10n_br_fiscal.document_fiscal_line_mixin_form",
         xpath_mappings=None,
     ):
         """
@@ -60,7 +60,7 @@ class AccountMoveLineMethods(models.AbstractModel):
         Used for invoice line, sale order line, purchase order line...
         """
         fiscal_view = self.env.ref(
-            "import_invoice.document_fiscal_line_mixin_form"
+            "l10n_br_fiscal.document_fiscal_line_mixin_form"
         ).sudo()
         fsc_doc = etree.fromstring(fiscal_view["arch"])
         doc = etree.fromstring(view_arch)

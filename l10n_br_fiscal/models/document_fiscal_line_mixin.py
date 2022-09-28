@@ -856,3 +856,27 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         comodel_name="l10n_br_fiscal.cnae",
         string="CNAE Code",
     )
+
+    exportind_ndraw = fields.Char(
+        string="Número do ato concessório de Drawback",
+        size=11,
+        help="O número do Ato Concessório de Suspensão deve ser preenchido com 11 dígitos (AAAANNNNNND) e o número do Ato Concessório de Drawback Isenção deve ser preenchido com 9 dígitos (AANNNNNND)."
+    )
+
+    exportind_nre = fields.Char(
+        string="Registro de exportação",
+        size=12,
+        help="Número do Registro de Exportação",
+    )
+
+    exportind_qexport = fields.Float(
+        digits=(11, 4),
+        string="Quantidade do item efetivamente exportado",
+        help="A unidade de medida desta quantidade é a unidade de comercialização deste item. No caso de operação com CFOP 3.503, informar a quantidade de mercadoria devolvida."
+    )
+
+    exportind_chnfe = fields.Char(
+        string="Chave de Acesso da NF-e recebida para exportação",
+        size=44,
+        help="NF-e recebida com fim específico de exportação. No caso de operação com CFOP 3.503, informar a chave de acesso da NF-e que efetivou a exportação."
+    )

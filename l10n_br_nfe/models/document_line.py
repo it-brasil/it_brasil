@@ -241,6 +241,16 @@ class NFeLine(spec_models.StackedModel):
         string="Imposto de importação",
     )
 
+    nfe40_exportInd = fields.Many2one(
+        "nfe.40.exportind",
+        string="Grupo sobre exportação indireta"
+    )
+
+    nfe40_detExport = fields.Many2one(
+        "nfe.40.detexport",
+        string="Grupo de informações de exportação para o item"
+    )
+
     @api.depends("additional_data")
     def _compute_nfe40_infAdProd(self):
         for record in self:
@@ -495,6 +505,23 @@ class NFeLine(spec_models.StackedModel):
         self.nfe40_pCOFINS = self.cofins_percent
         self.nfe40_cEnq = str(self.ipi_guideline_id.code or "999").zfill(3)
         self.nfe40_vSeg = str("%.02f" % self.insurance_value)
+        if self.exportind_chnfe:
+            self.nfe40_exportInd.create(
+                {
+                    'display_name': self.name,
+                    'nfe40_chNFe': self.exportind_chnfe,
+                    'nfe40_nRE': self.exportind_nre,
+                    'nfe40_qExport': self.exportind_qexport,
+                }
+            )
+            self.nfe40_detExport.create(
+                {
+                    'display_name': self.name,
+                    'nfe40_detExport_prod_id': self.id,
+                    'nfe40_exportInd': self.nfe40_exportInd.id,
+                    'nfe40_nDraw': self.exportind_ndraw
+                }
+            )
 
         return super()._export_fields(xsd_fields, class_obj, export_dict)
 
@@ -623,8 +650,7 @@ class NFeLine(spec_models.StackedModel):
                     v
                     for k, v in sub_tag_read.items()
                     if k.startswith(self._field_prefix)
-                ) and field_name != "nfe40_II":
-
+                ) and field_name != "nfe40_II" or field_name != "nf40_detExport" or field_name != "nfe40_exportInd":
                     return False
 
         return super()._export_many2one(field_name, xsd_required, class_obj)

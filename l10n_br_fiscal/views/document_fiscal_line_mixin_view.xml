@@ -982,6 +982,12 @@
                 <field name="manual_additional_data" />
                 <field name="additional_data" readonly="1" />
             </group>
+            <group name="detExport" attrs="{'invisible': [('cfop_destination', '!=', '3')]}">
+                <field name="exportind_ndraw" />
+                <field name="exportind_nre" />
+                <field name="exportind_chnfe" />
+                <field name="exportind_qexport" />
+            </group>
           </page>
         </notebook>
       </form>
