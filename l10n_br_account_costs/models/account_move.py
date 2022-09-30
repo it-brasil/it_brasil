@@ -63,7 +63,7 @@ class AccountMove(models.Model):
     def _inverse_amount_freight(self):
         # account_costs
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total":
+            if record.company_id.delivery_costs == "total" and record.amount_freight_value:
                 amount_freight_value = record.amount_freight_value
                 if all(record.invoice_line_ids.mapped("freight_value")):
                     amount_freight_old = sum(record.invoice_line_ids.mapped("freight_value"))
@@ -102,7 +102,7 @@ class AccountMove(models.Model):
 
     def _inverse_amount_insurance(self):
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total":
+            if record.company_id.delivery_costs == "total" and record.amount_insurance_value:
                 amount_insurance_value = record.amount_insurance_value
                 if all(record.invoice_line_ids.mapped("insurance_value")):
                     amount_insurance_old = sum(
@@ -148,7 +148,7 @@ class AccountMove(models.Model):
 
     def _inverse_amount_other(self):
         for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total":
+            if record.company_id.delivery_costs == "total" and record.amount_other_value:
                 amount_other_value = record.amount_other_value
                 if all(record.invoice_line_ids.mapped("other_value")):
                     amount_other_old = sum(record.invoice_line_ids.mapped("other_value"))
