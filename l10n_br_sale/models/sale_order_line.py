@@ -149,6 +149,10 @@ class SaleOrderLine(models.Model):
             line._update_taxes()
             # Call mixin compute method
             line._compute_amounts()
+            # adicionei aqui, pois, voltava para o fiscal_price errado
+            if line.product_id.uot_id and line.product_id.uom_id != line.product_id.uot_id:
+                line.fiscal_price = line.price_unit / (line.product_id.uot_factor or 1.0)
+                line.fiscal_quantity = (line.qty_to_invoice or line.product_uom_qty) * (line.product_id.uot_factor or 1.0)
             # Update record
             line.update(
                 {
@@ -167,20 +171,30 @@ class SaleOrderLine(models.Model):
             result["fiscal_quantity"] = self.fiscal_qty_delivered
             result["fiscal_quantity"] = self.qty_to_invoice
 
-        # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
-        # fica errado e na linha do diario tbem (ipi)
-        if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
-                result["uot_id"] = self.product_id.uot_id
-                result["fiscal_price"] = self.price_unit / (self.product_id.uot_factor or 1.0)
-                result["fiscal_quantity"] = self.qty_to_invoice * (self.product_id.uot_factor or 1.0)
-
         result.update(super()._prepare_invoice_line(**optional_values))
+        # rotina necessaria para Fatura com pedido em outra moeda
+        if self.order_id.currency_id != self.order_id.company_id.currency_id:
+                price = self.currency_id._convert(
+                    self.price_unit,
+                    self.order_id.company_id.currency_id,
+                    self.order_id.company_id or self.env.company,
+                    fields.Date.today(),
+                )
+                result['price_unit'] = price
+                result['currency_id'] = self.order_id.company_id.currency_id
+                if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
+                    result["fiscal_price"] = price / (self.product_id.uot_factor or 1.0)
         return result
 
     @api.onchange("product_uom", "product_uom_qty")
-    def _onchange_product_uom(self):
+    def _onchange_product_uom(self):       
         """To call the method in the mixin to update
         the price and fiscal quantity."""
+        # Quando fatura item com o uot_factor preenchido sem isto o total de impostos na fatura
+        # fica errado e na linha do diario tbem (ipi)
+        if self.product_id.uot_id and self.product_id.uom_id != self.product_id.uot_id:
+            self.fiscal_price = self.price_unit / (self.product_id.uot_factor or 1.0)
+            self.fiscal_quantity = self.qty_to_invoice * (self.product_id.uot_factor or 1.0)
         self._onchange_commercial_quantity()
 
     @api.depends(
