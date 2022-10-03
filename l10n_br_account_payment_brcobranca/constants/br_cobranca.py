@@ -9,6 +9,7 @@ from collections import namedtuple
 
 from odoo import _
 from odoo.exceptions import UserError
+from odoo.tools import config
 
 DICT_BRCOBRANCA_CNAB_TYPE = {
     "240": "cnab240",
@@ -56,9 +57,13 @@ def get_brcobranca_bank(bank_account_id, payment_method_code):
     return bank_name_brcobranca
 
 
-def get_brcobranca_api_url():
-    #brcobranca_api_url = os.environ.get("BRCOBRANCA_API_URL")
-    brcobranca_api_url = "http://127.0.0.1:9292"
+def get_brcobranca_api_url(env):
+    brcobranca_api_url = (
+        os.environ.get("BRCOBRANCA_API_URL")
+        or config.get("brcobranca_api_url")
+        or env["ir.config_parameter"].sudo().get_param("brcobranca_api_url")
+    )
+
     if not brcobranca_api_url:
         raise UserError(
             _(
