@@ -135,7 +135,12 @@ class PaymentOrder(models.Model):
         pagamentos = []
         for line in self.bank_line_ids:
             pagamentos.append(line.prepare_bank_payment_line(bank_brcobranca))
-
+        
+        if not self.payment_mode_id.cnab_sequence_id:
+            raise ValidationError(
+                _("The CNAB sequence is not defined in the payment mode.")
+            )
+        
         remessa_values = {
             "carteira": str(self.payment_mode_id.boleto_wallet),
             "agencia": bank_account_id.bra_number,
