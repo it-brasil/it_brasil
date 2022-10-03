@@ -867,7 +867,7 @@ msgstr ""
 #. module: l10n_br_account_payment_order
 #: model:ir.actions.act_window,name:l10n_br_account_payment_order.account_move_line_change_act_window
 msgid "CNAB Change Account Move Line"
-msgstr ""
+msgstr "Alterar Linha de Conta do CNAB"
 
 #. module: l10n_br_account_payment_order
 #: model:ir.model,name:l10n_br_account_payment_order.model_l10n_br_cnab_data_abstract
@@ -1654,7 +1654,7 @@ msgstr ""
 #. module: l10n_br_account_payment_order
 #: model:ir.model.fields,field_description:l10n_br_account_payment_order.field_account_move_line_cnab_change__date_maturity
 msgid "Date Maturity"
-msgstr ""
+msgstr "Data de Vencimento"
 
 #. module: l10n_br_account_payment_order
 #: model:ir.model.fields,help:l10n_br_account_payment_order.field_account_payment_mode__generate_own_number
@@ -2259,7 +2259,7 @@ msgstr ""
 #: code:addons/l10n_br_account_payment_order/models/l10n_br_cnab_change_methods.py:0
 #, python-format
 msgid "New Date Maturity %s is equal to actual Date Maturity %s"
-msgstr ""
+msgstr "Nova data de vencimento %s é igual a data de vencimento atual %s"
 
 #. module: l10n_br_account_payment_order
 #: model:ir.model.fields,field_description:l10n_br_account_payment_order.field_l10n_br_cnab_return_log__activity_date_deadline
@@ -2505,7 +2505,7 @@ msgstr "Modo de Pagamento"
 #, python-format
 msgid ""
 "Payment Mode %s don't has %s for making CNAB change, check if should have."
-msgstr ""
+msgstr "Modo de Pagamento %s não tem %s para fazer alteração no CNAB, verifique se deveria ter."
 
 #. module: l10n_br_account_payment_order
 #: model:ir.model,name:l10n_br_account_payment_order.model_account_payment_mode
@@ -2855,12 +2855,12 @@ msgstr ""
 #. module: l10n_br_account_payment_order
 #: model_terms:ir.ui.view,arch_db:l10n_br_account_payment_order.cnab_view_move_line_form_inherit
 msgid "Update CNAB Information"
-msgstr ""
+msgstr "Atualizar Informações CNAB"
 
 #. module: l10n_br_account_payment_order
 #: model_terms:ir.ui.view,arch_db:l10n_br_account_payment_order.cnab_view_move_line_tree_inherit
 msgid "Update Information"
-msgstr ""
+msgstr "Atualizar Informações"
 
 #. module: l10n_br_account_payment_order
 #: model:ir.model.fields,field_description:l10n_br_account_payment_order.field_account_payment_line__amount_interest
