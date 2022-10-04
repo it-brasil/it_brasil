@@ -75,3 +75,22 @@ def get_brcobranca_api_url(env):
         )
 
     return brcobranca_api_url
+
+def get_cobranca_provider(env):
+    cobranca_provider = (
+        os.environ.get("COBRANCA_PROVIDER")
+        or config.get("cobranca_provider")
+        or env["ir.config_parameter"].sudo().get_param("cobranca_provider")
+    )
+
+    if not cobranca_provider:
+        raise UserError(
+            _(
+                "Inform the provider of the BRCobranca API."
+                " Example:\n"
+                "COBRANCA_PROVIDER=br_cobranca"
+            )
+        )
+
+    return cobranca_provider
+    

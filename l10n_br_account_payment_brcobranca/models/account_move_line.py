@@ -37,6 +37,7 @@ class AccountMoveLine(models.Model):
         for move_line in self:
 
             bank_account_id = move_line.payment_mode_id.fixed_journal_id.bank_account_id
+            use_plugboleto = move_line.payment_mode_id.fixed_journal_id.use_plugboleto
             if not bank_account_id:
                 raise ValidationError(
                     _("Bank Account is not defined in the journal %s")
@@ -95,6 +96,12 @@ class AccountMoveLine(models.Model):
                 ),
                 "instrucao1": move_line.payment_mode_id.instructions or "",
             }
+
+            if use_plugboleto:
+                boleto_cnab_api_data["CedenteContaNumero"] = bank_account_id.acc_number
+                boleto_cnab_api_data["CedenteContaNumeroDV"] = bank_account_id.acc_number_dig
+                boleto_cnab_api_data["CedenteConvenioNumero"] = move_line.payment_mode_id.code_convetion
+                boleto_cnab_api_data["CedenteContaCodigoBanco"] = bank_account_id.bank_id.code_bc
 
             # Instrução de Juros
             if move_line.payment_mode_id.boleto_interest_perc > 0.0:

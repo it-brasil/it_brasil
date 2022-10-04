@@ -17,6 +17,7 @@ from ..constants.br_cobranca import (
     DICT_BRCOBRANCA_CNAB_TYPE,
     get_brcobranca_api_url,
     get_brcobranca_bank,
+    get_cobranca_provider,
 )
 
 logger = logging.getLogger(__name__)
@@ -178,8 +179,11 @@ class PaymentOrder(models.Model):
         files = {"data": open(f.name, "rb")}
 
         brcobranca_api_url = get_brcobranca_api_url(self.env)
+        cobranca_provider = get_cobranca_provider(self.env)
         # EX.: "http://boleto_cnab_api:9292/api/remessa"
         brcobranca_service_url = brcobranca_api_url + "/api/remessa"
+        if cobranca_provider == "plugboleto":
+            brcobranca_service_url = brcobranca_api_url + "/api/v1/remessas/lote"
         logger.info(
             "Connecting to %s to generate CNAB-REMESSA file for Payment Order %s",
             brcobranca_service_url,
