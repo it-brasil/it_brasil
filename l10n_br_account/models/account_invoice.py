@@ -224,14 +224,14 @@ class AccountMove(models.Model):
         for vals in values:
             if not vals.get("document_type_id"):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
+            # esta criando a fatura com a moeda errada se e do tipo NFe
+            # se pedido em outra moeda q nao da empresa
+            if (
+                vals.get("document_type_id")
+                and vals['currency_id'] != self.env.company.currency_id.id
+            ):
+                vals['currency_id'] = self.env.company.currency_id.id
         invoice = super().create(values)
-        # esta criando a fatura com a moeda errada se e do tipo NFe
-        if (
-            invoice.document_type_id
-            and invoice.document_type_id.code == '55'
-            and invoice.currency_id != invoice.company_id.currency_id
-        ):
-            invoice.currency_id = invoice.company_id.currency_id.id
         invoice._write_shadowed_fields()
         return invoice
 

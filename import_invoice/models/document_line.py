@@ -44,18 +44,28 @@ class NFeLine(spec_models.StackedModel):
                     }
                     obj = self.env["nfe.40.adi"].create(vals_adi)
                     list_adi.append(obj.id)
+                if len(list_adi):
+                    vals_di_di["nfe40_adi"] = [(6, 0, list_adi)]                       
+                    obj_di = self.env["nfe.40.di"].create(vals_di_di).id
+                    self.nfe40_DI = [(6, 0, [obj_di])]
 
-                vals_di_di["nfe40_adi"] = [(6, 0, list_adi)]
-                        
-                obj_di = self.env["nfe.40.di"].create(vals_di_di).id
-                self.nfe40_DI = [(6, 0, [obj_di])]
+            if self.account_line_ids.move_id.move_type == "out_invoice":
+                vals_di_di = {
+                    "nfe40_detExport_prod_id": self.id,
+                    "nfe40_nDraw": self.number_di
+                }
+                vals_adi = []
+                for line in self.di_ids:
+                    vals_adi = {
+                        "nfe40_nRE": line.name,
+                        "nfe40_chNFe": line.manufacturer_code,
+                        "nfe40_qExport": "{:.2f}".format(line.amount_discount) if line.amount_discount != 0.0 else False,
+                    }
+                # TODO estou gravando so uma linha , se tiver mais vai dar erro
+                if len(vals_adi):
+                    export_id = self.env["nfe.40.exportind"].create(vals_adi)
+                    vals_di_di["nfe40_exportInd"] = export_id.id                       
+                    obj_di = self.env["nfe.40.detexport"].create(vals_di_di).id
+                    self.nfe40_detExport = [(6, 0, [obj_di])]
 
-                # vals_ii = {
-                #     "nfe40_vBC": "{:.2f}".format(self.ii_base),
-                #     "nfe40_vDespAdu": "{:.2f}".format(self.ii_customhouse_charges),
-                #     "nfe40_vII": "{:.2f}".format(self.ii_value),
-                #     "nfe40_vIOF": "{:.2f}".format(self.ii_iof_value),
-                # }
-                # obj_ii = self.env["nfe.40.ii"].create(vals_ii).id
-                # self.nfe40_II = [(6, 0, [vals_ii])]
         return super()._export_fields(xsd_fields, class_obj, export_dict)
