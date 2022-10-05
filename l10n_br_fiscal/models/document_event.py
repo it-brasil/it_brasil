@@ -324,7 +324,7 @@ class Event(models.Model):
         self, status_code, response, protocol_date, protocol_number, file_response_xml
     ):
         self._save_event_file(file_response_xml, "xml", authorization=True)
-        if status_code not in ["100", "150"]:
+        if status_code not in ["100", "102", "135", "150"]:
             self.write({
                 "state": "draft",
                 "status_code": status_code,
