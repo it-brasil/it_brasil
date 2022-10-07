@@ -11,10 +11,10 @@ class PurchaseOrder(models.Model):
             res["document_serie_id"] = self.company_id.nfe_default_serie_id.id
         return res
 
-    def action_create_invoice(self):
-        super(PurchaseOrder, self).action_create_invoice()
-        invoice = max([inv.id for inv in self.invoice_ids])
-        return invoice
+    # def action_create_invoice(self):
+    #     res = super(PurchaseOrder, self).action_create_invoice()
+    #     #invoice = max([inv.id for inv in self.invoice_ids])
+    #     return res
 
     # TODO
     def import_di(self):
