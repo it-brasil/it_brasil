@@ -550,6 +550,11 @@ class NFe(spec_models.StackedModel):
         related="company_id.technical_support_id",
     )
 
+    nfe40_entrega = fields.Many2one(
+        comodel_name="res.partner",
+        related="partner_shipping_id",
+    )
+
     ################################
     # Framework Spec model's methods
     ################################
@@ -687,6 +692,7 @@ class NFe(spec_models.StackedModel):
     def _processador(self):
         if not self.company_id.certificate_nfe_id:
             raise UserError(_("Certificado não encontrado"))
+        self._check_nfe_environment()
 
         certificado = cert.Certificado(
             arquivo=self.company_id.certificate_nfe_id.file,
@@ -701,6 +707,18 @@ class NFe(spec_models.StackedModel):
             versao=self.nfe_version,
             ambiente=self.nfe_environment,
         )
+
+    def _check_nfe_environment(self):
+        self.ensure_one()
+        company_nfe_environment = self.company_id.nfe_environment
+        if self.nfe_environment != company_nfe_environment:
+            raise UserError(
+                _(
+                    f"Nf-e environment: {self.nfe_environment}"
+                    " cannot be different from what is configured "
+                    f"in the company: {company_nfe_environment}"
+                )
+            )
 
     def _document_export(self, pretty_print=True):
         super()._document_export()
@@ -844,7 +862,6 @@ class NFe(spec_models.StackedModel):
                         processo.protocolo.infProt, processo.processo_xml.decode("utf-8")
                     )
 
-
                     ###################################
                     # if processo.protocolo.infProt.cStat in AUTORIZADO:
                     #     try:
@@ -860,10 +877,6 @@ class NFe(spec_models.StackedModel):
 
 
                     ###################################
-
-
-
-
 
                 elif processo.resposta.protNFe.infProt.cStat in AUTORIZADO: 
                     # Qdo a NFe ja foi enviada e deu algum erro no retorno
@@ -889,9 +902,10 @@ class NFe(spec_models.StackedModel):
                         new_root.append(root)
                         new_root.append(protNFe_node)
                         file = etree.tostring(new_root)
-                    record.atualiza_status_nfe(
-                        processo.resposta.protNFe.infProt, file.decode("utf-8")
-                    )
+
+                        record.atualiza_status_nfe(
+                            processo.resposta.protNFe.infProt, file.decode("utf-8")
+                        )
                     try:
                         record.make_pdf()
                     except Exception as e:
