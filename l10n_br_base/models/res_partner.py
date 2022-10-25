@@ -26,8 +26,7 @@ class Partner(models.Model):
 
     crc_code = fields.Char(string="CRC Code", size=18)
 
-    crc_state_id = fields.Many2one(
-        comodel_name="res.country.state", string="CRC State")
+    crc_state_id = fields.Many2one(comodel_name="res.country.state", string="CRC State")
 
     rntrc_code = fields.Char(string="RNTRC Code", size=12)
 
@@ -71,8 +70,7 @@ class Partner(models.Model):
                     ("parent_id", "not in", record.parent_id.ids),
                 ]
 
-            domain += [("cnpj_cpf", "=", record.cnpj_cpf),
-                       ("id", "!=", record.id)]
+            domain += [("cnpj_cpf", "=", record.cnpj_cpf), ("id", "!=", record.id)]
 
             # se encontrar CNPJ iguais
             if record.env["res.partner"].search(domain):
@@ -178,8 +176,7 @@ class Partner(models.Model):
                 )
                 if duplicate_ie:
                     raise ValidationError(
-                        _("State Tax Number already used" " %s" %
-                          duplicate_ie.name)
+                        _("State Tax Number already used {}").format(duplicate_ie.name)
                     )
 
     @api.model
