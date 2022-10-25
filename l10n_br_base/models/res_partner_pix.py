@@ -1,3 +1,7 @@
+# Copyright (C) 2022-Today - Engenere (<https://engenere.one>).
+# @author Antônio S. Pereira Neto <neto@engenere.one>
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
+
 import phonenumbers
 from email_validator import EmailSyntaxError, validate_email
 from erpbrasil.base.fiscal import cnpj_cpf
@@ -20,6 +24,13 @@ class PartnerPix(models.Model):
         )
     ]
 
+    KEY_TYPES = [
+        ("cnpj_cpf", _("CPF or CNPJ")),
+        ("phone", _("Phone Number")),
+        ("email", _("E-mail")),
+        ("evp", _("Random Key")),
+    ]
+
     partner_id = fields.Many2one(
         comodel_name="res.partner",
         string="Partner",
@@ -28,7 +39,7 @@ class PartnerPix(models.Model):
     )
     sequence = fields.Integer(default=10)
     key_type = fields.Selection(
-        selection=lambda self: self._selection_key_type(),
+        selection=KEY_TYPES,
         string="Type",
         required=True,
     )
@@ -43,47 +54,37 @@ class PartnerPix(models.Model):
         domain="[('partner_id', '=', partner_id)]",
     )
 
-    @api.model
-    def _selection_key_type(self):
-        return [
-            ("cnpj_cpf", _("CPF or CNPJ")),
-            ("phone", _("Phone Number")),
-            ("email", _("E-mail")),
-            ("evp", _("Random Key")),
-        ]
-
     def _normalize_email(self, email):
         try:
             result = validate_email(
                 email,
                 check_deliverability=False,
             )
-        except EmailSyntaxError:
-            raise ValidationError(_(f"{email.strip()} is an invalid email"))
-        normalized_email = result["local"].lower() + \
-            "@" + result["domain_i18n"]
+        except EmailSyntaxError as e:
+            raise ValidationError(_(f"{email.strip()} is an invalid email")) from e
+        normalized_email = result["local"].lower() + "@" + result["domain_i18n"]
         if len(normalized_email) > 77:
             raise ValidationError(
                 _(
                     f"The email is too long, "
                     f"a maximum of 77 characters is allowed: \n{email.strip()}"
                 )
-            )
+            ) from None
         return normalized_email
 
     def _normalize_phone(self, phone):
         try:
             phonenumber = phonenumbers.parse(phone, "BR")
         except phonenumbers.phonenumberutil.NumberParseException as e:
-            raise ValidationError(_(f"Unable to parse {phone}: {str(e)}"))
+            raise ValidationError(_(f"Unable to parse {phone}: {str(e)}")) from e
         if not phonenumbers.is_possible_number(phonenumber):
             raise ValidationError(
                 _(f"Impossible number {phone}: probably invalid number of digits.")
-            )
+            ) from None
         if not phonenumbers.is_valid_number(phonenumber):
             raise ValidationError(
                 _(f"Invalid number {phone}: probably incorrect prefix.")
-            )
+            ) from None
         phone = phonenumbers.format_number(
             phonenumber, phonenumbers.PhoneNumberFormat.E164
         )
@@ -119,13 +120,13 @@ class PartnerPix(models.Model):
         for block in blocks:
             try:
                 int(block, 16)
-            except ValueError:
+            except ValueError as e:
                 raise ValidationError(
                     _(
                         f"Invalid Random Key: {key} \nthe block {block} "
                         f"is not a valid hexadecimal format."
                     )
-                )
+                ) from e
         return key
 
     @api.model
