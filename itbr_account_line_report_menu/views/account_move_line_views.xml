@@ -168,7 +168,7 @@
 		<field name="domain">[
 			('account_id.internal_type', '=', 'receivable'),
 			('credit', '=', 0),('move_id.state', '=', 'posted'),
-			'|',('move_id.fiscal_operation_id.fiscal_type', 'in', ('sale', 'purchase')),
+			'|',('move_id.fiscal_operation_id.fiscal_type', 'in', ('sale', 'purchase', 'other')),
 			('move_id.fiscal_operation_id', '=', False)
 			]</field>
 		<field name="help" type="html">
@@ -188,7 +188,7 @@
 		<field name="domain">[
 			('account_id.internal_type', '=', 'payable'), 
 			('debit', '=', 0),('move_id.state', '=', 'posted'),
-			'|',('move_id.fiscal_operation_id.fiscal_type', 'in', ('sale', 'purchase')),
+			'|',('move_id.fiscal_operation_id.fiscal_type', 'in', ('sale', 'purchase', 'other')),
 			('move_id.fiscal_operation_id', '=', False)
 			]</field>
 		<field name="help" type="html">
