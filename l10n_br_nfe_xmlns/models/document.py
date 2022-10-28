@@ -18,6 +18,7 @@ from lxml import etree
 from nfelib.v4_00 import leiauteNFe_sub as nfe_sub, retEnviNFe as leiauteNFe
 from requests import Session
 
+from odoo.addons.l10n_br_nfe.models.danfe import danfe
 from lxml import etree
 
 from odoo import _, api, fields
@@ -69,7 +70,51 @@ def filter_processador_edoc_nfe(record):
 class NFe(spec_models.StackedModel):
     _inherit = "l10n_br_fiscal.document"
 
-    def _eletronic_document_send(self):           
+
+    def atualiza_status_nfe(self, infProt, xml_file):
+        self.ensure_one()
+        # TODO: Verificar a consulta de notas
+        # if not infProt.chNFe == self.key:
+        #     self = self.search([
+        #         ('key', '=', infProt.chNFe)
+        #     ])
+        if infProt.cStat in AUTORIZADO:
+            state = SITUACAO_EDOC_AUTORIZADA
+        elif infProt.cStat in DENEGADO:
+            state = SITUACAO_EDOC_DENEGADA
+        else:
+            state = SITUACAO_EDOC_REJEITADA
+        # acrescenta a tag <?xml .. encoding=...> no xml final
+        root = etree.fromstring(xml_file)
+        file = etree.tostring(root,
+            pretty_print=True,
+            xml_declaration=True,
+            encoding='UTF-8')
+        xml_file = file.decode("utf-8")
+        if self.authorization_event_id and infProt.nProt:
+            if type(infProt.dhRecbto) == datetime:
+                protocol_date = fields.Datetime.to_string(infProt.dhRecbto)
+            else:
+                protocol_date = fields.Datetime.to_string(
+                    datetime.fromisoformat(infProt.dhRecbto)
+                )
+
+            self.authorization_event_id.set_done(
+                status_code=infProt.cStat,
+                response=infProt.xMotivo,
+                protocol_date=protocol_date,
+                protocol_number=infProt.nProt,
+                file_response_xml=xml_file,
+            )
+        self.write(
+            {
+                "status_code": infProt.cStat,
+                "status_name": infProt.xMotivo,
+            }
+        )
+        self._change_state(state)
+
+    def _eletronic_document_send(self):
         # super(NFe, self)._eletronic_document_send()
         for record in self.filtered(filter_processador_edoc_nfe):
             record._export_fields_pagamentos()
@@ -94,7 +139,7 @@ class NFe(spec_models.StackedModel):
                         processo.protocolo.infProt, xml_file
                     )
 
-                elif processo.resposta.protNFe.infProt.cStat in AUTORIZADO: 
+                elif processo.resposta.protNFe.infProt.cStat in AUTORIZADO:
                     # Qdo a NFe ja foi enviada e deu algum erro no retorno
                     # qdo tenta enviar novamente entra aqui.
                     if not self.authorization_file_id:
@@ -150,3 +195,69 @@ class NFe(spec_models.StackedModel):
                     }
                 )
         return
+
+    def make_pdf(self):
+        if not self.filtered(filter_processador_edoc_nfe):
+            return super().make_pdf()
+
+        file_pdf = self.file_report_id
+        self.file_report_id = False
+        file_pdf.unlink()
+
+        if self.authorization_file_id:
+            arquivo = self.authorization_file_id
+            xml_string = base64.b64decode(arquivo.datas).decode()
+        else:
+            arquivo = self.send_file_id
+            xml_string = base64.b64decode(arquivo.datas).decode()
+            xml_string = self.temp_xml_autorizacao(xml_string)
+
+        # Teste Usando impressao via ReportLab Pytrustnfe
+        evento_xml = []
+        cce_list = self.env['l10n_br_fiscal.event'].search([
+            ('type', '=', '14'),
+            ('document_id', '=', self.id),
+        ])
+
+        if cce_list:
+            for cce in cce_list:
+                cce_xml = base64.b64decode(cce.file_request_id.datas)
+                evento_xml.append(etree.fromstring(cce_xml))
+
+        logo = base64.b64decode(self.company_id.logo)
+
+        tmpLogo = io.BytesIO()
+        tmpLogo.write(logo)
+        tmpLogo.seek(0)
+
+        timezone = pytz.timezone(self.env.context.get('tz') or 'UTC')
+        # alterado para exibir o arquivo xml com a tag <?xml ...encoding=...>
+        xml_element = etree.fromstring(bytes(xml_string, encoding='utf8'))
+
+        cancel_list = self.env['l10n_br_fiscal.event'].search([
+            ('type', '=', '2'),
+            ('document_id', '=', self.id),
+        ])
+        if cancel_list:
+            cancel_xml = base64.b64decode(cancel_list.file_request_id.datas).decode()
+            evento_xml.append(etree.fromstring(cancel_xml))
+
+        oDanfe = danfe(list_xml=[xml_element], logo=tmpLogo,
+            evento_xml=evento_xml, timezone=timezone)
+        tmpDanfe = io.BytesIO()
+        oDanfe.writeto_pdf(tmpDanfe)
+        danfe_file = tmpDanfe.getvalue()
+        tmpDanfe.close()
+
+        # base64.b64encode(bytes(tmpDanfe)),
+
+        self.file_report_id = self.env["ir.attachment"].create(
+            {
+                "name": self.document_key + ".pdf",
+                "res_model": self._name,
+                "res_id": self.id,
+                "datas": base64.b64encode(danfe_file),
+                "mimetype": "application/pdf",
+                "type": "binary",
+            }
+        )
