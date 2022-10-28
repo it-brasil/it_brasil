@@ -54,9 +54,6 @@
                   tornar invisivel o campo City/Char e incluir City_id/m2o,
                   teria outra forma de fazer isso? -->
             <field name="state_id" position="after">
-                <field name="district"
-                class="o_address_district"
-                placeholder="Bairro" />
                 <field
                     name="city_id"
                     class="o_address_city"
