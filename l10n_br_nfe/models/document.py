@@ -801,37 +801,38 @@ class NFe(spec_models.StackedModel):
 
     def _export_fields_faturas(self):
         inv = self.move_ids
-        fat_id = self.env["nfe.40.fat"].create(
-            {
-                "nfe40_nFat": inv.name,
-                "nfe40_vOrig": float(inv.amount_financial_total_gross),
-                "nfe40_vDesc": float(inv.amount_financial_discount_value),
-                "nfe40_vLiq": float(inv.amount_financial_total),
-            }
-        )
-        duplicatas = self.env["nfe.40.dup"]
-        count = 1
-        for mov in inv.financial_move_line_ids:
-            if mov.debit > 0 and mov.account_id.user_type_id.type in ['receivable', 'payable']:
-                duplicatas += duplicatas.create(
-                    {
-                        "nfe40_nDup": str(count).zfill(3),
-                        "nfe40_dVenc": mov.date_maturity,
-                        "nfe40_vDup": mov.debit,
-                    }
-                )
-                count += 1
-        cobr_id = self.env["nfe.40.cobr"].create(
-            {
-                "nfe40_fat": fat_id.id,
-                "nfe40_dup": [(6, 0, duplicatas.ids)],
-            }
-        )
-        self.update(
-            {
-                "nfe40_cobr": cobr_id.id,
-            }
-        )
+        if inv.financial_move_line_ids:
+            fat_id = self.env["nfe.40.fat"].create(
+                {
+                    "nfe40_nFat": inv.name,
+                    "nfe40_vOrig": float(inv.amount_financial_total_gross),
+                    "nfe40_vDesc": float(inv.amount_financial_discount_value),
+                    "nfe40_vLiq": float(inv.amount_financial_total),
+                }
+            )
+            duplicatas = self.env["nfe.40.dup"]
+            count = 1
+            for mov in inv.financial_move_line_ids:
+                if mov.debit > 0 and mov.account_id.user_type_id.type in ['receivable', 'payable']:
+                    duplicatas += duplicatas.create(
+                        {
+                            "nfe40_nDup": str(count).zfill(3),
+                            "nfe40_dVenc": mov.date_maturity,
+                            "nfe40_vDup": mov.debit,
+                        }
+                    )
+                    count += 1
+            cobr_id = self.env["nfe.40.cobr"].create(
+                {
+                    "nfe40_fat": fat_id.id,
+                    "nfe40_dup": [(6, 0, duplicatas.ids)],
+                }
+            )
+            self.update(
+                {
+                    "nfe40_cobr": cobr_id.id,
+                }
+            )
 
     def _valida_xml(self, xml_file):
         self.ensure_one()
@@ -895,7 +896,7 @@ class NFe(spec_models.StackedModel):
                         etree.SubElement(infProt, "dhRecbto").text = fields.Datetime.to_string(
                             processo.resposta.protNFe.infProt.dhRecbto)
                         etree.SubElement(infProt, "nProt").text = processo.resposta.protNFe.infProt.nProt
-                        # etree.SubElement(infProt, "digVal").text = processo.resposta.protNFe.infProt.digVal
+                        etree.SubElement(infProt, "digVal").text = str(processo.resposta.protNFe.infProt.digVal)
                         etree.SubElement(infProt, "cStat").text = processo.resposta.protNFe.infProt.cStat
                         etree.SubElement(infProt, "xMotivo").text = processo.resposta.protNFe.infProt.xMotivo
 
