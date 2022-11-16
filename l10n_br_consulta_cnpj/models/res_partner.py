@@ -173,7 +173,7 @@ class Partner(models.Model):
                     self.cnpjws_nome_fantasia = cnpjws_estabelecimento['nome_fantasia']
                     self.cnpjws_tipo = cnpjws_estabelecimento['tipo']
                     self.cnpjws_situacao_cadastral = cnpjws_estabelecimento['situacao_cadastral']
-                    self.cnpjws_porte = cnpjws_result['porte']['descricao']
+                    self.cnpjws_porte = cnpjws_result['porte']['descricao'] if cnpjws_result['porte'] else False
                     self.cnpjws_atualizado_odoo = datetime.now()
                 else:
                     raise ValidationError(
