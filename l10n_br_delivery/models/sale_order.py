@@ -13,13 +13,9 @@ class SaleOrder(models.Model):
     # cosiderado.
     # Esse modulo l10n_br_delivery é pensando para ter aderencia com o
     # product_net_weight (modulo link acima).
-    amount_gross_weight = fields.Float(
-        string="Amount Gross Weight", compute="_compute_amount_gross_weight"
-    )
+    amount_gross_weight = fields.Float(compute="_compute_amount_gross_weight")
 
-    amount_volume = fields.Float(
-        string="Amount Volume", compute="_compute_amount_volume"
-    )
+    amount_volume = fields.Float(compute="_compute_amount_volume")
 
     # Devido o campo no sale_order chamar apenas incoterm
     # ao inves de incoterm_id como o padrão, a copia do
@@ -40,6 +36,10 @@ class SaleOrder(models.Model):
         for order in self:
             order.carrier_id = carrier.id
             order.amount_freight_value = amount
+            if order.delivery_costs == "line":
+                order.delivery_costs = "total"
+                order.amount_freight_value = amount
+                order.delivery_costs = "line"
         return True
 
     def _compute_amount_gross_weight(self):
