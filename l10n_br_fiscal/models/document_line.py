@@ -92,6 +92,10 @@ class DocumentLine(models.Model):
     delivery_costs = fields.Selection(
         related="company_id.delivery_costs",
     )
+
+    force_compute_delivery_costs_by_total = fields.Boolean(
+        related="document_id.force_compute_delivery_costs_by_total"
+    )
     
     def unlink(self):
         dummy_docs = self.env["res.company"].search([]).mapped("fiscal_dummy_id")
