@@ -8,10 +8,9 @@ class CarrierVehicle(models.Model):
     _name = "l10n_br_delivery.carrier.vehicle"
     _description = "Carrier Vehicle"
 
-    name = fields.Char(string="Name", required=True, size=32)
+    name = fields.Char(required=True, size=32)
 
     description = fields.Char(
-        string="Descrição",
         size=132,
     )
 
@@ -21,35 +20,32 @@ class CarrierVehicle(models.Model):
     )
 
     driver = fields.Char(
-        string="Motorista",
         size=64,
     )
 
     rntc_code = fields.Char(
-        string="Código ANTT",
+        string="ANTT Code",
         size=32,
     )
 
     country_id = fields.Many2one(
         comodel_name="res.country",
-        string="País",
+        string="Country",
     )
 
     state_id = fields.Many2one(
         comodel_name="res.country.state",
-        string="Estado",
+        string="State",
         domain="[('country_id', '=', country_id)]",
     )
 
     city_id = fields.Many2one(
         comodel_name="res.city",
-        string="Cidade",
+        string="City",
         domain="[('state_id', '=', state_id)]",
     )
 
-    active = fields.Boolean(
-        string="Disponível",
-    )
+    active = fields.Boolean()
 
     manufacture_year = fields.Char(
         string="Ano de Fabricação",
@@ -63,12 +59,12 @@ class CarrierVehicle(models.Model):
 
     type = fields.Selection(
         selection=[("bau", "Caminhão Baú")],
-        string="Tipo do modelo",
+        string="Model Type",
     )
 
     carrier_id = fields.Many2one(
         comodel_name="delivery.carrier",
-        string="Transportadora",
+        string="Carrier",
         index=True,
         ondelete="cascade",
     )

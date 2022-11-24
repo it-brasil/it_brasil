@@ -429,8 +429,9 @@ class NFeLine(spec_models.StackedModel):
             self.nfe40_vBCFCPUFDest = str("%.02f" % self.icmsfcp_base)
             self.nfe40_pFCPUFDest = str("%.04f" % self.icmsfcp_percent)
             self.nfe40_pICMSUFDest = str("%.04f" % self.icms_destination_percent)
+            icmsinter = self.icms_origin_percent or self.icms_percent
             self.nfe40_pICMSInter = str(
-                "%.02f" % self.icms_origin_percent or self.icms_percent
+                "%.02f" % icmsinter
             )
             self.nfe40_pICMSInterPart = str(
                 "%.04f" % self.icms_sharing_percent or 100.0
