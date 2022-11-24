@@ -515,43 +515,54 @@ class AccountMove(models.Model):
         # Hack: Na V14 o frete, seguro e outros custos não estão no lancamento contabil
         # e isto gera uma diferença entre o lancamento e o documento fiscal
         # Por ora incluimos linhas com estes valores no movimento
-        for line in self.line_ids:
-            if not line.exclude_from_invoice_tab and line.freight_value > 0:
-                new_line = self.env["account.move.line"].new(
-                    {
-                        "name": "[FREIGHT]",
-                        "account_id": line.account_id.id,
-                        "move_id": self.id,
-                        "exclude_from_invoice_tab": True,
-                        "price_unit": line.freight_value,
-                    }
-                )
-                self.line_ids += new_line
-                self.with_context(check_move_validity=False)._onchange_currency()
-            if not line.exclude_from_invoice_tab and line.insurance_value > 0:
-                new_line = self.env["account.move.line"].new(
-                    {
-                        "name": "[INSURANCE]",
-                        "account_id": line.account_id.id,
-                        "move_id": self.id,
-                        "exclude_from_invoice_tab": True,
-                        "price_unit": line.insurance_value,
-                    }
-                )
-                self.line_ids += new_line
-                self.with_context(check_move_validity=False)._onchange_currency()
-            if not line.exclude_from_invoice_tab and line.other_value > 0:
-                new_line = self.env["account.move.line"].new(
-                    {
-                        "name": "[OTHER]",
-                        "account_id": line.account_id.id,
-                        "move_id": self.id,
-                        "exclude_from_invoice_tab": True,
-                        "price_unit": line.other_value,
-                    }
-                )
-                self.line_ids += new_line
-                self.with_context(check_move_validity=False)._onchange_currency()
+        # # total = 0.0
+        # # for line in self.line_ids:
+        # #     if line.freight_value > 0:
+        # #         total += line.freight_value
+        # #     elif line.insurance_value > 0:
+        # #         total += line.insurance_value
+        # #     elif line.other_value > 0:
+        # #         total += line.other_value
+        # for line in self.line_ids:
+        #     if not line.exclude_from_invoice_tab and line.freight_value > 0:
+        #         new_line = self.env["account.move.line"].new(
+        #             {
+        #                 "name": "[FREIGHT]",
+        #                 "account_id": line.account_id.id,
+        #                 "move_id": self.id,
+        #                 "exclude_from_invoice_tab": True,
+        #                 "price_unit": line.freight_value,
+        #             }
+        #         )
+        #         self.line_ids += new_line
+        #         self.with_context(check_move_validity=False)._onchange_currency()
+        #     if not line.exclude_from_invoice_tab and line.insurance_value > 0:
+        #         new_line = self.env["account.move.line"].new(
+        #             {
+        #                 "name": "[INSURANCE]",
+        #                 "account_id": line.account_id.id,
+        #                 "move_id": self.id,
+        #                 "exclude_from_invoice_tab": True,
+        #                 "price_unit": line.insurance_value,
+        #             }
+        #         )
+        #         self.line_ids += new_line
+        #         self.with_context(check_move_validity=False)._onchange_currency()
+        #     if not line.exclude_from_invoice_tab and line.other_value > 0:
+        #         new_line = self.env["account.move.line"].new(
+        #             {
+        #                 "name": "[OTHER]",
+        #                 "account_id": line.account_id.id,
+        #                 "move_id": self.id,
+        #                 "exclude_from_invoice_tab": True,
+        #                 "price_unit": line.other_value,
+        #             }
+        #         )
+        #         self.line_ids += new_line
+        #         self.with_context(check_move_validity=False)._onchange_currency()
+        # # if line.account_id.user_type_id.type in ("receivable", "payable"):
+        # #     if total:
+        #         line.price_unit = line.price_unit + total
 
         self.mapped("fiscal_document_id").filtered(
             lambda d: d.document_type_id
