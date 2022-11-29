@@ -158,11 +158,12 @@
                 <!--## move-->
                 <div class="act_as_cell" style="width: 8.0%;">Lançamento</div>
                 <!--## journal-->
-                <div class="act_as_cell" style="width: 5.0%;">Diário</div>
+                <!-- <div class="act_as_cell" style="width: 5.0%;">Diário</div> -->
                 <!--## account code-->
                 <div class="act_as_cell" style="width: 14.0%;">Conta</div>
                 <!--## partner-->
                 <div class="act_as_cell" style="width: 27.0%;">Parceiro</div>
+                <div class="act_as_cell" style="width: 5.0%;">Tipo</div>
                 <!--## ref - label-->
                 <div class="act_as_cell" style="width: 20.0%;">
                     Ref. -
@@ -208,11 +209,11 @@
                 </span>
             </div>
             <!--## journal-->
-            <div class="act_as_cell left">
+            <!-- <div class="act_as_cell left">
                 <span t-att-res-id="journals_data[line['journal_id']]['id']" res-model="account.journal" view-type="form">
                     <t t-esc="journals_data[line['journal_id']]['code']" />
                 </span>
-            </div>
+            </div> -->
             <!--## account code-->
             <div class="act_as_cell left">
                 <span t-if="line.get('account_id', False)" t-att-res-id="line['account_id']" res-model="account.account" view-type="form">
@@ -223,6 +224,12 @@
             <div class="act_as_cell left">
                 <span t-if="line.get('partner_id', False)" t-att-res-id="line['partner_id']" res-model="res.partner" view-type="form">
                     <t t-esc="line['partner_name']" />
+                </span>
+            </div>
+            <!--## tipo pagamento-->
+            <div class="act_as_cell left">
+                <span t-if="line.get('payment_mode_id', False)" t-att-res-id="line['payment_mode_id']" res-model="account.payment.mode" view-type="form">
+                    <t t-esc="line['payment_mode_name']" />
                 </span>
             </div>
             <!--## ref - label-->

@@ -60,6 +60,7 @@ class CashFlowReport(models.AbstractModel):
             "journal_id",
             "account_id",
             "partner_id",
+            "payment_mode_id",
             "amount_residual",
             "date_maturity",
             "ref",
@@ -71,7 +72,6 @@ class CashFlowReport(models.AbstractModel):
             "amount_residual_currency",
             "balance",
         ]
-        # import pudb;pu.db
         move_lines = self.env["account.move.line"].search_read(
             domain=domain, fields=ml_fields, order="date_maturity"
         )
@@ -117,7 +117,10 @@ class CashFlowReport(models.AbstractModel):
         for move_line in move_lines:
             journals_ids.add(move_line["journal_id"][0])
             contas_key.append(move_line["account_id"][0])
-            dt_time = move_line["date_maturity"]
+            if move_line["date_maturity"]:
+                dt_time = move_line["date_maturity"]
+            else:
+                dt_time = move_line["date"]
             date_vcto = 10000*dt_time.year + 100*dt_time.month + dt_time.day
             acc_id = date_vcto
             # Partners data
@@ -153,10 +156,21 @@ class CashFlowReport(models.AbstractModel):
                 ref_label = move_line["ref"]
             else:
                 ref_label = move_line["ref"] + str(" - ") + move_line["name"]
-            # import pudb;pu.db
             account_name = ""
             if move_line["account_id"]:
                 account_name = move_line["account_id"][1]
+            # move_id = self.env["account.move"].browse([move_line["move_id"][0]])
+            # if move_id.ref:
+            #     if ref_label:
+            #         ref_label += ', ' + move_id.ref
+            #     else:
+            #         ref_label = move_id.ref
+            # payment_mode = move_id.payment_mode_id.name
+            payment_mode = ""
+            payment_mode_id = 0
+            if move_line["payment_mode_id"]:
+                payment_mode = move_line["payment_mode_id"][1]
+                payment_mode_id = move_line["payment_mode_id"][0]
             move_line.update(
                 {
                     "date": move_line["date"],
@@ -165,6 +179,8 @@ class CashFlowReport(models.AbstractModel):
                     "original": original,
                     "partner_id": prt_id,
                     "partner_name": prt_name,
+                    "payment_mode_id": payment_mode_id,
+                    "payment_mode_name": payment_mode,
                     "account_name": account_name,
                     "ref_label": ref_label,
                     "journal_id": move_line["journal_id"][0],
@@ -196,7 +212,6 @@ class CashFlowReport(models.AbstractModel):
                 else:
                     open_items_move_lines_data[acc_id][prt_id].append(move_line)
         journals_data = self._get_journals_data(list(journals_ids))
-        # import pudb;pu.db
         # accounts_data = self._get_accounts_data(open_items_move_lines_data.keys())
         accounts_data = self._get_accounts_data(contas_key)
         return (
@@ -280,7 +295,6 @@ class CashFlowReport(models.AbstractModel):
             ("internal_type", "=", "liquidity"),
         ])
         copy_account_ids = account_ids
-        # import pudb;pu.db
         # Removo as contas Caixa e Banco
         acc_ids = account_ids
         # for acc in account_bank.ids:
@@ -322,8 +336,6 @@ class CashFlowReport(models.AbstractModel):
                 'balance_value': balance['balance']
             }
             balance_list.append(vals)
-
-        # import pudb;pu.db
 
         return {
             "doc_ids": [wizard_id],

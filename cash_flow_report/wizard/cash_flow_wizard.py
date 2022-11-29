@@ -141,7 +141,7 @@ class CashFlowReportWizard(models.TransientModel):
         data = self._prepare_report_cash_flow()
         # import pudb;pu.db
         if report_type == "xlsx":
-            report_name = "a_f_r.cash_flow_report_xlsx"
+            report_name = "cash_flow_report.cash_flow_report_xlsx"
         else:
             report_name = "cash_flow_report.cash_flow_report"
         report = self.env["ir.actions.report"].search(
