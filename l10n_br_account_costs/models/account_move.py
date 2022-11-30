@@ -202,7 +202,7 @@ class AccountMove(models.Model):
         'line_ids.full_reconcile_id')
     def _compute_amount(self):
         total_tax = 0.0
-        super()._compute_amount()
+        result = super()._compute_amount()
         # coloquei o len abaixo pq tem hora q traz todas as faturas do sistema
         if len(self) == 1:
             # total do ICMS
@@ -230,3 +230,4 @@ class AccountMove(models.Model):
                     line.amount_currency = line.amount_currency - dif
                     total += line.amount_currency + total_tax
                 line._update_taxes()
+        return result
