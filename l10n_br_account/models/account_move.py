@@ -97,6 +97,14 @@ class AccountMove(models.Model):
             self.amount_other_value != self.fiscal_document_id.amount_other_value
         )):
             self.fiscal_document_id.amount_other_value = self.amount_other_value
+        if (self.amount_freight_value and (
+            self.amount_freight_value != self.fiscal_document_id.amount_freight_value
+        )):
+            self.fiscal_document_id.amount_freight_value = self.amount_freight_value
+        if (self.amount_insurance_value and (
+            self.amount_insurance_value != self.fiscal_document_id.amount_insurance_value
+        )):
+            self.fiscal_document_id.amount_insurance_value = self.amount_insurance_value
 
         # TODO FIXME migrate: no mode invoice keyword               
         result = super().action_post()
