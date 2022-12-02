@@ -122,9 +122,10 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                 else:
                     amount_total = sum(record._get_amount_lines().mapped("price_gross"))
                     for line in record._get_amount_lines()[:-1]:
-                        line.freight_value = amount_freight_value * (
-                            line.price_gross / amount_total
-                        )
+                        if not line.price_gross == 0:
+                            line.freight_value = amount_freight_value * (
+                                line.price_gross / amount_total
+                            )
                     record._get_amount_lines()[
                         -1
                     ].freight_value = amount_freight_value - sum(
@@ -166,9 +167,10 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                 else:
                     amount_total = sum(record._get_amount_lines().mapped("price_gross"))
                     for line in record._get_amount_lines()[:-1]:
-                        line.insurance_value = amount_insurance_value * (
-                            line.price_gross / amount_total
-                        )
+                        if not line.price_gross == 0:
+                            line.insurance_value = amount_insurance_value * (
+                                line.price_gross / amount_total
+                            )
                     record._get_amount_lines()[
                         -1
                     ].insurance_value = amount_insurance_value - sum(
@@ -209,9 +211,10 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                 else:
                     amount_total = sum(record._get_amount_lines().mapped("price_gross"))
                     for line in record._get_amount_lines()[:-1]:
-                        line.other_value = amount_other_value * (
-                            line.price_gross / amount_total
-                        )
+                        if not line.price_gross == 0:
+                            line.other_value = amount_other_value * (
+                                line.price_gross / amount_total
+                            )
                     record._get_amount_lines()[
                         -1
                     ].other_value = amount_other_value - sum(
