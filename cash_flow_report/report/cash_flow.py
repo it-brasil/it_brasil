@@ -107,7 +107,7 @@ class CashFlowReport(models.AbstractModel):
         move_lines = [
             move_line
             for move_line in move_lines
-            if move_line["date"] <= date_at_object
+            if move_line["date_maturity"] <= date_at_object
             and not float_is_zero(move_line["amount_residual"], precision_digits=2)
         ]
 

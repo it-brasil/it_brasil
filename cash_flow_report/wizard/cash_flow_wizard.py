@@ -139,7 +139,6 @@ class CashFlowReportWizard(models.TransientModel):
     def _print_report(self, report_type):
         self.ensure_one()
         data = self._prepare_report_cash_flow()
-        # import pudb;pu.db
         if report_type == "xlsx":
             report_name = "cash_flow_report.cash_flow_report_xlsx"
         else:
