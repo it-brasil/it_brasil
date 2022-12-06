@@ -1,0 +1,108 @@
+# License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
+
+from functools import partial
+
+from odoo import api, fields, models
+from odoo.tools import float_is_zero
+from odoo.tools.misc import formatLang
+from collections import defaultdict
+
+from ...l10n_br_fiscal.constants.fiscal import (
+    CFOP_DESTINATION_EXPORT,
+    FISCAL_IN
+)
+
+
+class AccountMove(models.Model):
+    _inherit = "account.move"
+
+
+    def action_post(self):
+        result = super().action_post()
+        # Hack: Na V14 o frete, seguro e outros custos não estão no lancamento contabil
+        # e isto gera uma diferença entre o lancamento e o documento fiscal
+        # Por ora incluimos linhas com estes valores no movimento
+        alterado = 0.0
+        for line in self.line_ids:
+            if not line.exclude_from_invoice_tab and line.freight_value > 0:
+                new_line = self.env["account.move.line"].new(
+                    {
+                        "name": "[FREIGHT]",
+                        "account_id": line.account_id.id,
+                        "move_id": self.id,
+                        "exclude_from_invoice_tab": True,
+                        "price_unit": line.freight_value,
+                    }
+                )
+                self.line_ids += new_line
+                self.with_context(check_move_validity=False)._onchange_currency()
+                alterado += line.freight_value
+            if not line.exclude_from_invoice_tab and line.insurance_value > 0:
+                new_line = self.env["account.move.line"].new(
+                    {
+                        "name": "[INSURANCE]",
+                        "account_id": line.account_id.id,
+                        "move_id": self.id,
+                        "exclude_from_invoice_tab": True,
+                        "price_unit": line.insurance_value,
+                    }
+                )
+                self.line_ids += new_line
+                self.with_context(check_move_validity=False)._onchange_currency()
+                alterado += line.insurance_value
+            if not line.exclude_from_invoice_tab and line.other_value > 0:
+                new_line = self.env["account.move.line"].new(
+                    {
+                        "name": "[OTHER]",
+                        "account_id": line.account_id.id,
+                        "move_id": self.id,
+                        "exclude_from_invoice_tab": True,
+                        "price_unit": line.other_value,
+                    }
+                )
+                self.line_ids += new_line
+                self.with_context(check_move_validity=False)._onchange_currency()
+                alterado += line.other_value
+        if alterado:
+            # estava dobrando o valor frete, seguro e outros no total
+            for line in self.line_ids:
+                if line.product_id:                   
+                    if line.debit:
+                        other = line.other_value + line.insurance_value + line.freight_value
+                        line.with_context(check_move_validity=False).write({'debit': line.debit - other})
+                    if line.credit:
+                        other = line.other_value + line.insurance_value + line.freight_value
+                        line.with_context(check_move_validity=False).write({'credit': line.credit - other})
+
+                if line.account_id.user_type_id.type == "receivable":
+                    line.with_context(check_move_validity=False).write({'debit': line.debit - alterado})
+                if line.account_id.user_type_id.type == "payable":
+                    line.with_context(check_move_validity=False).write({'credit': line.credit - alterado})
+            self._recompute_dynamic_lines(recompute_all_taxes=True)
+        self.mapped("fiscal_document_id").filtered(
+            lambda d: d.document_type_id
+        ).action_document_confirm()
+
+        return result
+
+    def button_draft(self): 
+        # entrando com custos extras dos itens
+        result = super().button_draft()
+
+        # Hack: apagando linhas inseridas no lancamento para suportar as alteraçoes
+        # na 14.0
+        for line in self.line_ids:
+            if line.name in ["[FREIGHT]", "[INSURANCE]", "[OTHER]"]:
+                self.with_context(
+                    check_move_validity=False,
+                    skip_account_move_synchronization=True,
+                    force_delete=True,
+                ).write(
+                    {
+                        "line_ids": [(2, line.id)],
+                        "to_check": False,
+                    }
+                )
+        self.with_context(check_move_validity=False)._onchange_currency()
+
+        return result

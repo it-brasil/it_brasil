@@ -13,6 +13,7 @@ from odoo.exceptions import UserError
 from odoo.addons.l10n_br_fiscal.constants.fiscal import (
     DOCUMENT_ISSUER_COMPANY,
     DOCUMENT_ISSUER_PARTNER,
+    FISCAL_IN_OUT_ALL,
     FISCAL_OUT,
     SITUACAO_EDOC_CANCELADA,
     SITUACAO_EDOC_EM_DIGITACAO,
@@ -111,6 +112,25 @@ class AccountMove(models.Model):
         string="Document Code",
         store=True,
     )
+
+    fiscal_operation_type = fields.Selection(
+        selection=FISCAL_IN_OUT_ALL,
+        related=None,
+        compute="_compute_fiscal_operation_type",
+    )
+
+    def _compute_fiscal_operation_type(self):
+        for inv in self:
+            if inv.move_type == "entry":
+                # if it is a Journal Entry there is nothing to do.
+                inv.fiscal_operation_type = False
+                continue
+            if inv.fiscal_operation_id:
+                inv.fiscal_operation_type = (
+                    inv.fiscal_operation_id.fiscal_operation_type
+                )
+            else:
+                inv.fiscal_operation_type = MOVE_TO_OPERATION[inv.move_type]
 
     def _get_amount_lines(self):
         """Get object lines instaces used to compute fields"""
@@ -219,6 +239,21 @@ class AccountMove(models.Model):
             defaults["issuer"] = DOCUMENT_ISSUER_PARTNER
         return defaults
 
+    @api.model
+    def _move_autocomplete_invoice_lines_create(self, vals_list):
+        """
+        This method is called in the original AccountMove#create method.
+        And when the type is "entry" rather than "invoice", we should
+        force the dummy fiscal_document_id again or it would be removed
+        from the values and the _inherits system would create a new one.
+        So in general we always use this method to ensure the dummy is used
+        when document_type_id is empty.
+        """
+        vals_list = super()._move_autocomplete_invoice_lines_create(vals_list)
+        for vals in vals_list:
+            if not vals.get("document_type_id"):
+                vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
+        return vals_list
     @api.model_create_multi
     def create(self, values):
         for vals in values:
@@ -264,7 +299,7 @@ class AccountMove(models.Model):
         if self.document_type_id:
             default["fiscal_line_ids"] = False
         else:
-            default["line_ids"] = self.line_ids[0]
+            default["fiscal_line_ids"] = self.line_ids[0]
         return super().copy(default)
 
     @api.model
@@ -366,7 +401,7 @@ class AccountMove(models.Model):
         # documento fiscal o numero do documento pode estar em branco
         # atualizar esse dado ao validar a fatura, ou atribuir o número da NFe
         # antes de salva-la.
-        super()._recompute_payment_terms_lines()
+        result = super()._recompute_payment_terms_lines()
         if self.document_number:
             terms_lines = self.line_ids.filtered(
                 lambda l: l.account_id.user_type_id.type in ("receivable", "payable")
@@ -380,6 +415,7 @@ class AccountMove(models.Model):
                 terms_line.name = "{}/{}-{}".format(
                     self.document_number, str(idx + 1).zfill(2), str(len(terms_lines)).zfill(2)
                 )
+        return result
 
     # @api.model
     # def invoice_line_move_line_get(self):
@@ -407,9 +443,10 @@ class AccountMove(models.Model):
 
     @api.onchange("fiscal_operation_id")
     def _onchange_fiscal_operation_id(self):
-        super()._onchange_fiscal_operation_id()
+        result = super()._onchange_fiscal_operation_id()
         if self.fiscal_operation_id and self.fiscal_operation_id.journal_id:
             self.journal_id = self.fiscal_operation_id.journal_id
+        return result
 
     def open_fiscal_document(self):
         if self.env.context.get("move_type", "") == "out_invoice":
@@ -432,14 +469,15 @@ class AccountMove(models.Model):
         """Usamos esse método para definir a data de emissão do documento
         fiscal e numeração do documento fiscal para ser usado nas linhas
         dos lançamentos contábeis."""
-        super().action_date_assign()
+        result = super().action_date_assign()
         for invoice in self:
             if invoice.document_type_id:
                 if invoice.issuer == DOCUMENT_ISSUER_COMPANY:
                     invoice.fiscal_document_id._document_date()
                     invoice.fiscal_document_id._document_number()
+        return result
 
-    def button_draft(self):        
+    def button_draft(self): 
         for i in self.filtered(lambda d: d.document_type_id):
             if i.state_edoc == SITUACAO_EDOC_CANCELADA:
                 if i.issuer == DOCUMENT_ISSUER_COMPANY:
@@ -453,28 +491,7 @@ class AccountMove(models.Model):
                     )
             if i.state_edoc != SITUACAO_EDOC_EM_DIGITACAO:
                 i.fiscal_document_id.action_document_back2draft()
-
-        # entrando com custos extras dos itens
-        result = super().button_draft()
-
-        # Hack: apagando linhas inseridas no lancamento para suportar as alteraçoes
-        # na 14.0
-        for line in self.line_ids:
-            if line.name in ["[FREIGHT]", "[INSURANCE]", "[OTHER]"]:
-                self.with_context(
-                    check_move_validity=False,
-                    skip_account_move_synchronization=True,
-                    force_delete=True,
-                ).write(
-                    {
-                        "line_ids": [(2, line.id)],
-                        "to_check": False,
-                    }
-                )
-
-        self.with_context(check_move_validity=False)._onchange_currency()
-
-        return result
+        return super().button_draft()
 
     def action_document_send(self):
         invoices = self.filtered(lambda d: d.document_type_id)
@@ -511,58 +528,6 @@ class AccountMove(models.Model):
 
     def action_post(self):
         result = super().action_post()
-
-        # Hack: Na V14 o frete, seguro e outros custos não estão no lancamento contabil
-        # e isto gera uma diferença entre o lancamento e o documento fiscal
-        # Por ora incluimos linhas com estes valores no movimento
-        # # total = 0.0
-        # # for line in self.line_ids:
-        # #     if line.freight_value > 0:
-        # #         total += line.freight_value
-        # #     elif line.insurance_value > 0:
-        # #         total += line.insurance_value
-        # #     elif line.other_value > 0:
-        # #         total += line.other_value
-        # for line in self.line_ids:
-        #     if not line.exclude_from_invoice_tab and line.freight_value > 0:
-        #         new_line = self.env["account.move.line"].new(
-        #             {
-        #                 "name": "[FREIGHT]",
-        #                 "account_id": line.account_id.id,
-        #                 "move_id": self.id,
-        #                 "exclude_from_invoice_tab": True,
-        #                 "price_unit": line.freight_value,
-        #             }
-        #         )
-        #         self.line_ids += new_line
-        #         self.with_context(check_move_validity=False)._onchange_currency()
-        #     if not line.exclude_from_invoice_tab and line.insurance_value > 0:
-        #         new_line = self.env["account.move.line"].new(
-        #             {
-        #                 "name": "[INSURANCE]",
-        #                 "account_id": line.account_id.id,
-        #                 "move_id": self.id,
-        #                 "exclude_from_invoice_tab": True,
-        #                 "price_unit": line.insurance_value,
-        #             }
-        #         )
-        #         self.line_ids += new_line
-        #         self.with_context(check_move_validity=False)._onchange_currency()
-        #     if not line.exclude_from_invoice_tab and line.other_value > 0:
-        #         new_line = self.env["account.move.line"].new(
-        #             {
-        #                 "name": "[OTHER]",
-        #                 "account_id": line.account_id.id,
-        #                 "move_id": self.id,
-        #                 "exclude_from_invoice_tab": True,
-        #                 "price_unit": line.other_value,
-        #             }
-        #         )
-        #         self.line_ids += new_line
-        #         self.with_context(check_move_validity=False)._onchange_currency()
-        # # if line.account_id.user_type_id.type in ("receivable", "payable"):
-        # #     if total:
-        #         line.price_unit = line.price_unit + total
 
         self.mapped("fiscal_document_id").filtered(
             lambda d: d.document_type_id
@@ -602,6 +567,16 @@ class AccountMove(models.Model):
     def action_send_email(self):
         self.ensure_one()
         return self.fiscal_document_id.action_send_email()
+
+    @api.onchange("document_type_id")
+    def _onchange_document_type_id(self):
+        # We need to ensure that invoices without a fiscal document have the
+        # document_number blank, as all invoices without a fiscal document share this
+        # same field, they are linked to the same dummy fiscal document.
+        # Otherwise, in the tree view, this field will be displayed with the same value
+        # for all these invoices.
+        if not self.document_type_id:
+            self.document_number = ""
 
     # TODO FIXME migrate. refund method are very different in Odoo 13+
     # def _get_refund_common_fields(self):

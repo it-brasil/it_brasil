@@ -42,6 +42,9 @@
             <!-- </t>  -->
             <!-- </t> -->
             <!-- </t> -->
+            <t t-set="total_balance_debit" t-value="0" />
+            <t t-set="total_balance_credit" t-value="0" />
+            <!-- <t t-set="total_balance" t-value="0" /> -->
             <t t-foreach="balance_list" t-as="line">
                 <t t-set="total_geral" t-value="line['balance_value']" />
             </t>
@@ -62,10 +65,13 @@
                             <t t-if="line['amount_residual'] &gt; 0">
                                 <t t-set="debit" t-value="line['amount_residual']" />
                                 <t t-set="balance_debit" t-value="balance_debit + line['amount_residual']" />
+                                <t t-set="total_balance_debit" t-value="total_balance_debit + line['amount_residual']" />
+                                <!-- <t t-set="total_balance" t-value="total_balance + line['amount_residual']" /> -->
                             </t>
                             <t t-if="line['amount_residual'] &lt; 0">
                                 <t t-set="credit" t-value="line['amount_residual']" />
                                 <t t-set="balance_credit" t-value="balance_credit + line['amount_residual']" />
+                                <t t-set="total_balance_credit" t-value="total_balance_credit + line['amount_residual']" />
                             </t>
                             <t t-call="cash_flow_report.cash_flow_report_lines" />
                             <!-- <t t-if="data_nova != '0' and data_nova != line['date_maturity']"> -->
@@ -95,6 +101,7 @@
                         </div>
                     </t>
                 </t>
+                <t t-call="cash_flow_report.cash_flow_report_footer" /> 
             </div>
         </div>
     </template>
@@ -153,7 +160,7 @@
             <div class="act_as_row labels">
                 <!--## date-->
                 <div class="act_as_cell first_column" style="width: 8.0%;">
-                    Data
+                    Data Vencto
                 </div>
                 <!--## move-->
                 <div class="act_as_cell" style="width: 8.0%;">Lançamento</div>
@@ -309,6 +316,41 @@
             </div>
             <div class="act_as_cell amount" style="width: 10.0%;">
                 <span t-esc="balance_credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+            </div>
+            <div class="act_as_cell amount" style="width: 10.0%;">
+                <span t-esc="saldo_ini" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+            </div>
+        </div>
+    </template>
+    <template id="cash_flow_report.cash_flow_report_footer">
+        <!-- Display ending balance line for account or partner -->
+        <div class="act_as_row labels" style="font-weight: bold;">
+            <div class="act_as_cell first_column" style="width: 6.0%;" />
+            <div class="act_as_cell" style="width: 10.0%;" />
+            <div class="act_as_cell" style="width: 5.0%;" />
+            <div class="act_as_cell" style="width: 14.0%;" />
+            <div class="act_as_cell" style="width: 15.0%;" />
+            <div class="act_as_cell" />
+            <div class="act_as_cell" />
+            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
+        </div>        
+        <div class="act_as_row labels" style="font-weight: bold;">
+            <div class="act_as_cell first_column" style="width: 6.0%;" />
+            <div class="act_as_cell" style="width: 10.0%;" />
+            <div class="act_as_cell" style="width: 5.0%;" />
+            <div class="act_as_cell" style="width: 14.0%;" />
+            <div class="act_as_cell" style="width: 15.0%;" />
+            <div class="act_as_cell left">
+                    Total - <span t-esc="date_maturity" />
+            </div>
+            <div class="act_as_cell" />
+            <div class="act_as_cell amount" style="width: 10.0%;">
+                <span t-esc="total_balance_debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+            </div>
+            <div class="act_as_cell amount" style="width: 10.0%;">
+                <span t-esc="total_balance_credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
             </div>
             <div class="act_as_cell amount" style="width: 10.0%;">
                 <span t-esc="saldo_ini" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />

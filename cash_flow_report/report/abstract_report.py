@@ -17,17 +17,14 @@ class CashFlowReportAbstract(models.AbstractModel):
             ("company_id", "=", company_id),
             ("reconciled", "=", False),
         ]
-        # import pudb;pu.db
         if partner_ids:
             domain += [("partner_id", "in", partner_ids)]
         if only_posted_moves:
             domain += [("move_id.state", "=", "posted")]
         else:
             domain += [("move_id.state", "in", ["posted", "draft"])]
-        # if tipo == "liquidity" and date_from:
-        domain += [("date", ">", date_from)]
-        # else:
-            # domain += [("date_maturity", ">", date_from)]
+        domain += [("date_maturity", ">=", date_from)]
+            
         return domain
 
     @api.model
