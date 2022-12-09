@@ -1,4 +1,4 @@
-from copy import copy
+from collections import Counter
 from datetime import datetime
 import json
 import re
@@ -18,72 +18,80 @@ class Partner(models.Model):
     _inherit = [_name, "l10n_br_base.party.mixin"]
 
     cnpjws_atualizadoem = fields.Datetime(
-        string="Atualizado na base pública em",
-        help="Data da última atualização das informações",
+        string="Public data in",
+        help="Date of the last update of information in the public database",
         readonly=True,
         copy=False
     )
     cnpjws_nome_fantasia = fields.Char(
-        string="Nome Fantasia",
+        string="Fantasy name",
         readonly=True,
         copy=False
     )
     cnpjws_situacao_cadastral = fields.Char(
-        string="Situação Cadastral",
+        string="Registration Status",
         readonly=True,
         copy=False
     )
     cnpjws_tipo = fields.Char(
-        string="Tipo de CNPJ",
+        string="CNPJ Type",
         readonly=True,
         copy=False
     )
 
     cnpjws_porte = fields.Char(
-        string="Porte da Empresa",
+        string="Company size",
         readonly=True,
         copy=False
     )
 
     cnpjws_atualizado_odoo = fields.Datetime(
-        string="Atualizado no Odoo em",
-        help="Data da última atualização das informações no Odoo",
+        string="Updated on Odoo",
+        help="Date of last update of information on Odoo",
         readonly=True,
         copy=False
     )
 
     cnpjws_razao_social = fields.Char(
-        string="Razão Social Completa",
+        string="Full Legal Name",
         readonly=True,
         copy=False
     )
 
     cnpjws_size_legal_name = fields.Integer(
-        string="Tamanho Razão Social",
+        string="Legal Name Size",
+        readonly=True,
         copy=False,
         default=0
     )
 
     cnpjws_manual_razao_social = fields.Boolean(
-        string="Precisa de ajuste Razão Social",
-        help="Se essa opção estiver marcada, significa que a Razão Social possuí mais de 60 caracteres e você precisa ajustar manualmente.",
+        string="Needs adjustment Legal Name",
+        help="If this option is checked, it means that the Corporate Name is longer than 60 characters and you need to manually adjust it.",
         copy=False,
         default=False
     )
 
     cnpjws_size_adress = fields.Integer(
-        string="Tamanho Endereço",
+        string="Address size",
+        readonly=True,
         copy=False,
-        default=0   
+        default=0
     )
 
     cnpjws_manual_adress = fields.Boolean(
-        string="Precisa de ajuste Endereço",
-        help="Se essa opção estiver marcada, significa que o Endereço possuí mais de 60 caracteres e você precisa ajustar manualmente.",
-        copy=False, 
+        string="Needs adjustment Address",
+        help="If this option is checked, it means that the Address is longer than 60 characters and you need to manually adjust it.",
+        copy=False,
         default=False
     )
 
+    cnpjws_other_ies = fields.Text(
+        string="Other IEs",
+        readonly=True,
+        copy=False,
+        tracking=True
+    )
 
     def action_consult_cnpj(self):
         cnpjws_url = 'https://publica.cnpj.ws/cnpj/'
@@ -132,30 +140,27 @@ class Partner(models.Model):
                         cnpj_logra = cnpjws_estabelecimento['logradouro']
 
                         self.street_name = cnpj_t_logra + " " + cnpj_logra
-                        
 
                     self.street_number = cnpjws_estabelecimento['numero']
-                    
+
                     if self.street_number == "S/N":
-                        self.street_number = False
+                        self.street_number = "SN"
 
                     self.district = cnpjws_estabelecimento['bairro']
-                    
+
                     self.street2 = cnpjws_estabelecimento['complemento']
-                    #self.street2 = ' '.join(self.street2.split())
 
                     if self.street_name:
-                        fulladress = self.street_name 
+                        fulladress = self.street_name
                     if self.street_number:
                         fulladress += ", " + self.street_number
                     if self.street2:
+                        self.street2 = re.sub(' +', ' ', self.street2)
                         fulladress += " - " + self.street2
-
 
                     self.cnpjws_size_adress = len(fulladress)
                     if self.cnpjws_size_adress > 60:
                         self.cnpjws_manual_adress = True
-
 
                     cnpjws_simples = cnpjws_result['simples']
                     cnpjws_ie = cnpjws_estabelecimento['inscricoes_estaduais']
@@ -175,48 +180,39 @@ class Partner(models.Model):
                     self.cnpjws_situacao_cadastral = cnpjws_estabelecimento['situacao_cadastral']
                     self.cnpjws_porte = cnpjws_result['porte']['descricao'] if cnpjws_result['porte'] else False
                     self.cnpjws_atualizado_odoo = datetime.now()
+                    #if language pt_BR is installed
+                    if self.env['res.lang'].search([('code', '=', 'pt_BR')]):
+                        self.lang = 'pt_BR'
                 else:
-                    raise ValidationError(
-                        "Erro: " + cnpjws_result['titulo'] + '\n' + cnpjws_result['detalhes'] + '\n' 'Se a empresa for do Brasil, informe o CNPJ correto. Caso contrário, complete o cadastro manualmente.')
+                    raise ValidationError(_(
+                        "Error: " + cnpjws_result['titulo'] + '\n' + cnpjws_result['detalhes'] + '\n' 'If the company is from Brazil, enter the correct CNPJ. Otherwise, complete the registration manually.'))
             else:
-                raise UserError("Por favor, informe o CNPJ da empresa.")
+                raise UserError(_('Please enter the CNPJ.'))
         else:
-            raise ValidationError(
-                "Apenas contatos do tipo Empresa com CNPJ podem ser consultados.")
+            raise ValidationError(_('This option is only available for companies.'))
 
     def define_inscricao_estadual(self, fiscal_info):
         result_ie = fiscal_info[1]
+        others_ie = ''
 
         if result_ie == []:
             self.inscr_est = ''
         else:
             for ie in result_ie:
                 if ie['ativo'] == True:
-                    if self.state_id.code == ie['estado']['sigla']:
-                        self.inscr_est = ie['inscricao_estadual']
-                    if self.state_id.code != ie['estado']['sigla']:
-                        search_tax_numbers = self.env['state.tax.numbers'].search(
-                            [('partner_id', '=', self.id),
-                             ('inscr_est', '=', ie['inscricao_estadual'])]
-                        )
-                        if not search_tax_numbers:
-                            search_state = self.env['res.country.state'].search(
-                                [('ibge_code', '=', ie['estado']['ibge_id'])])
-                            if search_state:
-                                try:
-                                    incluir_outras_ies = self.write(
-                                        {"state_tax_number_ids": [(0, 0, {
-                                            "state_id": search_state.id,
-                                            "inscr_est": ie['inscricao_estadual']
-                                        })]}
-                                    )
-                                    _logger.info(
-                                        "Inscrição estadual adicional incluída.")
-                                except Exception:
-                                    _logger.warning(
-                                        "Erro ao incluir IE Adicional: %s", ie['inscricao_estadual'])
-                                # raise ValidationError(
-                                # "Erro ao incluir segunda inscrição estadual: %s estado %s", ie['inscricao_estadual'], ie['estado']['sigla'])
+                    search_state = self.env['res.country.state'].search([('ibge_code', '=', ie['estado']['ibge_id'])])
+
+                    if search_state:
+                        if self.state_id.code == ie['estado']['sigla']:
+                            self.inscr_est = ie['inscricao_estadual']
+                        else:
+                            others_ie += "IE: " + ie['inscricao_estadual'] + " - " + ie['estado']['sigla'] + "\n"
+                    else:
+                        _logger.info("Estado não encontrado: " + ie['estado']['sigla'])
+
+        if others_ie != '':
+            self.cnpjws_other_ies = others_ie
+
 
     def define_fiscal_profile_id(self, fiscal_info):
         module_l10n_br_fiscal = self.env['ir.module.module'].search(
@@ -273,12 +269,12 @@ class Partner(models.Model):
                     try:
                         incluir_cnae_principal = self.write(
                             {"cnae_main_id": search_cnae.id})
-                        _logger.info("CNAE Principal Adicionado: " +
+                        _logger.info("CNAE Main added successfully %s",
                                      str(incluir_cnae_principal))
                     except Exception:
                         incluir_cnae_principal = False
-                        raise ValidationError(
-                            "Erro ao incluir cnae: %s", fiscal_info[2]['subclasse'])
+                        raise ValidationError(_(
+                            "Error to include CNAE Main %s." % fiscal_info[2]['subclasse']))
 
         else:
             self.define_inscricao_estadual(fiscal_info)
@@ -292,7 +288,6 @@ class Partner(models.Model):
             else:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
                 self.cnpjws_manual_razao_social = True
-
 
         if "street" in vals:
             if vals["street"] != False and len(vals["street"]) <= 60:
