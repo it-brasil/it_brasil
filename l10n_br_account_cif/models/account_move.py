@@ -156,7 +156,7 @@ class AccountMove(models.Model):
         # invoice._finalize_invoices(invoice)
         invoice._line_cost()
         # invoice._compute_amount()
-        invoice._compute_taxes_mapped()
+        # invoice._compute_taxes_mapped()
         # invoice.with_context(check_move_validity=False)._onchange_currency()
         # import pudb;pu.db
         return invoice
