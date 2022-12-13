@@ -15,176 +15,19 @@ from ...l10n_br_fiscal.constants.fiscal import (
 )
 
 
+# class AccountMove(models.Model):
+#     _inherit = "account.move"
 class AccountMove(models.Model):
-    _inherit = "account.move"
+    _name = "account.move"
+    _inherit = [
+        _name,
+        "l10n_br_fiscal.document.mixin.methods",
+        "l10n_br_fiscal.document.invoice.mixin",
+    ]
+    _inherits = {"l10n_br_fiscal.document": "fiscal_document_id"}
+    _order = "date DESC, name DESC"
 
-    amount_freight_value = fields.Monetary(
-        compute="_compute_freight_value",
-        inverse="_inverse_amount_freight",
-    )
-
-    amount_insurance_value = fields.Monetary(
-        compute="_compute_insurance_value",
-        inverse="_inverse_amount_insurance",
-    )
-
-    amount_other_value = fields.Monetary(
-        compute="_compute_other_value",
-        inverse="_inverse_amount_other",
-    )
-
-    # Usado para tornar Somente Leitura os campos totais dos custos
-    # de entrega quando a definição for por Linha
-    delivery_costs = fields.Selection(
-        related="company_id.delivery_costs",
-    )
-
-    @api.depends("amount_freight_value")
-    def _compute_freight_value(self):
-        total_freight = 0.0
-        for record in self.invoice_line_ids:
-            total_freight += record.freight_value
-        self.amount_freight_value = total_freight
-
-    @api.depends("amount_insurance_value")
-    def _compute_insurance_value(self):
-        total_insurance = 0.0
-        for record in self.invoice_line_ids:
-            total_insurance += record.insurance_value
-        self.amount_insurance_value = total_insurance
-
-    @api.depends("amount_other_value")
-    def _compute_other_value(self):
-        total_other = 0.0
-        for record in self.invoice_line_ids:
-            total_other += record.other_value
-        self.amount_other_value = total_other
-
-    def _inverse_amount_freight(self):
-        # account_costs
-        for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total" and record.amount_freight_value:
-                amount_freight_value = record.amount_freight_value
-                if all(record.invoice_line_ids.mapped("freight_value")):
-                    amount_freight_old = sum(record.invoice_line_ids.mapped("freight_value"))
-                    for line in record.invoice_line_ids[:-1]:
-                        line.freight_value = amount_freight_value * (
-                            line.freight_value / amount_freight_old
-                        )
-                    record.invoice_line_ids[-1].freight_value = amount_freight_value - sum(
-                        line.freight_value for line in record.invoice_line_ids[:-1]
-                    )
-                else:
-                    amount_total = sum(record.invoice_line_ids.mapped("price_total"))
-                    for line in record.invoice_line_ids[:-1]:
-                        line.freight_value = amount_freight_value * (
-                            line.price_total / amount_total
-                        )
-                    record.invoice_line_ids[-1].freight_value = amount_freight_value - sum(
-                        line.freight_value for line in record.invoice_line_ids[:-1]
-                    )
-                for line in record.invoice_line_ids:
-                    price_subtotal = line._get_price_total_and_subtotal()
-                    line.price_subtotal = price_subtotal['price_subtotal']
-                    line.update(line._get_fields_onchange_subtotal())
-                    line._onchange_fiscal_taxes()
-                record._recompute_dynamic_lines(recompute_all_taxes=True)
-                record._fields["amount_total"].compute_value(record)
-
-                record.write(
-                    {
-                        name: value
-                        for name, value in record._cache.items()
-                        if record._fields[name].compute == "_compute_amount"
-                        and not record._fields[name].inverse
-                    }
-                )
-
-    def _inverse_amount_insurance(self):
-        for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total" and record.amount_insurance_value:
-                amount_insurance_value = record.amount_insurance_value
-                if all(record.invoice_line_ids.mapped("insurance_value")):
-                    amount_insurance_old = sum(
-                        record.invoice_line_ids.mapped("insurance_value")
-                    )
-                    for line in record.invoice_line_ids[:-1]:
-                        line.insurance_value = amount_insurance_value * (
-                            line.insurance_value / amount_insurance_old
-                        )
-                    record.invoice_line_ids[
-                        -1
-                    ].insurance_value = amount_insurance_value - sum(
-                        line.insurance_value for line in record.invoice_line_ids[:-1]
-                    )
-                else:
-                    amount_total = sum(record.invoice_line_ids.mapped("price_total"))
-                    for line in record.invoice_line_ids[:-1]:
-                        line.insurance_value = amount_insurance_value * (
-                            line.price_total / amount_total
-                        )
-                    record.invoice_line_ids[
-                        -1
-                    ].insurance_value = amount_insurance_value - sum(
-                        line.insurance_value for line in record.invoice_line_ids[:-1]
-                    )
-
-                for line in record.invoice_line_ids:
-                    price_subtotal = line._get_price_total_and_subtotal()
-                    line.price_subtotal = price_subtotal['price_subtotal']
-                    line.update(line._get_fields_onchange_subtotal())
-                    line._onchange_fiscal_taxes()
-                record._recompute_dynamic_lines(recompute_all_taxes=True)
-
-                record._fields["amount_total"].compute_value(record)
-                record.write(
-                    {
-                        name: value
-                        for name, value in record._cache.items()
-                        if record._fields[name].compute == "_amount_all"
-                        and not record._fields[name].inverse
-                    }
-                )
-
-    def _inverse_amount_other(self):
-        for record in self.filtered(lambda inv: inv.invoice_line_ids):
-            if record.company_id.delivery_costs == "total" and record.amount_other_value:
-                amount_other_value = record.amount_other_value
-                if all(record.invoice_line_ids.mapped("other_value")):
-                    amount_other_old = sum(record.invoice_line_ids.mapped("other_value"))
-                    for line in record.invoice_line_ids[:-1]:
-                        line.other_value = amount_other_value * (
-                            line.other_value / amount_other_old
-                        )
-                    record.invoice_line_ids[-1].other_value = amount_other_value - sum(
-                        line.other_value for line in record.invoice_line_ids[:-1]
-                    )
-                else:
-                    amount_total = sum(record.invoice_line_ids.mapped("price_total"))
-                    for line in record.invoice_line_ids[:-1]:
-                        line.other_value = amount_other_value * (
-                            line.price_total / amount_total
-                        )
-                    record.invoice_line_ids[-1].other_value = amount_other_value - sum(
-                        line.other_value for line in record.invoice_line_ids[:-1]
-                    )
-
-                for line in record.invoice_line_ids:
-                    price_subtotal = line._get_price_total_and_subtotal()
-                    line.price_subtotal = price_subtotal['price_subtotal']
-                    line.update(line._get_fields_onchange_subtotal())
-                    line._onchange_fiscal_taxes()
-                record._recompute_dynamic_lines(recompute_all_taxes=True)
-                record._fields["amount_total"].compute_value(record)
-                record.write(
-                    {
-                        name: value
-                        for name, value in record._cache.items()
-                        if record._fields[name].compute == "_amount_all"
-                        and not record._fields[name].inverse
-                    }
-                )
-
+    # necessario para mostrar o campo total corretamente incluido frete, outros e seguros
     @api.depends(
         'line_ids.matched_debit_ids.debit_move_id.move_id.payment_id.is_matched',
         'line_ids.matched_debit_ids.debit_move_id.move_id.line_ids.amount_residual',
@@ -199,35 +42,54 @@ class AccountMove(models.Model):
         'line_ids.amount_residual',
         'line_ids.amount_residual_currency',
         'line_ids.payment_id.state',
-        'line_ids.full_reconcile_id')
+        'line_ids.full_reconcile_id',)
     def _compute_amount(self):
-        total_tax = 0.0
         result = super()._compute_amount()
-        # coloquei o len abaixo pq tem hora q traz todas as faturas do sistema
-        if len(self) == 1:
-            # total do ICMS
-            for line in self.line_ids:
-                if (
-                    line.cfop_id
-                    and line.cfop_id.destination == CFOP_DESTINATION_EXPORT
-                    and line.fiscal_operation_id.fiscal_operation_type == FISCAL_IN
-                ):
-                    total_tax += line.icms_value
-            dif = 0.0
+        if len(self) > 1:
+            return result
+        for move in self:
+            if move.payment_state == 'invoicing_legacy':
+                # invoicing_legacy state is set via SQL when setting setting field
+                # invoicing_switch_threshold (defined in account_accountant).
+                # The only way of going out of this state is through this setting,
+                # so we don't recompute it here.
+                move.payment_state = move.payment_state
+                continue
             total = 0.0
-            # Corrige a conta de ICMS Importacao
-            for line in self.line_ids:
-                if (line.name and 'ICMS Entrada Importa' in line.name 
-                    and total_tax):
-                    dif = total_tax - line.debit
-                    line.debit = total_tax
-                if (
-                    line.account_id and dif
-                    and 'Fornecedor' in line.account_id.name
-                ):
-                    line.credit = line.credit + dif
-                    # menos pq o amount currency e negativo
-                    line.amount_currency = line.amount_currency - dif
-                    total += line.amount_currency + total_tax
-                line._update_taxes()
+            total_currency = 0.0
+            total_other = 0.0
+            currencies = move._get_lines_onchange_currency().currency_id
+
+            for line in move.line_ids:
+                
+                if move.is_invoice(include_receipts=True):
+                    # === Invoices ===
+                    total_other += line.freight_value + line.insurance_value + line.other_value
+                    if not line.exclude_from_invoice_tab:
+                        # Untaxed amount.
+                        total += line.balance
+                        total_currency += line.amount_currency
+                    elif line.tax_line_id:
+                        # Tax amount.
+                        total += line.balance
+                        total_currency += line.amount_currency
+                else:
+                    # === Miscellaneous journal entry ===
+                    if line.debit:
+                        total += line.balance
+                        total_currency += line.amount_currency
+
+            if move.move_type == 'entry' or move.is_outbound():
+                sign = 1
+            else:
+                sign = -1
+            move.amount_total = sign * (total_currency if len(currencies) == 1 else total)
+            if total_other:
+                total += total_other
+                move.amount_total = sign * (total)
+                move.amount_total_signed = abs(total) if move.move_type == 'entry' else -total
+                if move.move_type == 'entry':
+                    move.amount_untaxed_signed = move.amount_untaxed_signed + total_other
+                else:
+                    move.amount_untaxed_signed = move.amount_untaxed_signed - total_other
         return result
