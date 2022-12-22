@@ -24,7 +24,7 @@ class CashFlowReportWizard(models.TransientModel):
     account_ids = fields.Many2many(
         comodel_name="account.account",
         string="Filtro contas",
-        domain=[("reconcile", "=", True)],
+        domain=["|",("reconcile", "=", True), ("user_type_id", "=", 3)],
         required=True,
     )
     hide_account_at_0 = fields.Boolean(
@@ -119,7 +119,7 @@ class CashFlowReportWizard(models.TransientModel):
 
     @api.onchange("account_ids")
     def onchange_account_ids(self):
-        return {"domain": {"account_ids": [("reconcile", "=", True)]}}
+        return {"domain": {"account_ids": ["|", ("reconcile", "=", True), ("user_type_id", "=", 3)]}}
 
     @api.onchange("receivable_accounts_only", "payable_accounts_only")
     def onchange_type_accounts_only(self):

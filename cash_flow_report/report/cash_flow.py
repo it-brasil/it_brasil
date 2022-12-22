@@ -285,7 +285,9 @@ class CashFlowReport(models.AbstractModel):
         date_at = data["date_at"]
         date_at_object = datetime.strptime(date_at, "%Y-%m-%d").date()
         date_from = data["date_from"]
-        date_from_object =  datetime.strptime(date_from, "%Y-%m-%d").date()
+        date_from_object = date_at_object
+        if date_from:
+            date_from_object =  datetime.strptime(date_from, "%Y-%m-%d").date()
         only_posted_moves = data["only_posted_moves"]
         show_partner_details = data["show_partner_details"]
         
