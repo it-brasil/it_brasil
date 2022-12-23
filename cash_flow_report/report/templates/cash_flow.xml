@@ -44,9 +44,10 @@
             <!-- </t> -->
             <t t-set="total_balance_debit" t-value="0" />
             <t t-set="total_balance_credit" t-value="0" />
+            <t t-set="total_geral" t-value="0" />
             <!-- <t t-set="total_balance" t-value="0" /> -->
             <t t-foreach="balance_list" t-as="line">
-                <t t-set="total_geral" t-value="line['balance_value']" />
+                <t t-set="total_geral" t-value="total_geral + line['balance_value']" />
             </t>
             <div class="act_as_table data_table" style="width: 100%;">
                 <t t-call="cash_flow_report.cash_flow_report_lines_header" />
@@ -152,6 +153,14 @@
                 </div>
                 <t t-set="total_geral" t-value="total_geral + line['balance_value']" />
             </t>
+            <div class="act_as_row">
+                <div class="act_as_cell">
+                    <span><b>Total geral</b></span>
+                </div>
+                <div class="act_as_cell amount">
+                    <span t-esc="total_geral" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </div>
+            </div>
         </div>
     </template>
     <template id="cash_flow_report.cash_flow_report_lines_header">

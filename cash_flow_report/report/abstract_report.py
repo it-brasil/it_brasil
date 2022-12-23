@@ -113,7 +113,7 @@ class CashFlowReportAbstract(models.AbstractModel):
                         "group_id": account.group_id.id,
                         "currency_id": account.currency_id or False,
                         "currency_name": account.currency_id.name,
-                        "centralized": account.centralized,
+                        "centralized": False,
                     }
                 }
             )
