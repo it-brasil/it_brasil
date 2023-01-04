@@ -241,6 +241,12 @@ class NFeLine(spec_models.StackedModel):
         string="Imposto de importação",
     )
 
+    # nfe40_DI = fields.One2many(
+    #     comodel_name="nfe.40.di",
+    #     # inverse_name="document_line_id",
+    #     string="Declaração importação",
+    # )
+
     @api.depends("additional_data")
     def _compute_nfe40_infAdProd(self):
         for record in self:

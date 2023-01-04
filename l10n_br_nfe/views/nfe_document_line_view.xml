@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="nfe_document_line_form" model="ir.ui.view">
+        <field name="name">l10n_br_nfe.document.line.form</field>
+        <field name="model">l10n_br_fiscal.document.line</field>
+        <field name="inherit_id" ref="l10n_br_fiscal.document_line_form" />
+        <field name="arch" type="xml">
+            <page name="fiscal_taxes" position="before">
+                <page name="nfe40_di" string="Declaração de Importação">
+                    <field name="nfe40_DI" context="{'form_view_ref': 'l10n_br_nfe.nfe_import_di_form', 'tree_view_ref': 'l10n_br_nfe.nfe_import_di_tree', 'default_nfe40_DI_prod_id': product_id}" />
+                    <!-- <field name="nfe40_DI" context="{'default_nfe40_DI_prod_id': product_id}" >
+                        <tree string="Declaração de Importação">
+                            <field name="nfe40_nDI" />
+                            <field name="nfe40_dDI" />
+                            
+                            
+                            <field name="nfe40_UFDesemb" />
+                            <field name="nfe40_xLocDesemb" />
+                            <field name="nfe40_dDesemb" />
+                            <field name="nfe40_tpViaTransp" />
+                            <field name="nfe40_tpIntermedio" />
+                            
+                        </tree>
+                        <form>
+                            <group>
+                                <group>
+                                    <field name="nfe40_DI_prod_id" readonly="1" />
+                                    <field name="nfe40_nDI" />
+                                    <field name="nfe40_dDI" />
+                                 
+                                    <field name="nfe40_CNPJ" />
+                                    <field name="nfe40_UFTerceiro" />
+                                    <field name="nfe40_cExportador" />
+                                    <field name="nfe40_vAFRMM" />
+                                </group>
+                                <group>
+                                 
+                                    <field name="nfe40_UFDesemb" />
+                                    <field name="nfe40_xLocDesemb" />
+                                    <field name="nfe40_dDesemb" />
+                                    <field name="nfe40_tpViaTransp" />
+                                    <field name="nfe40_tpIntermedio" />
+                                </group>
+                            </group>
+                            <field name="nfe40_adi" context="{'default_nfe40_adi_DI_id': active_id}" >
+                                <tree>
+                                    <field name="nfe40_nSeqAdic" />
+                                    <field name="nfe40_cFabricante" />
+                                    <field name="nfe40_vDescDI" />
+                                    <field name="nfe40_nDraw" />
+                                </tree>
+                                <form>
+                                    <group>
+                                        <field name="nfe40_nSeqAdic" />
+                                        <field name="nfe40_cFabricante" />
+                                        <field name="nfe40_vDescDI" />
+                                        <field name="nfe40_nDraw" />
+                                    </group>
+                                </form>
+                            </field>
+                        </form>
+                    </field> -->
+                </page>
+            </page>
+        </field>
+    </record>
+
+</odoo>

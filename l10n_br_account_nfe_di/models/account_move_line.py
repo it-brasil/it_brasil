@@ -5,22 +5,37 @@ from odoo import models, _, api, fields
 
 class AccountMoveLine(models.Model):
     _name = "account.move.line"
-    _inherit = [_name, "l10n_br_fiscal.document.line.mixin.methods"]
+    _inherit = [_name, "l10n_br_fiscal.document.line.mixin.methods", "nfe.40.di"]
     _inherits = {"l10n_br_fiscal.document.line": "fiscal_document_line_id"}
 
-    di_ids = fields.One2many(
-        'declaracao.importacao',
-        'aml_id',
-        string='Delcaração de Importação (NT 2011/004)',
-        copy=True
+    partner_acquirer_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Partner Acquirer"
     )
 
-    exp_ids = fields.One2many(
-        'detalhe.exportacao',
-        'aml_id',
-        string='Detalhe da exportação',
-        store=True, check_company=True, copy=True,
+    state_clearance_id = fields.Many2one(
+        comodel_name="res.country.state",
+        string="State Clearance",
     )
+
+    # nfe40_DI = fields.One2many(
+    #     "nfe.40.di",
+    #     string="Declaração importação",
+    # )
+
+    # di_ids = fields.One2many(
+    #     'declaracao.importacao',
+    #     'aml_id',
+    #     string='Delcaração de Importação (NT 2011/004)',
+    #     copy=True
+    # )
+
+    # exp_ids = fields.One2many(
+    #     'detalhe.exportacao',
+    #     'aml_id',
+    #     string='Detalhe da exportação',
+    #     store=True, check_company=True, copy=True,
+    # )
 
     # def write(self, values):
     #     dummy_doc = self.env.company.fiscal_dummy_id
@@ -222,15 +237,16 @@ class AccountMoveLineMethods(models.AbstractModel):
     def inject_fiscal_fields(
         self,
         view_arch,
-        view_ref="import_invoice.document_fiscal_line_mixin_form",
+        view_ref="l10n_br_nfe.nfe_document_line_form",
         xpath_mappings=None,
     ):
         """
         Injects common fiscal fields into view placeholder elements.
         Used for invoice line, sale order line, purchase order line...
         """
+        # import pudb;pu.db
         fiscal_view = self.env.ref(
-            "import_invoice.document_fiscal_line_mixin_form"
+            "l10n_br_nfe.nfe_document_line_form"
         ).sudo()
         fsc_doc = etree.fromstring(fiscal_view["arch"])
         doc = etree.fromstring(view_arch)
@@ -262,7 +278,7 @@ class AccountMoveLineMethods(models.AbstractModel):
                     # (deepcopy is required to inject fiscal nodes in possible
                     # next places)
                     replace_node = deepcopy(fiscal_nodes[0])
-                    target_node.getparent().replace(target_node, replace_node)
+                    # target_node.getparent().replace(target_node, replace_node)
                 else:
                     # append multiple fields to placeholder container
                     for fiscal_node in fiscal_nodes:
