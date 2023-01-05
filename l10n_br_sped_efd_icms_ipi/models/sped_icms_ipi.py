@@ -360,13 +360,13 @@ class SpedEfdIcmsIpi(models.Model):
 
         query = """
                     select distinct
-                        ie.id, ie.state
+                        ie.id, ie.state_edoc
                     from
-                        invoice_eletronic as ie
+                        l10n_br_fiscal_document as ie
                     where
                         %s
-                        and (ie.model in ('57','67'))
-                        and ie.state = 'done'
+                        and (ie.document_type in ('57','67'))
+                        and (ie.state_edoc = 'autorizada')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -993,7 +993,8 @@ class SpedEfdIcmsIpi(models.Model):
                         sum(it.icmsst_value) as VL_ICMS_ST,
                         it.icms_reduction as VL_RED_BC, 
                         sum(it.ipi_value) as VL_IPI, 
-                        sum(it.icmsfcp_value)
+                        sum(it.icmsfcp_value),
+                        it.icms_cst_code
                     from
                         l10n_br_fiscal_document ie
                     inner join
@@ -1039,18 +1040,17 @@ class SpedEfdIcmsIpi(models.Model):
             registro_c190.VL_IPI = id[9]
             lista.append(registro_c190)
 
+            if id[10]:
+                registro_c191 = registros.RegistroC191()
+                if id[11] in ('00','10','20','51','70','90'):
+                    registro_c191.VL_FCP_OP = id[10]
+                if id[11] in ('10','30','70','90'):
+                    registro_c191.VL_FCP_ST = 0.0
+                if id[11] == '60':
+                    registro_c191.VL_FCP_RET = id[10]
+                lista.append(registro_c191)
 
-            
             """
-            registro_c191 = registros.RegistroC191()
-            if id[11] in ('00','10','20','51','70','90'):
-                registro_c191.VL_FCP_OP = id[10]
-            if id[11] in ('10','30','70','90'):
-                registro_c191.VL_FCP_ST = 0.0
-            if id[11] == '60':
-                registro_c191.VL_FCP_RET = id[10]
-            lista.append(registro_c191)
-            
             registro_c195 = registros.RegistroC195()
             registro_c195.COD_OBS = ''
             registro_c195.TXT_COMPL = ''
@@ -1084,7 +1084,8 @@ class SpedEfdIcmsIpi(models.Model):
     # transporte
     def query_registroD100(self, cte):
         lista = []
-        cte_ids = self.env['invoice.eletronic'].browse(cte)
+        import pudb;pu.db
+        cte_ids = self.env['l10n_br_fiscal.document'].browse(cte)
         for cte in cte_ids:
             registro_d100 = registros.RegistroD100()
             if cte.tipo_operacao == 'entrada':
@@ -1168,6 +1169,7 @@ class SpedEfdIcmsIpi(models.Model):
             item += 1
     """        
 
+    # TODO arrumar aqui
     # transporte - analitico
     def query_registroD190(self, nf):
         query = """
@@ -1221,18 +1223,22 @@ class SpedEfdIcmsIpi(models.Model):
         #SAIDA
         query = """
                 select  
-                    sum(COALESCE(it.icms_valor,0.0)) as VL_ICMS 
+                    sum(it.icms_value) as VL_ICMS 
                     from
-                        invoice_eletronic as ie
+                        l10n_br_fiscal_document as ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where
                         %s 
-                        and (ie.model in ('55','1','57','67'))
-                        and (ie.state = 'done')
-                        and ((substr(it.cfop, 1,1) in ('5','6','7')) or 
-                            (it.cfop = '1605'))
+                        and (ie.document_type in ('55','1','57','67'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ((substr(cfop.code, 1,1) in ('5','6','7'))
+                          or 
+                            (cfop.code = '1605'))
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1250,18 +1256,21 @@ class SpedEfdIcmsIpi(models.Model):
         #ENTRADA
         query = """
                 select  
-                    sum(COALESCE(it.icms_valor,0.0)) as VL_ICMS 
+                    sum(it.icms_value) as VL_ICMS 
                     from
-                        invoice_eletronic as ie
+                        l10n_br_fiscal_document as ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where
                         %s    
-                        and (ie.model in ('55','1','57','67'))
-                        and (ie.state = 'done')
-                        and (((substr(it.cfop, 1,1) in ('1','2','3')) 
-                        and it.cfop not in ('1605')) or (it.cfop = '5605'))
+                        and (ie.document_type in ('55','1','57','67'))
+                        and (ie.state_edoc = 'autorizada')
+                        and (((substr(cfop.code, 1,1) in ('1','2','3')) 
+                        and cfop.code not in ('1605')) or (cfop.code = '5605'))
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
