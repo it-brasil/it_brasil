@@ -6,7 +6,7 @@
     "summary": """ Sped EFD ICMS/IPI - com localização: OCA/l10n-brazil """,
     "version": "14.0.1.0.0",
     "category": "Localisation",
-    "author": 'Carlos R. Silveria, ATSti Solucoes',
+    "author": 'Carlos R. Silveira, ATSti Solucoes',
     'website': 'http://www.atsti.com.br',
     'license': 'AGPL-3',
     'contributors': [

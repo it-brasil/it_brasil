@@ -903,10 +903,9 @@ class SpedEfdIcmsIpi(models.Model):
                     where
                         ie.id = '%s'
                         and (ie.document_type in ('55','01'))
-                        and ie.state in ('done')
                         and (ie.state_edoc = 'autorizada')
-                        and ((ie.valor_icms_uf_dest > 0) or 
-                        (ie.valor_icms_uf_remet > 0))
+                        and ((ie.amount_icms_destination_value > 0) or 
+                        (ie.amount_icms_origin_value > 0))
                     group by ie.fiscal_operation_type
                 """ % (nf)
         self._cr.execute(query)
@@ -927,17 +926,18 @@ class SpedEfdIcmsIpi(models.Model):
 
     def query_registroC170(self, nf):
         lista = []
-        nfe_line = self.env['l10n_br_fiscal.document.line'].search_read([
+        nfe_line = self.env['l10n_br_fiscal.document.line'].search([
                 ('document_id','=', nf),
                 ], order='nfe40_nItem, id')
         n_item = 1
+        # import pudb;pu.db
         for item in nfe_line:
             registro_c170 = registros.RegistroC170()
             # saida
             registro_c170.NUM_ITEM = str(item.nfe40_nItem or n_item)
             registro_c170.COD_ITEM = item.product_id.default_code
             registro_c170.DESCR_COMPL = self.limpa_caracteres(item.name.strip())
-            registro_c170.QTD = self.transforma_valor(item.fiscl_quantity)
+            registro_c170.QTD = self.transforma_valor(item.fiscal_quantity)
             if item.uom_id.code.find('-') != -1:
                 unidade = item.uom_id.code[:item.uom_id.code.find('-')]
             else:
@@ -968,7 +968,7 @@ class SpedEfdIcmsIpi(models.Model):
             registro_c170.VL_BC_IPI = item.ipi_base
             registro_c170.ALIQ_IPI = item.ipi_percent
             registro_c170.VL_IPI = item.ipi_value
-            registro_c170.CST_PIS = item.pis_cst_cod
+            registro_c170.CST_PIS = item.pis_cst_code
             registro_c170.VL_BC_PIS = item.pis_base
             registro_c170.ALIQ_PIS = item.pis_percent
             registro_c170.VL_PIS = item.pis_value
@@ -983,42 +983,44 @@ class SpedEfdIcmsIpi(models.Model):
     def query_registroC190(self, nf):
         query = """
                 select distinct
-                        it.origem || it.icms_cst, it.cfop,
-                        COALESCE(it.icms_aliquota, 0.0) as ALIQUOTA ,
-                        sum(it.valor_liquido) as VL_OPR,
-                        sum(it.icms_base_calculo) as VL_BC_ICMS,
-                        sum(it.icms_valor) as VL_ICMS,
-                        sum(it.icms_st_base_calculo) as VL_BC_ICMS_ST,
-                        sum(it.icms_st_valor) as VL_ICMS_ST,
-                        case when (cast(it.icms_aliquota_reducao_base as integer) > 0) then
-                          sum((it.valor_liquido)-it.icms_base_calculo) else 0 end as VL_RED_BC, 
-                        sum(it.ipi_valor) as VL_IPI, 
-                        sum(it.icms_fcp_uf_dest), 
-                        it.icms_cst
+                        it.icms_origin || it.icms_cst_code,
+                        cfop.code,
+                        it.icms_percent,
+                        sum(it.amount_tax_included) as VL_OPR,
+                        sum(it.icms_base) as VL_BC_ICMS,
+                        sum(it.icms_value) as VL_ICMS,
+                        sum(it.icmsst_base) as VL_BC_ICMS_ST,
+                        sum(it.icmsst_value) as VL_ICMS_ST,
+                        it.icms_reduction as VL_RED_BC, 
+                        sum(it.ipi_value) as VL_IPI, 
+                        sum(it.icmsfcp_value)
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where    
-                        ie.model in ('55', '1')
-                        and ie.state = 'done'
+                        (ie.document_type in ('55','01'))
+                        and (ie.state_edoc = 'autorizada')
                         and ie.id = '%s'
                     group by 
-                        cast(it.icms_aliquota_reducao_base as integer),
-                        it.icms_cst,
-                        it.cfop,
-                        it.icms_aliquota,
-                        it.origem 
+                        it.icms_reduction,
+                        it.icms_origin,
+                        it.icms_cst_code,
+                        cfop.code,
+                        it.icms_percent
                     order by 1,2,3    
                 """ % (nf)
-        # PAREI AQUI
-        nfe_line = self.env['l10n_br_fiscal.document.line'].read_group([
-                ('document_id','=', nf),
-                ],
-                ['icms_origin', 'icms_cst_code', 'cfop_id', 'icms_percent',],
-                ['amount_tax_included']
-                , order='nfe40_nItem, id')
+        # TODO o group by anterior tinha aliquota_reducao_icms
+        # nfe_line = self.env['l10n_br_fiscal.document.line'].read_group([
+        #         ('document_id','=', nf),
+        #         ],
+        #         ['icms_cst_code', 'nfe40_CFOP', 'icms_percent','icms_origin'],
+        #         ['amount_tax_included', 'cfop_id', 'amount_total', 'icms_base']
+        # )
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
         lista = []
@@ -1036,6 +1038,9 @@ class SpedEfdIcmsIpi(models.Model):
             registro_c190.VL_RED_BC = id[8]
             registro_c190.VL_IPI = id[9]
             lista.append(registro_c190)
+
+
+            
             """
             registro_c191 = registros.RegistroC191()
             if id[11] in ('00','10','20','51','70','90'):
