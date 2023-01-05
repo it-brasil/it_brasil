@@ -1012,6 +1012,7 @@ class SpedEfdIcmsIpi(models.Model):
                         it.origem 
                     order by 1,2,3    
                 """ % (nf)
+        # PAREI AQUI
         nfe_line = self.env['l10n_br_fiscal.document.line'].read_group([
                 ('document_id','=', nf),
                 ],
