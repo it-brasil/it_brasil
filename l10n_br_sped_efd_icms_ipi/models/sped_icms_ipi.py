@@ -158,9 +158,10 @@ class SpedEfdIcmsIpi(models.Model):
         self.registro0000()
         if not self.log_faturamento:
             self.log_faturamento = 'Arquivo gerado com sucesso. <br />'
-        return {
-            "type": "ir.actions.do_nothing",
-        }
+        return None
+        # return {
+        #     "type": "ir.actions.do_nothing",
+        # }
 
     def versao(self):
         if self.date_start.year == 2018:
@@ -451,7 +452,7 @@ class SpedEfdIcmsIpi(models.Model):
         #arqxx = open('/opt/odoo/novo_arquivo.txt', 'w')
         #arqxx.write(arq.getstring())
         #arqxx.close()
-        self.sped_file = base64.encodestring(bytes(arq.getstring(), 'iso-8859-1'))        
+        self.sped_file = base64.encodebytes(bytes(arq.getstring(), 'iso-8859-1'))        
 
     def query_registro0150(self, periodo):
         # TODO pegando somente AUTORIZADA ,correto ???
@@ -1194,7 +1195,7 @@ class SpedEfdIcmsIpi(models.Model):
                         and ie.state_edoc = 'autorizada'
                         and ie.id = '%s'
                     group by 
-                        it.icms_aliquota_reducao_base,
+                        it.icms_reduction,
                         it.icms_percent,
                         it.icms_cst_code,
                         cfop.code,
@@ -1331,7 +1332,7 @@ class SpedEfdIcmsIpi(models.Model):
                 select distinct
                         rs.code
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
                         res_partner rp
                             on rp.id = ie.partner_id
@@ -1340,9 +1341,9 @@ class SpedEfdIcmsIpi(models.Model):
                             on rs.id = rp.state_id
                     where
                         %s
-                        and (ie.model in ('55','1'))
-                        and ie.state = 'done'
-                        and ie.valor_icmsst > 0
+                        and (ie.document_type in ('55','1'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ie.amount_icmsst_value > 0
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1358,10 +1359,9 @@ class SpedEfdIcmsIpi(models.Model):
 
     def query_registroE210(self, uf, periodo):
         query = """
-                select sum(ie.valor_icmsst),
-                       sum(ie.valor_br_icmsst)
+                select sum(ie.amount_icmsst_value)
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
                         res_partner rp
                             on rp.id = ie.partner_id
@@ -1370,9 +1370,9 @@ class SpedEfdIcmsIpi(models.Model):
                             on rs.id = rp.state_id
                     where
                         %s    
-                        and (ie.model in ('55','1'))
-                        and ie.state = 'done'
-                        and ie.valor_icmsst > 0
+                        and (ie.document_type in ('55','1'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ie.amount_icmsst_value > 0
                         and rs.code = '%s'
                 """ % (periodo, uf)
         self._cr.execute(query)
@@ -1403,7 +1403,7 @@ class SpedEfdIcmsIpi(models.Model):
                     select distinct 
                         rs.code, rp.state_id
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
                         res_partner as rp
                             on rp.id = ie.partner_id
@@ -1412,10 +1412,10 @@ class SpedEfdIcmsIpi(models.Model):
                             on rs.id = rp.state_id                            
                     where
                         %s
-                        and (ie.model in ('55','1'))
-                        and ie.state = 'done'
-                        and ((ie.valor_icms_uf_dest > 0) or 
-                        (ie.valor_icms_uf_remet > 0))
+                        and (ie.document_type in ('55','1'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ((ie.amount_icms_destination_value > 0) or 
+                        (ie.amount_icms_origin_value > 0))
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1442,12 +1442,12 @@ class SpedEfdIcmsIpi(models.Model):
             tipo_mov = '1'
             query = """
                     select 
-                        sum(ie.valor_icms_uf_dest) as icms_uf_dest,
+                        sum(ie.amount_icms_destination_value) as icms_uf_dest,
                         0,
-                        sum(ie.valor_icms_fcp_uf_dest) as fcp_uf_dest,
-                        ie.tipo_operacao
+                        sum(ie.amount_icmsfcp_value) as fcp_uf_dest,
+                        ie.fiscal_operation_type
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
                         res_partner as rp
                             on rp.id = ie.partner_id
@@ -1456,24 +1456,24 @@ class SpedEfdIcmsIpi(models.Model):
                             on rs.id = rp.state_id                                                        
                     where
                         %s
-                        and (ie.model in ('55','1'))
-                        and (ie.state = 'done'))
-                        and ((ie.valor_icms_uf_dest > 0) or 
-                        (ie.valor_icms_uf_remet > 0))
+                        and (ie.document_type in ('55','1'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ((ie.amount_icms_destination_value > 0) or 
+                        (ie.amount_icms_origin_value > 0))
                         and rs.code = '%s'
-                    group by ie.tipo_operacao
+                    group by ie.fiscal_operation_type
                 """ % (periodo, uf_dif)
         else:   
             # mesmo uf
             tipo_mov = '0'
             query = """
                     select 
-                        sum(ie.valor_icms_uf_remet) as icms_uf_remet,
+                        sum(ie.amount_icms_origin_value) as icms_uf_remet,
                         0, 
-                        sum(ie.valor_icms_fcp_uf_dest) as fcp_uf_dest,
-                        ie.tipo_operacao
+                        sum(ie.amount_icms_destination_value) as fcp_uf_dest,
+                        ie.fiscal_operation_type
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
                         res_partner as rp
                             on rp.id = ie.partner_id
@@ -1482,12 +1482,12 @@ class SpedEfdIcmsIpi(models.Model):
                             on rs.id = rp.state_id                                                        
                     where
                         %s
-                        and (ie.model in ('55','1'))
-                        and (ie.state = 'done'))
-                        and ((ie.valor_icms_uf_dest > 0) or 
-                        (ie.valor_icms_uf_remet > 0))
+                        and (ie.document_type in ('55','1'))
+                        and (ie.state_edoc = 'autorizada')
+                        and ((ie.amount_icms_destination_value > 0) or 
+                        (ie.amount_icms_origin_value > 0))
                         and rs.code = '%s'
-                    group by ie.tipo_operacao
+                    group by ie.fiscal_operation_type
                 """ % (periodo, uf_informante)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1521,7 +1521,8 @@ class SpedEfdIcmsIpi(models.Model):
         registro_e316 = registros.RegistroE316()
         if not self.data_vencimento_e316:
             raise UserError('Erro, a data de vencimento (E-316) não informada.')
-        
+        import pudb;pu.db
+        mes_ref = f"{str(self.date_start.month).zfill(2), str(self.date_start.month).year}"
         for id in query_resposta:
             registro_e316.COD_OR = self.cod_obrigacao
             registro_e316.VL_OR = id[0]+id[2]
@@ -1531,128 +1532,120 @@ class SpedEfdIcmsIpi(models.Model):
             registro_e316.IND_PROC = ''
             registro_e316.PROC = ''
             registro_e316.TXT_COMPL = ''
-            registro_e316.MES_REF = data
+            registro_e316.MES_REF = mes_ref
         lista.append(registro_e316)
         return lista
 
     # remover se funcionou acima
-    def query_registroE316(self, uf_informante, uf_dif):
-        if uf_informante != uf_dif:
-            tipo_mov = '1'
-            query = """
-                    select 
-                        sum(d.valor_icms_uf_dest) as icms_uf_dest,
-                        0,
-                        sum(d.valor_icms_fcp_uf_dest) as fcp_uf_dest,
-                        fp.fiscal_type
-                    from
-                        account_invoice as d
-                    inner join
-                        invoice_eletronic ie
-                            on ie.invoice_id = d.id
-                    inner join
-                        res_partner as rp
-                            on rp.id = d.partner_id
-                    inner join
-                        res_country_state as rs
-                            on rs.id = rp.state_id                                                        
-                    left join     
-                        br_account_fiscal_document fd
-                            on fd.id = d.product_document_id  
-                    inner join 
-                        account_fiscal_position fp 
-                            on d.fiscal_position_id = fp.id
-                    where
-                        ((fd.code='55') or (d.nfe_modelo = '55') or (d.nfe_modelo = '1'))
-                        and d.state in ('open','paid')
-                        and ((ie.state is null) or (ie.state = 'done'))
-                        and d.fiscal_position_id is not null 
-                        and ((d.valor_icms_uf_dest > 0) or 
-                        (d.valor_icms_uf_remet > 0))
-                        and rs.code = '%s'
-                        and %s
-                    group by fp.fiscal_type
-                """ % (uf_dif, periodo)
-        else:   
-            # mesmo uf
-            tipo_mov = '0'
-            query = """
-                    select 
-                        sum(d.valor_icms_uf_remet) as icms_uf_remet,
-                        0, 
-                        sum(d.valor_icms_fcp_uf_dest) as fcp_uf_dest,
-                        fp.fiscal_type
-                    from
-                        account_invoice as d
-                    inner join
-                        invoice_eletronic ie
-                            on ie.invoice_id = d.id
-                    inner join
-                        res_partner as rp
-                            on rp.id = d.partner_id
-                    inner join
-                        res_country_state as rs
-                            on rs.id = rp.state_id                                                        
-                    left join     
-                        br_account_fiscal_document fd
-                            on fd.id = d.product_document_id  
-                    inner join 
-                        account_fiscal_position fp 
-                            on d.fiscal_position_id = fp.id
-                    where
-                        ((fd.code='55') or (d.nfe_modelo = '55') or (d.nfe_modelo = '1'))
-                        and d.state in ('open','paid')
-                        and ((ie.state is null) or (ie.state = 'done'))
-                        and d.fiscal_position_id is not null 
-                        and ((d.valor_icms_uf_dest > 0) or 
-                        (d.valor_icms_uf_remet > 0))
-                        and %s
-                    group by fp.fiscal_type
-                """ % (periodo)
-        """
-        self._cr.execute(query)
-        query_resposta = self._cr.fetchall()
-        registro_e316 = registros.RegistroE316()
-        lista = []
-        data = self.data_vencimento_e316
-        data = str(data.month).zfill(2) + str(data.year)
+    # def query_registroE316(self, uf_informante, uf_dif):
+    #     if uf_informante != uf_dif:
+    #         tipo_mov = '1'
+    #         query = """
+    #                 select 
+    #                     sum(d.amount_icms_destination_value) as icms_uf_dest,
+    #                     0,
+    #                     sum(d.amount_icms_destination_value) as fcp_uf_dest,
+    #                     ie.fiscal_operation_type
+    #                 from
+    #                     l10n_br_fiscal_document ie
+    #                 inner join
+    #                     res_partner as rp
+    #                         on rp.id = d.partner_id
+    #                 inner join
+    #                     res_country_state as rs
+    #                         on rs.id = rp.state_id                                                        
+    #                 where
+    #                     (ie.document_type in ('55','1'))
+    #                     and (ie.state_edoc = 'autorizada') 
+    #                     and ((d.amount_icms_destination_value > 0) or 
+    #                     (d.amount_icms_destination_value > 0))
+    #                     and rs.code = '%s'
+    #                     and %s
+    #                 group by fp.fiscal_operation_type
+    #             """ % (uf_dif, periodo)
+    #     else:   
+    #         # mesmo uf
+    #         tipo_mov = '0'
+    #         query = """
+    #                 select 
+    #                     sum(d.valor_icms_uf_remet) as icms_uf_remet,
+    #                     0, 
+    #                     sum(d.valor_icms_fcp_uf_dest) as fcp_uf_dest,
+    #                     fp.fiscal_type
+    #                 from
+    #                     account_invoice as d
+    #                 inner join
+    #                     invoice_eletronic ie
+    #                         on ie.invoice_id = d.id
+    #                 inner join
+    #                     res_partner as rp
+    #                         on rp.id = d.partner_id
+    #                 inner join
+    #                     res_country_state as rs
+    #                         on rs.id = rp.state_id                                                        
+    #                 left join     
+    #                     br_account_fiscal_document fd
+    #                         on fd.id = d.product_document_id  
+    #                 inner join 
+    #                     account_fiscal_position fp 
+    #                         on d.fiscal_position_id = fp.id
+    #                 where
+    #                     ((fd.code='55') or (d.nfe_modelo = '55') or (d.nfe_modelo = '1'))
+    #                     and d.state in ('open','paid')
+    #                     and ((ie.state is null) or (ie.state = 'done'))
+    #                     and d.fiscal_position_id is not null 
+    #                     and ((d.valor_icms_uf_dest > 0) or 
+    #                     (d.valor_icms_uf_remet > 0))
+    #                     and %s
+    #                 group by fp.fiscal_type
+    #             """ % (periodo)
+    #     """
+    #     self._cr.execute(query)
+    #     query_resposta = self._cr.fetchall()
+    #     registro_e316 = registros.RegistroE316()
+    #     lista = []
+    #     data = self.data_vencimento_e316
+    #     data = str(data.month).zfill(2) + str(data.year)
 
-        if not self.data_vencimento_e316:
-            raise UserError('Erro, a data de vencimento (E-316) não informada.')
+    #     if not self.data_vencimento_e316:
+    #         raise UserError('Erro, a data de vencimento (E-316) não informada.')
         
-        for id in query_resposta:
-            registro_e316.COD_OR = self.cod_obrigacao
-            registro_e316.VL_OR = self.transforma_valor(id[0]+id[2])
-            registro_e316.DT_VCTO = self.data_vencimento_e316
-            registro_e316.COD_REC = self.cod_receita
-            registro_e316.NUM_PROC = ''
-            registro_e316.IND_PROC = ''
-            registro_e316.PROC = ''
-            registro_e316.TXT_COMPL = ''
-            registro_e316.MES_REF = data
+    #     for id in query_resposta:
+    #         registro_e316.COD_OR = self.cod_obrigacao
+    #         registro_e316.VL_OR = self.transforma_valor(id[0]+id[2])
+    #         registro_e316.DT_VCTO = self.data_vencimento_e316
+    #         registro_e316.COD_REC = self.cod_receita
+    #         registro_e316.NUM_PROC = ''
+    #         registro_e316.IND_PROC = ''
+    #         registro_e316.PROC = ''
+    #         registro_e316.TXT_COMPL = ''
+    #         registro_e316.MES_REF = data
             
-        lista.append(registro_e316)
-        return lista
-        """
+    #     lista.append(registro_e316)
+    #     return lista
+    #     """
         
     def query_registroE510(self, periodo):
         query = """
                 select distinct
-                        it.ipi_cst,
-                        it.cfop,
-                        sum(it.ipi_base_calculo) as VL_BC_IPI,
-                        sum(it.ipi_valor) as VL_IPI
+                        it.ipi_cst_code,
+                        cfop.code,
+                        sum(it.ipi_base) as VL_BC_IPI,
+                        sum(it.ipi_value) as VL_IPI
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where    
                         %s
-                        and (ie.model in ('55', '1'))
-                        and (ie.state = 'done')
-                    group by it.ipi_cst,
-                        it.cfop
+                        and (ie.document_type in ('55','01'))
+                        and (ie.state_edoc = 'autorizada')
+                    group by it.ipi_cst_code,
+                        cfop.code
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1671,17 +1664,20 @@ class SpedEfdIcmsIpi(models.Model):
     def query_registroE520(self, periodo):
         query = """
                 select 
-                       sum(COALESCE(ie.valor_ipi,0.0)) as VL_IPI
+                       sum(COALESCE(ie.amount_ipi_value,0.0)) as VL_IPI
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where    
                         %s
-                        and (ie.model in ('55', '1'))
-                        and (ie.state = 'done')
-                        and substr(it.cfop, 1,1) in ('5','6')
+                        and (ie.document_type in ('55','01'))
+                        and (ie.state_edoc = 'autorizada')
+                        and substr(cfop.code, 1,1) in ('5','6')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1700,17 +1696,20 @@ class SpedEfdIcmsIpi(models.Model):
         registro_E520.VL_OC_IPI = '0'
         query = """
                 select 
-                       sum(COALESCE(ie.valor_ipi,0.0)) as VL_IPI
+                       sum(COALESCE(ie.amount_ipi_value,0.0)) as VL_IPI
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document ie
                     inner join
-                        invoice_eletronic_item it
-                        on it.invoice_eletronic_id = ie.id
+                        l10n_br_fiscal_document_line it
+                        on it.document_id = ie.id
+                    inner join
+                        l10n_br_fiscal_cfop cfop
+                        on it.cfop_id = cfop.id
                     where    
                         %s
-                        and (ie.model in ('55', '1'))
-                        and (ie.state = 'done')
-                        and substr(it.cfop, 1,1) in ('1','2','3')
+                        and (ie.document_type in ('55','01'))
+                        and (ie.state_edoc = 'autorizada')
+                        and substr(cfop.code, 1,1) in ('1','2','3')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -1766,7 +1765,7 @@ class SpedEfdIcmsIpi(models.Model):
         resposta_inv = product.search([])
         for inv in resposta_inv:
             if inv.qty_available > 0.0 and \
-                inv.l10n_br_sped_type in ('00','01','02','03','04','05','06','10'):
+                inv.fiscal_type in ('00','01','02','03','04','05','06','10'):
                 registro_K200 = RegistroK200()                                                                                                           
                 registro_K200.DT_EST = self.date_end
                 registro_K200.COD_ITEM = inv.default_code
