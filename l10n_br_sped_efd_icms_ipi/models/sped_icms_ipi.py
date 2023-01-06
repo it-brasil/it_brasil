@@ -170,8 +170,12 @@ class SpedEfdIcmsIpi(models.Model):
             return '013'
         elif self.date_start.year == 2020:
             return '014'
-        else:
+        elif self.date_start.year == 2021:
             return '015'
+        elif self.date_start.year == 2022:
+            return '016'
+        else:
+            return '017'
 
     def limpa_caracteres(self, data):
         if data:
@@ -198,7 +202,7 @@ class SpedEfdIcmsIpi(models.Model):
 
     def registro0000(self):
         arq = ArquivoDigital()
-        cod_mun = '%s%s' %(self.company_id.state_id.ibge_code, self.company_id.city_id.ibge_code)        
+        cod_mun = self.company_id.city_id.ibge_code
         arq._registro_abertura.COD_VER = self.versao()
         arq._registro_abertura.COD_FIN = self.tipo_arquivo
         arq._registro_abertura.DT_INI = self.date_start
@@ -346,7 +350,7 @@ class SpedEfdIcmsIpi(models.Model):
                 for item_lista in self.query_registroC101(nf):
                     arq.read_registro(self.junta_pipe(item_lista))
             # TODO C110 - Inf. Adicional
-            if id[2] == "company":
+            if id[2] == "partner":
                 for item_lista in self.query_registroC170(nf):
                     arq.read_registro(self.junta_pipe(item_lista))
 
@@ -473,7 +477,7 @@ class SpedEfdIcmsIpi(models.Model):
             participante = self.env['res.partner'].browse(id[0])
             registro_0150 = registros.Registro0150()
             registro_0150.COD_PART = str(participante.id)
-            registro_0150.NOME = participante.legal_name or participante.name
+            registro_0150.NOME = participante.legal_name[:100] or participante.name[:100]
             cod_pais = participante.country_id.bc_code
             registro_0150.COD_PAIS = cod_pais
             cpnj_cpf = self.limpa_formatacao(participante.cnpj_cpf)
@@ -488,14 +492,18 @@ class SpedEfdIcmsIpi(models.Model):
             else:
                 registro_0150.COD_MUN = "9999999"
             registro_0150.SUFRAMA = self.limpa_formatacao(participante.suframa)
-            registro_0150.END = participante.street
-            registro_0150.NUM = participante.street_number
+            registro_0150.END = ""
+            if participante.street:
+                registro_0150.END = participante.street[:60]
+            registro_0150.NUM = ""
+            if participante.street_number:
+                registro_0150.NUM = participante.street_number[:10]
             registro_0150.COMPL = ""
             if participante.street2:
-                registro_0150.COMPL = str(participante.street2.split())
+                registro_0150.COMPL = str(participante.street2.split())[:60]
             registro_0150.BAIRRO = ""
             if participante.district:
-                registro_0150.BAIRRO = str(participante.district.split())
+                registro_0150.BAIRRO = str(participante.district.split())[:60]
             lista.append(registro_0150)
         return lista
 
@@ -745,14 +753,16 @@ class SpedEfdIcmsIpi(models.Model):
             lista.append(registro_0205)
         return lista
 
+    # TODO Não podem ser informados GTINs iguais para fatores de conversões de produtos 
     def query_registro0220(self, ITEM, periodo):
         query = """
             select distinct
-                   sum(aml.quantity) as qtde
-                   ,sum(aml.fiscal_quantity) as qtde_fiscal
-                   ,TRIM(uom.code)
-                   ,aml.product_id
-                   ,TRIM(uot.code)
+                    sum(aml.quantity) as qtde
+                    ,sum(aml.fiscal_quantity) as qtde_fiscal
+                    ,TRIM(uom.code)
+                    ,aml.product_id
+                    ,TRIM(uot.code)
+                    ,p.barcode
                     from
                         l10n_br_fiscal_document as ie
                     inner join
@@ -774,7 +784,7 @@ class SpedEfdIcmsIpi(models.Model):
                         and (ie.issuer = 'company')
                         and (aml.uom_id <> aml.uot_id)
                         and p.default_code = '%s'
-                        group by uom.code, aml.product_id, uot.code
+                        group by uom.code, aml.product_id, uot.code, p.barcode
                 """ % (periodo, ITEM)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -790,6 +800,8 @@ class SpedEfdIcmsIpi(models.Model):
             except:
                 msg_error = 'Erro, fator conversao : %s - %s' %(str(resposta[4]), str(conversao))
                 raise UserError(msg_error)
+            if resposta[5]:
+                registro_0220.COD_BARRA = resposta[5]
             lista.append(registro_0220)
         return lista
         
@@ -844,11 +856,11 @@ class SpedEfdIcmsIpi(models.Model):
             if nfe.state_edoc == "cancelada":
                 registro_c100.COD_SIT = "02"
                 cancel = True
-            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "normal":
+            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "1":
                 registro_c100.COD_SIT = "00"
-            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "complementar":
+            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "2":
                 registro_c100.COD_SIT = "06"
-            elif nfe.state_edoc == "denegada" and nfe.edoc_purpose == "normal":
+            elif nfe.state_edoc == "denegada" and nfe.edoc_purpose == "1":
                 registro_c100.COD_SIT = "04"
             elif nfe.state_edoc == "inutilizada":
                 registro_c100.COD_SIT = "05"
@@ -860,7 +872,7 @@ class SpedEfdIcmsIpi(models.Model):
             if nfe.document_key:
                 registro_c100.CHV_NFE = nfe.document_key
             registro_c100.NUM_DOC = self.limpa_formatacao(str(nfe.document_number))
-            if not cancel:
+            if not cancel and nfe.state_edoc != "inutilizada":
                 registro_c100.DT_DOC = nfe.document_date
                 registro_c100.DT_E_S = nfe.date_in_out
                 registro_c100.IND_PGTO = '1'
@@ -931,7 +943,6 @@ class SpedEfdIcmsIpi(models.Model):
                 ('document_id','=', nf),
                 ], order='nfe40_nItem, id')
         n_item = 1
-        # import pudb;pu.db
         for item in nfe_line:
             registro_c170 = registros.RegistroC170()
             # saida
