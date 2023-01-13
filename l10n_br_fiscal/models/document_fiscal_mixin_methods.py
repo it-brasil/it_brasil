@@ -99,6 +99,8 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
             self.comment_ids = self.fiscal_operation_id.comment_ids
 
     def _inverse_amount_freight(self):
+        if not self.active:
+            return
         for record in self.filtered(lambda doc: doc._get_amount_lines()):
             if (
                 record.delivery_costs == "total"
@@ -130,7 +132,7 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                         -1
                     ].freight_value = amount_freight_value - sum(
                         line.freight_value for line in record._get_amount_lines()[:-1]
-                    )
+                    )                
                 for line in record._get_amount_lines():
                     line._onchange_fiscal_taxes()
                 record._fields["amount_total"].compute_value(record)
@@ -144,6 +146,8 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                 )
 
     def _inverse_amount_insurance(self):
+        if not self.active:
+            return
         for record in self.filtered(lambda doc: doc._get_amount_lines()):
             if (
                 record.delivery_costs == "total"
@@ -189,6 +193,8 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
                 )
 
     def _inverse_amount_other(self):
+        if not self.active:
+            return
         for record in self.filtered(lambda doc: doc._get_amount_lines()):
             if (
                 record.delivery_costs == "total"
