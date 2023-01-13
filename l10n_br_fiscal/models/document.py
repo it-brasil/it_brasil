@@ -165,6 +165,7 @@ class Document(models.Model):
         inverse_name="document_id",
         string="Document Lines",
         copy=True,
+        limit=100,
         check_company=True,
     )
 
@@ -368,6 +369,7 @@ class Document(models.Model):
         "fiscal_line_ids.amount_tax_withholding",
     )
     def _compute_amount(self):
+        # import pudb;pu.db
         return super()._compute_amount()
 
     @api.model
@@ -404,6 +406,7 @@ class Document(models.Model):
 
     def _create_return(self):
         return_docs = self.env[self._name]
+        # import pudb;pu.db
         for record in self:
             fsc_op = record.fiscal_operation_id.return_fiscal_operation_id
             if not fsc_op:
