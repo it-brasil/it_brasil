@@ -15,9 +15,9 @@ class AccountMoveLine(models.Model):
 
     # @api.model
     # def _get_price_total_and_subtotal_model(self, price_unit, quantity, discount, currency, product, partner, taxes, move_type):
-    #     # import pudb;pu.db
+
     #     res = super()._get_price_total_and_subtotal_model(price_unit, quantity, discount, currency, product, partner, taxes, move_type)
-    #     # import pudb;pu.db
+
     #     line_discount_price_unit = price_unit * (1 - (discount / 100.0))
     #     subtotal = quantity * line_discount_price_unit
     #     # subtotal = subtotal + self.freight_value + self.insurance_value + self.other_value
@@ -78,7 +78,6 @@ class AccountMoveLine(models.Model):
             result['price_total'] = taxes_res['total_included']
 
             fol = self.env.context.get("fiscal_operation_line_id")
-            # import pudb;pu.db
             if operation_line:
                 fiscal_operation_type = operation_line.fiscal_operation_type or FISCAL_OUT
                 if (
@@ -108,7 +107,7 @@ class AccountMoveLine(models.Model):
     #     # dedutíveis os impostos contáveis deduvíveis são adicionados na linha
     #     # da movimentação/fatura.
 
-    #     import pudb;pu.db
+
     #     # na nota importacao, ignorar deductible
     #     deductible=True
     #     fiscal_operation_type = self.fiscal_operation_line_id.fiscal_operation_type or FISCAL_OUT

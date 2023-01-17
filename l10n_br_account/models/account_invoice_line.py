@@ -152,6 +152,7 @@ class AccountMoveLine(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         dummy_doc = self.env.company.fiscal_dummy_id
+        # dummy_line = self.env['l10n_br_fiscal.document.line'].search([('document_id', '=', dummy_doc.id)], limit=1)
         dummy_line = fields.first(dummy_doc.fiscal_line_ids)
         for values in vals_list:
             fiscal_doc_id = (
@@ -191,6 +192,7 @@ class AccountMoveLine(models.Model):
     def write(self, values):
         dummy_doc = self.env.company.fiscal_dummy_id
         dummy_line = fields.first(dummy_doc.fiscal_line_ids)
+        # dummy_line = self.env['l10n_br_fiscal.document.line'].search([('document_id', '=', dummy_doc.id)], limit=1)
         non_dummy = self.filtered(lambda l: l.fiscal_document_line_id != dummy_line)
         if values.get("move_id") and len(non_dummy) == len(self):
             # we can write the document_id in all lines
@@ -226,6 +228,7 @@ class AccountMoveLine(models.Model):
     def unlink(self):
         dummy_doc = self.env.company.fiscal_dummy_id
         dummy_line = fields.first(dummy_doc.fiscal_line_ids)
+        # dummy_line = self.env['l10n_br_fiscal.document.line'].search([('document_id', '=', dummy_doc.id)], limit=1)
         unlink_fiscal_lines = self.env["l10n_br_fiscal.document.line"]
         for inv_line in self:
             if not inv_line.exists():

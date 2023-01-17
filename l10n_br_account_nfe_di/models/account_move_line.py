@@ -1,27 +1,121 @@
 
 from copy import deepcopy
-from lxml import etree
+from xml import etree
 from odoo import models, _, api, fields
 
-class AccountMoveLine(models.Model):
-    _name = "account.move.line"
-    _inherit = [_name, "l10n_br_fiscal.document.line.mixin.methods", "nfe.40.di"]
-    _inherits = {"l10n_br_fiscal.document.line": "fiscal_document_line_id"}
+TPVIATRANSP_DI = [
+    ("1", "1 - Maritima"),
+    ("2", "2 - Fluvial"),
+    ("3", "3 - Lacustre"),
+    ("4", "4 - Aerea"),
+    ("5", "5 - Postal"),
+    ("6", "6 - Ferroviaria"),
+    ("7", "7 - Rodoviaria"),
+    ("8", "8 - Conduto/Rede Transmissão"),
+    ("9", "9 - Meios Próprios"),
+    ("10", "10 - Entrada/Saída Ficta"),
+    ("11", "11 - Courier"),
+    ("12", "12 - Em mãos"),
+    ("13", "13 - Por reboque"),
+]
 
-    partner_acquirer_id = fields.Many2one(
-        comodel_name="res.partner",
-        string="Partner Acquirer"
-    )
+TPINTERMEDIO_DI = [
+    ("1", "1 - Por conta própria"),
+    ("2", "2 - Por conta e ordem"),
+    ("3", "3 - Encomenda"),
+]
+
+class NFe40DI(models.AbstractModel):
+    _inherit = "nfe.40.di"
+
+    # aml_id = fields.Many2one(
+    #     "account.move.line",
+    #     required=True,
+    #     string="AML",
+    # )
 
     state_clearance_id = fields.Many2one(
         comodel_name="res.country.state",
         string="State Clearance",
     )
 
-    # nfe40_DI = fields.One2many(
-    #     "nfe.40.di",
-    #     string="Declaração importação",
+    nfe40_UFDesemb = fields.Char(
+        related="state_clearance_id.code",
+    )
+
+    nfe40_tpViaTransp = fields.Selection(
+        selection=TPVIATRANSP_DI,
+    )
+
+    nfe40_tpIntermedio = fields.Selection(
+        selection=TPINTERMEDIO_DI,
+    )
+
+    partner_acquirer_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Partner Acquirer"
+    )
+
+    nfe40_CNPJ = fields.Char(
+        related="partner_acquirer_id.nfe40_CNPJ",
+    )
+
+    nfe40_UFTerceiro = fields.Char(
+        related="partner_acquirer_id.state_id.code",
+    )
+
+    @api.model_create_multi
+    def create(self, values):
+        # import pudb;pu.db
+        return super().create(values)
+
+class AccountMoveLine(models.Model):
+    _name = "account.move.line"
+    _inherit = [_name, "l10n_br_fiscal.document.line.mixin.methods"]
+    _inherits = {"l10n_br_fiscal.document.line": "fiscal_document_line_id"}
+
+    nfe40_DI = fields.One2many(
+        comodel_name="nfe.40.di",
+        inverse_name="nfe40_DI_prod_id",
+        string="Declaração importação",
+        limit=30,
+    )
+
+    # state_clearance_id = fields.Many2one(
+    #     comodel_name="res.country.state",
+    #     string="UF desembaraço aduaneiro",
     # )
+
+    # nfe40_UFDesemb = fields.Char(
+    #     related="state_clearance_id.code",
+    #     string="UF desembaraço aduaneiro",
+    # )
+
+    # partner_acquirer_id = fields.Many2one(
+    #     comodel_name="res.partner",
+    #     string="Adquirente/Encomendante",
+    # )
+
+    # nfe40_CNPJ = fields.Char(
+    #     related="partner_acquirer_id.nfe40_CNPJ",
+    #     string="CNPJ adquirente/encomendante",
+    # )
+
+    # nfe40_UFTerceiro = fields.Char(
+    #     related="partner_acquirer_id.state_id.code",
+    #     string="UF adquirente/encomendante",
+    # )
+
+    # nfe40_DI_prod_id = fields.Many2one(
+    #     comodel_name="product.product",
+    #     related="product_id",
+    #     string="Item",
+    # )
+
+    # nfe40_DI_prod_id = fields.Many2one(
+    #     "nfe.40.prod",
+    # )
+
 
     # di_ids = fields.One2many(
     #     'declaracao.importacao',
@@ -128,7 +222,8 @@ class DeclaracaoImportacao(models.Model):
         'di_id',
         string='Adições (NT 2011/004',
         store=True, check_company=True, copy=True,
-        )
+        limit=30,
+    )
 
     def write(self, values):
         return super().write(values)

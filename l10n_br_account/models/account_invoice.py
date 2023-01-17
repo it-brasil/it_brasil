@@ -6,8 +6,6 @@
 
 
 from odoo import _, api, fields, models
-from odoo.tools import float_is_zero
-
 from odoo.exceptions import UserError
 
 from odoo.addons.l10n_br_fiscal.constants.fiscal import (
@@ -254,6 +252,7 @@ class AccountMove(models.Model):
             if not vals.get("document_type_id"):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         return vals_list
+
     @api.model_create_multi
     def create(self, values):
         for vals in values:
@@ -298,8 +297,8 @@ class AccountMove(models.Model):
         default = default or {}
         if self.document_type_id:
             default["fiscal_line_ids"] = False
-        else:
-            default["fiscal_line_ids"] = self.line_ids[0]
+        # else:
+        #     default["fiscal_line_ids"] = self.line_ids[0].id
         return super().copy(default)
 
     @api.model

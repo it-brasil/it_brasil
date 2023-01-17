@@ -290,6 +290,7 @@ class DocumentWorkflow(models.AbstractModel):
                     self.document_number = self.document_serie_id.next_seq_number()
 
             if not self.operation_name:
+                # import pudb;pu.db
                 self.operation_name = ", ".join(
                     [
                         line.name

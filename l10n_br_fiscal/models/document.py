@@ -406,7 +406,6 @@ class Document(models.Model):
 
     def _create_return(self):
         return_docs = self.env[self._name]
-        # import pudb;pu.db
         for record in self:
             fsc_op = record.fiscal_operation_id.return_fiscal_operation_id
             if not fsc_op:

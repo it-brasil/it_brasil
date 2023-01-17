@@ -780,6 +780,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
     def _onchange_fiscal_taxes(self):
         self._update_fiscal_tax_ids(self._get_all_tax_id_fields())
         self._update_taxes()
+        pass
 
     @api.model
     def _update_fiscal_quantity(self, product_id, price, quantity, uom_id, uot_id):

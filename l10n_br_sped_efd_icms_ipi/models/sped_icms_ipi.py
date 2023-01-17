@@ -509,6 +509,7 @@ class SpedEfdIcmsIpi(models.Model):
 
     def query_registro0190(self, periodo):
         # Unidade de medida
+        # TODO incluir unidade dos itens 0220 de notas de saida q nao estao no 0200
         query = """
                     select distinct
                           uom.code,
@@ -525,7 +526,7 @@ class SpedEfdIcmsIpi(models.Model):
                         %s
                         and (ie.document_type in ('55','01'))
                         and (ie.state_edoc = 'autorizada') 
-						and (ie.issuer = 'company')
+						and (ie.issuer = 'partner')
                     order by 1
                 """ % (periodo)
         self._cr.execute(query)
@@ -598,7 +599,7 @@ class SpedEfdIcmsIpi(models.Model):
                 %s
                 and (ie.document_type in ('55','01'))
                 and (ie.state_edoc = 'autorizada')
-                and (ie.issuer = 'company')
+                and (ie.issuer = 'partner')
             """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -753,7 +754,6 @@ class SpedEfdIcmsIpi(models.Model):
             lista.append(registro_0205)
         return lista
 
-    # TODO Não podem ser informados GTINs iguais para fatores de conversões de produtos 
     def query_registro0220(self, ITEM, periodo):
         query = """
             select distinct
@@ -800,8 +800,9 @@ class SpedEfdIcmsIpi(models.Model):
             except:
                 msg_error = 'Erro, fator conversao : %s - %s' %(str(resposta[4]), str(conversao))
                 raise UserError(msg_error)
-            if resposta[5]:
-                registro_0220.COD_BARRA = resposta[5]
+            # TODO Não podem ser informados GTINs iguais para fatores de conversões de produtos 
+            # if resposta[5]:
+            #     registro_0220.COD_BARRA = resposta[5]
             lista.append(registro_0220)
         return lista
         
@@ -815,7 +816,7 @@ class SpedEfdIcmsIpi(models.Model):
                     %s
                     and (ie.document_type in ('55','01'))
                     and (ie.state_edoc in ('autorizada', 'cancelada')) 
-                    and (ie.issuer = 'company')
+                    and (ie.issuer = 'partner')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -840,6 +841,9 @@ class SpedEfdIcmsIpi(models.Model):
             # removendo Emissao de Terceiros canceladas
             if nfe.issuer == "partner" and nfe.state_edoc == "cancelada":
                 return True
+            # Ajustes SINIEF 34/2021 e 38/2021 (01/12/2021)
+            if nfe.state_edoc == "denegada":
+                return True
             cancel = False
             # Obrigatorio para todos STATE_EDOC, exceto a CHV_NF-e nao obrig. INUTLIZADA
             # REG, IND_OPER,IND_EMIT, COD_MOD, COD_SIT, SER, NUM_DOC e CHV_NF-e
@@ -853,26 +857,30 @@ class SpedEfdIcmsIpi(models.Model):
             else:
                 registro_c100.IND_EMIT = "1"
             registro_c100.COD_MOD = nfe.document_type_id.code
+            registro_c100.SER = nfe.document_serie
+            if nfe.document_key:
+                registro_c100.CHV_NFE = nfe.document_key
+            registro_c100.NUM_DOC = self.limpa_formatacao(str(nfe.document_number))
             if nfe.state_edoc == "cancelada":
                 registro_c100.COD_SIT = "02"
                 cancel = True
-            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "1":
+            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose in ("1", "4"):
+                # Documento normal ou devolucao
                 registro_c100.COD_SIT = "00"
-            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose == "2":
+            elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose in ("2", "3"):
+                # Documento complementar/ajuste
                 registro_c100.COD_SIT = "06"
             elif nfe.state_edoc == "denegada" and nfe.edoc_purpose == "1":
                 registro_c100.COD_SIT = "04"
             elif nfe.state_edoc == "inutilizada":
                 registro_c100.COD_SIT = "05"
+                registro_c100.SER = ""
+                registro_c100.CHV_NFE = ""
             # if nfe.emissao_doc == '1' and not nfe.state == 'cancel' \
             #     and nfe.chave_nfe[6:20] != \
             #     self.limpa_formatacao(nfe.partner_id.company_id.cnpj_cpf):
             #     registro_c100.COD_SIT = '08'                    
-            registro_c100.SER = nfe.document_serie
-            if nfe.document_key:
-                registro_c100.CHV_NFE = nfe.document_key
-            registro_c100.NUM_DOC = self.limpa_formatacao(str(nfe.document_number))
-            if not cancel and nfe.state_edoc != "inutilizada":
+            if not cancel and nfe.state_edoc not in ("inutilizada", "inutilizada"):
                 registro_c100.DT_DOC = nfe.document_date
                 registro_c100.DT_E_S = nfe.date_in_out
                 registro_c100.IND_PGTO = '1'
