@@ -48,7 +48,9 @@ from sped.efd.icms_ipi.registros import Registro1010
 
 class SpedEfdIcmsIpi(models.Model):
     _name = "sped.efd.icms.ipi"
+    _inherit = ['portal.mixin', 'mail.thread', 'mail.activity.mixin']
     _description = "Cria o arquivo para o Sped ICMS / IPI"
+    _rec_name = "sped_file_name"
     _order = "date_start desc"
 
     date_start= fields.Date(string='Inicio de')
@@ -116,7 +118,7 @@ class SpedEfdIcmsIpi(models.Model):
         ('0', 'Industrial ou equiparado a industrial'),
         ('1', 'Outros'),
         ], string='Indicador tipo atividade', default='0')
-    log_faturamento = fields.Html('Log de Faturamento')
+    log_faturamento = fields.Text('Log de Faturamento', copy=False)
     company_id = fields.Many2one('res.company', string='Empresa', required=True,
         default=lambda self: self.env['res.company']._company_default_get('account.account'))
     sped_file = fields.Binary(string=u"Sped")
@@ -154,10 +156,8 @@ class SpedEfdIcmsIpi(models.Model):
     def create_file(self):
         if self.date_start > self.date_end:
             raise UserError('Erro, a data de início é maior que a data de encerramento!')
-        self.log_faturamento = 'Gerando arquivo .. <br />'
+        # self.log_faturamento = 'Gerando arquivo .. <br />'
         self.registro0000()
-        if not self.log_faturamento:
-            self.log_faturamento = 'Arquivo gerado com sucesso. <br />'
         return None
         # return {
         #     "type": "ir.actions.do_nothing",
@@ -341,23 +341,45 @@ class SpedEfdIcmsIpi(models.Model):
         query_resposta = self._cr.fetchall()
         lista = []
         cont = 1
+        c100_icms_credito = 0.0
+        c100_icms_debito = 0.0
+        c170_icms = 0.0
+        c190_icms = 0.0
+        msg_post = ""
         for id in query_resposta:
             if id[2] == "company" and id[1] == "cancelada":
                 continue
             nf = id[0]
             for item_lista in self.query_registroC100(nf):
+                # import pudb;pu.db
+                if item_lista.VL_ICMS:
+                    if item_lista.IND_OPER == "0" and id[1] == "autorizada":
+                        # Nota entrada
+                        c100_icms_credito += float(item_lista.VL_ICMS)
+                    if item_lista.IND_OPER == "1" and id[1] == "autorizada":
+                        # Nota saída
+                        c100_icms_debito += float(item_lista.VL_ICMS)
                 arq.read_registro(self.junta_pipe(item_lista))
                 for item_lista in self.query_registroC101(nf):
                     arq.read_registro(self.junta_pipe(item_lista))
+            
             # TODO C110 - Inf. Adicional
             if id[2] == "partner":
                 for item_lista in self.query_registroC170(nf):
+                    if item_lista.VL_ICMS:
+                        c170_icms += float(item_lista.VL_ICMS)
                     arq.read_registro(self.junta_pipe(item_lista))
+                # self.log_faturamento += f"c170-ICMS Value : {str(total_icms)}<br>"
 
             # import pudb;pu.db
             for item_lista in self.query_registroC190(nf):
+                if item_lista.VL_ICMS:
+                    c190_icms += float(item_lista.VL_ICMS)
                 arq.read_registro(self.junta_pipe(item_lista))
-
+        msg_post += f"C100-ICMS Value Crédito : {str(c100_icms_credito)}<br>"
+        msg_post += f"C100-ICMS Value Débito : {str(c100_icms_debito)}<br>"
+        msg_post += f"C170-ICMS Value : {str(c170_icms)}<br>"
+        msg_post += f"C190-ICMS Value : {str(c190_icms)}<br>"
                 
         # TODO BLOCO D - prestações ou contratações de serviços 
         # de comunicação, transporte interestadual e intermunicipa
@@ -395,7 +417,7 @@ class SpedEfdIcmsIpi(models.Model):
         registro_E100.DT_FIN = self.date_end
         arq._blocos['E'].add(registro_E100)
 
-        for item_lista in self.query_registroE110(periodo):
+        for item_lista in self.query_registroE110(c100_icms_credito, c100_icms_debito):
             arq.read_registro(self.junta_pipe(item_lista))  
         
         for item_lista in self.query_registroE200(periodo):
@@ -451,12 +473,19 @@ class SpedEfdIcmsIpi(models.Model):
             arq.read_registro(self.junta_pipe(item_lista))
         
         arq.prepare()
-        self.sped_file_name =  'Sped-%s_%s.txt' % (
-            str(dt.month).zfill(2), str(dt.year))
+        data_mod = datetime.now().strftime("%d%M%y%H%M")
+        mes_ano = self.date_start.strftime("%m%y").zfill(4)
+        self.sped_file_name = f"Sped-{mes_ano}-{data_mod}.txt"
+        msg_post = f"Arquivo gerado : {self.sped_file_name}."
         #arqxx = open('/opt/odoo/novo_arquivo.txt', 'w')
         #arqxx.write(arq.getstring())
         #arqxx.close()
-        self.sped_file = base64.encodebytes(bytes(arq.getstring(), 'iso-8859-1'))        
+        self.sped_file = base64.encodebytes(bytes(arq.getstring(), 'iso-8859-1'))
+        self.message_post(
+            body=msg_post,
+            subject=_('Geração do Sped Fiscal concluída!'),
+            message_type='notification'
+        )
 
     def query_registro0150(self, periodo):
         # TODO pegando somente AUTORIZADA ,correto ???
@@ -832,6 +861,7 @@ class SpedEfdIcmsIpi(models.Model):
     def transforma_valor(self, valor):
         #valor = ("%.2f" % (float(valor)))
         #return str(valor).replace('.', ',')
+        valor = round(valor, 2)
         return valor
 
     def query_registroC100(self, nf):
@@ -880,7 +910,7 @@ class SpedEfdIcmsIpi(models.Model):
             #     and nfe.chave_nfe[6:20] != \
             #     self.limpa_formatacao(nfe.partner_id.company_id.cnpj_cpf):
             #     registro_c100.COD_SIT = '08'                    
-            if not cancel and nfe.state_edoc not in ("inutilizada", "inutilizada"):
+            if not cancel and nfe.state_edoc not in ("inutilizada", "cancelada"):
                 registro_c100.DT_DOC = nfe.document_date
                 registro_c100.DT_E_S = nfe.date_in_out
                 registro_c100.IND_PGTO = '1'
@@ -902,7 +932,7 @@ class SpedEfdIcmsIpi(models.Model):
                 registro_c100.VL_DESC = nfe.amount_discount_value
                 registro_c100.VL_DOC  = nfe.amount_total
                 registro_c100.VL_BC_ICMS = nfe.amount_icms_base
-                registro_c100.VL_ICMS = nfe.amount_icms_value
+                registro_c100.VL_ICMS = self.transforma_valor(nfe.amount_icms_value)
                 registro_c100.VL_BC_ICMS_ST = nfe.amount_icmsst_base
                 registro_c100.VL_ICMS_ST = nfe.amount_icmsst_value
                 registro_c100.VL_IPI = nfe.amount_ipi_value
@@ -951,7 +981,7 @@ class SpedEfdIcmsIpi(models.Model):
                 ('document_id','=', nf),
                 ], order='nfe40_nItem, id')
         n_item = 1
-        for item in nfe_line:
+        for item in nfe_line:     
             registro_c170 = registros.RegistroC170()
             # saida
             registro_c170.NUM_ITEM = str(item.nfe40_nItem or n_item)
@@ -972,14 +1002,14 @@ class SpedEfdIcmsIpi(models.Model):
             try:
                 registro_c170.CST_ICMS = item.icms_origin + item.icms_cst_code
             except:
-                msg_err = 'Sem CST no Documento Fiscal %s. <br />' %(
+                msg_err = 'Sem CST no Documento Fiscal %s. \n' %(
                     str(item.product_id.default_code))
                 self.log_faturamento += msg_err
             registro_c170.CFOP = str(item.cfop_id.code)
             registro_c170.COD_NAT = str(item.fiscal_operation_id.id)
             registro_c170.VL_BC_ICMS = item.icms_base
             registro_c170.ALIQ_ICMS = item.icms_percent
-            registro_c170.VL_ICMS = item.icms_value
+            registro_c170.VL_ICMS = self.transforma_valor(item.icms_value)
             registro_c170.VL_BC_ICMS_ST = item.icmsst_base
             registro_c170.ALIQ_ST = item.icmsst_percent
             registro_c170.VL_ICMS_ST = item.icmsst_value
@@ -1059,7 +1089,6 @@ class SpedEfdIcmsIpi(models.Model):
             registro_c190.VL_RED_BC = id[8]
             registro_c190.VL_IPI = id[9]
             lista.append(registro_c190)
-
             if id[10]:
                 registro_c191 = registros.RegistroC191()
                 if id[11] in ('00','10','20','51','70','90'):
@@ -1238,81 +1267,99 @@ class SpedEfdIcmsIpi(models.Model):
             lista.append(registro_d190)
         return lista
 
-    def query_registroE110(self, periodo):
+    def query_registroE110(self, icms_credito, icms_debito):
         #SAIDA
-        query = """
-                select  
-                    sum(it.icms_value) as VL_ICMS 
-                    from
-                        l10n_br_fiscal_document as ie
-                    inner join
-                        l10n_br_fiscal_document_line it
-                        on it.document_id = ie.id
-                    inner join
-                        l10n_br_fiscal_cfop cfop
-                        on it.cfop_id = cfop.id
-                    where
-                        %s 
-                        and (ie.document_type in ('55','1','57','67'))
-                        and (ie.state_edoc = 'autorizada')
-                        and ((substr(cfop.code, 1,1) in ('5','6','7'))
-                          or 
-                            (cfop.code = '1605'))
-                """ % (periodo)
-        self._cr.execute(query)
-        query_resposta = self._cr.fetchall()
+        # query = 
+        #         select  
+        #             sum(it.icms_value) as VL_ICMS 
+        #             from
+        #                 l10n_br_fiscal_document as ie
+        #             inner join
+        #                 l10n_br_fiscal_document_line it
+        #                 on it.document_id = ie.id
+        #             inner join
+        #                 l10n_br_fiscal_cfop cfop
+        #                 on it.cfop_id = cfop.id
+        #             where
+        #                 %s 
+        #                 and (ie.document_type in ('55','1','57','67'))
+        #                 and (ie.state_edoc = 'autorizada')
+        #                 and ((substr(cfop.code, 1,1) in ('5','6','7'))
+        #                   or 
+        #                     (cfop.code = '1605'))
+        #          % (periodo)
+        # self._cr.execute(query)
+        # query_resposta = self._cr.fetchall()
+        # lista = []
+        # registro_E110 = RegistroE110()
+        # sld_transp = 0.0
+        # sld_icms = 0.0
+        # for id in query_resposta:
+        #     if not id[0]:
+        #         continue
+        #     registro_E110.VL_TOT_DEBITOS = id[0]
+        #     if id[0]:
+        #         sld_icms = id[0]
+        #         sld_transp = id[0]
+        # #ENTRADA
+        # query = 
+        #         select  
+        #             sum(it.icms_value) as VL_ICMS 
+        #             from
+        #                 l10n_br_fiscal_document as ie
+        #             inner join
+        #                 l10n_br_fiscal_document_line it
+        #                 on it.document_id = ie.id
+        #             inner join
+        #                 l10n_br_fiscal_cfop cfop
+        #                 on it.cfop_id = cfop.id
+        #             where
+        #                 %s    
+        #                 and (ie.document_type in ('55','1','57','67'))
+        #                 and (ie.state_edoc = 'autorizada')
+        #                 and (((substr(cfop.code, 1,1) in ('1','2','3')) 
+        #                 and cfop.code not in ('1605')) or (cfop.code = '5605'))
+        #          % (periodo)
+        # self._cr.execute(query)
+        # query_resposta = self._cr.fetchall()
+        # for id in query_resposta:
+
+        #     registro_E110.VL_TOT_CREDITOS = self.transforma_valor(id[0])
+        #     if not id[0]:
+        #         registro_E110.VL_ICMS_RECOLHER = self.transforma_valor(sld_icms)
+        #         registro_E110.VL_SLD_APURADO = self.transforma_valor(sld_icms)
+        #         continue
+        #     if id[0] > sld_icms:
+        #         sld_icms = id[0] - sld_icms
+        #         registro_E110.VL_ICMS_RECOLHER = '0'
+        #         registro_E110.VL_SLD_APURADO = '0'
+        #     else:
+        #         sld_icms = sld_icms - id[0]
+        #         registro_E110.VL_ICMS_RECOLHER = self.transforma_valor(sld_icms)
+        #         registro_E110.VL_SLD_APURADO = self.transforma_valor(sld_icms)
+        #     sld_transp -= id[0]
+        # if sld_transp > 0.0:
+        #     sld_transp = 0.0
+        # else:
+        #     if sld_transp <  0.0:
+        #         sld_transp = sld_transp * (-1)
+
         lista = []
         registro_E110 = RegistroE110()
         sld_transp = 0.0
+        registro_E110.VL_TOT_DEBITOS = self.transforma_valor(icms_debito)
+
+        registro_E110.VL_TOT_CREDITOS = self.transforma_valor(icms_credito)
         sld_icms = 0.0
-        for id in query_resposta:
-            if not id[0]:
-                continue
-            registro_E110.VL_TOT_DEBITOS = id[0]
-            if id[0]:
-                sld_icms = id[0]
-                sld_transp = id[0]
-        #ENTRADA
-        query = """
-                select  
-                    sum(it.icms_value) as VL_ICMS 
-                    from
-                        l10n_br_fiscal_document as ie
-                    inner join
-                        l10n_br_fiscal_document_line it
-                        on it.document_id = ie.id
-                    inner join
-                        l10n_br_fiscal_cfop cfop
-                        on it.cfop_id = cfop.id
-                    where
-                        %s    
-                        and (ie.document_type in ('55','1','57','67'))
-                        and (ie.state_edoc = 'autorizada')
-                        and (((substr(cfop.code, 1,1) in ('1','2','3')) 
-                        and cfop.code not in ('1605')) or (cfop.code = '5605'))
-                """ % (periodo)
-        self._cr.execute(query)
-        query_resposta = self._cr.fetchall()
-        for id in query_resposta:
-            registro_E110.VL_TOT_CREDITOS = self.transforma_valor(id[0])
-            if not id[0]:
-                registro_E110.VL_ICMS_RECOLHER = self.transforma_valor(sld_icms)
-                registro_E110.VL_SLD_APURADO = self.transforma_valor(sld_icms)
-                continue
-            if id[0] > sld_icms:
-                sld_icms = id[0] - sld_icms
-                registro_E110.VL_ICMS_RECOLHER = '0'
-                registro_E110.VL_SLD_APURADO = '0'
-            else:
-                sld_icms = sld_icms - id[0]
-                registro_E110.VL_ICMS_RECOLHER = self.transforma_valor(sld_icms)
-                registro_E110.VL_SLD_APURADO = self.transforma_valor(sld_icms)
-            sld_transp -= id[0]
-        if sld_transp > 0.0:
-            sld_transp = 0.0
+        if icms_credito < icms_debito:
+            sld_icms = icms_debito-icms_credito
+            registro_E110.VL_ICMS_RECOLHER = self.transforma_valor(sld_icms)
+            registro_E110.VL_SLD_APURADO = self.transforma_valor(sld_icms)
         else:
-            if sld_transp <  0.0:
-                sld_transp = sld_transp * (-1)
+            sld_icms = icms_credito-icms_debito
+            registro_E110.VL_ICMS_RECOLHER = '0'
+            registro_E110.VL_SLD_APURADO = '0'
+
         registro_E110.VL_AJ_DEBITOS = '0'
         registro_E110.VL_TOT_AJ_DEBITOS = '0'
         registro_E110.VL_ESTORNOS_CRED = '0'
@@ -1340,9 +1387,13 @@ class SpedEfdIcmsIpi(models.Model):
         #registro_E116.IND_PROC 
         #registro_E116.PROC
         #registro_E116.COMPL
-        registro_E116.MES_REF = '%s%s' %(
-            str(self.date_start.month).zfill(2), 
-            str(self.date_start.year))
+
+        # registro_E116.MES_REF = '%s%s' %(
+        #     str(self.date_start.month).zfill(2), 
+        #     str(self.date_start.year))
+
+        registro_E116.MES_REF = self.date_start.strftime("%y%m").zfill(4)
+
         lista.append(registro_E116)
         return lista
 

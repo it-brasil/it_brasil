@@ -43,6 +43,9 @@
                 ou
                 <button string="Cancelar" class="oe_link" special="cancel" />
             </footer>
+            <div class="oe_chatter">
+                <field name="message_ids"/>
+            </div>
         </form>
         </field>
     </record>
