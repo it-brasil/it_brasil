@@ -165,6 +165,7 @@ class Document(models.Model):
         inverse_name="document_id",
         string="Document Lines",
         copy=True,
+        limit=100,
         check_company=True,
     )
 
