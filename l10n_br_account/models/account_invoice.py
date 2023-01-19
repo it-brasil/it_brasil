@@ -298,8 +298,8 @@ class AccountMove(models.Model):
         default = default or {}
         if self.document_type_id:
             default["fiscal_line_ids"] = False
-        else:
-            default["fiscal_line_ids"] = self.line_ids[0]
+        # else:
+        #    default["fiscal_line_ids"] = self.line_ids[0]
         return super().copy(default)
 
     @api.model
