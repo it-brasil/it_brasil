@@ -196,7 +196,7 @@ class SpedEfdIcmsIpi(models.Model):
 
     def limpa_formatacao(self, data):
         if data:
-            replace = ['-', ' ', '(', ')', '/', '.', ':','º']
+            replace = ['-', ' ', '(', ')', '/', '.', ':','º','+55']
             for i in replace:
                 data = data.replace(i, '')
         return data
