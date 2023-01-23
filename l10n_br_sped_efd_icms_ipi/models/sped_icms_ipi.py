@@ -677,10 +677,10 @@ class SpedEfdIcmsIpi(models.Model):
             registro_0200.DESCR_ITEM = unidecode(desc_item)
             if resposta_produto.barcode != resposta_produto.default_code:
                 registro_0200.COD_BARRA = resposta_produto.barcode
-            if resposta_produto.uom_id.code.find('-') != -1:
-                unidade = resposta_produto.uom_id.code[:resposta_produto.uom_id.code.find('-')]
-            else:
-                unidade = resposta_produto.uom_id.code
+            # if resposta_produto.uom_id.code.find('-') != -1:
+            #     unidade = resposta_produto.uom_id.code[:resposta_produto.uom_id.code.find('-')]
+            # else:
+            unidade = resposta_produto.uom_id.code
             unidade = unidade.strip()
             unidade = unidade.upper()
             unidade = unidade[:6]
