@@ -276,12 +276,12 @@ class SpedEfdIcmsIpi(models.Model):
                 msg_err = 'Cadastre o contador Pessoa Fisica dentro do Contato da Contabilidade'
                 raise UserError(msg_err)
             contador = ctd.name
-            cod_mun = '%s%s' %(esc.state_id.ibge_code, esc.city_id.ibge_code)
+            cod_mun = esc.city_id.ibge_code
             contabilista.NOME = contador
             contabilista.CNPJ = self.limpa_formatacao(self.company_id.accountant_id.cnpj_cpf)
             contabilista.CPF = self.limpa_formatacao(ctd.cnpj_cpf)
-            contabilista.CRC = self.limpa_formatacao(ctd.rg)
-            contabilista.END = esc.street
+            contabilista.CRC = self.limpa_formatacao(ctd.crc_code)
+            contabilista.END = esc.street_name
             contabilista.CEP = self.limpa_formatacao(esc.zip)
             contabilista.NUM = esc.street_number
             contabilista.COMPL = esc.street2
