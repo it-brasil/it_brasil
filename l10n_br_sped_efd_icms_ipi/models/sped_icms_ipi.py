@@ -1,6 +1,6 @@
 # Copyright (C) 2020 - Carlos R. Silveira - ATSti Soluções
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
-
+import logging
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from unidecode import unidecode
@@ -46,7 +46,7 @@ from sped.efd.icms_ipi.registros import RegistroK200
 from sped.efd.icms_ipi.registros import Registro1001
 from sped.efd.icms_ipi.registros import Registro1010
 
-
+_logger = logging.getLogger(__name__)
 class SpedEfdIcmsIpi(models.Model):
     _name = "sped.efd.icms.ipi"
     _inherit = ['portal.mixin', 'mail.thread', 'mail.activity.mixin']
@@ -363,7 +363,9 @@ class SpedEfdIcmsIpi(models.Model):
         c190_ipi_debito = 0.0
         msg_post = ""
         for id in query_resposta:
-            if id[2] == "company" and id[1] == "cancelada":
+            # A partir de janeiro de 2023, os códigos de situação de documento 04 (NF-e ou CT-e denegado) e 
+            # 05 (NF-e ou CT-e Numeração inutilizada) da tabela 4.1.2 - Tabela Situação do Documento serão descontinuados.
+            if id[2] == "company" and id[1] in ("cancelada", "denegada", "inutilizada"):
                 continue
             nf = id[0]
             for item_lista in self.query_registroC100(nf):
@@ -936,12 +938,14 @@ class SpedEfdIcmsIpi(models.Model):
             elif nfe.state_edoc == "autorizada" and nfe.edoc_purpose in ("2", "3"):
                 # Documento complementar/ajuste
                 registro_c100.COD_SIT = "06"
-            elif nfe.state_edoc == "denegada" and nfe.edoc_purpose == "1":
-                registro_c100.COD_SIT = "04"
-            elif nfe.state_edoc == "inutilizada":
-                registro_c100.COD_SIT = "05"
-                registro_c100.SER = ""
-                registro_c100.CHV_NFE = ""
+            # A partir de janeiro de 2023, os códigos de situação de documento 04 (NF-e ou CT-e denegado) e 
+            # 05 (NF-e ou CT-e Numeração inutilizada) da tabela 4.1.2 - Tabela Situação do Documento serão descontinuados.
+            # elif nfe.state_edoc == "denegada" and nfe.edoc_purpose == "1":
+            #     registro_c100.COD_SIT = "04"
+            # elif nfe.state_edoc == "inutilizada":
+            #     registro_c100.COD_SIT = "05"
+            #     registro_c100.SER = ""
+            #     registro_c100.CHV_NFE = ""
             # if nfe.emissao_doc == '1' and not nfe.state == 'cancel' \
             #     and nfe.chave_nfe[6:20] != \
             #     self.limpa_formatacao(nfe.partner_id.company_id.cnpj_cpf):
@@ -1190,10 +1194,10 @@ class SpedEfdIcmsIpi(models.Model):
                registro_d100.COD_SIT = '02'
             elif cte.tp_emiss_cte == '4':
                registro_d100.COD_SIT = '03'
-            elif cte.tp_emiss_cte == '5':
-               registro_d100.COD_SIT = '04'
-            elif cte.tp_emiss_cte == '6':
-               registro_d100.COD_SIT = '05'
+            # elif cte.tp_emiss_cte == '5':
+            #    registro_d100.COD_SIT = '04'
+            # elif cte.tp_emiss_cte == '6':
+            #    registro_d100.COD_SIT = '05'
             elif cte.tp_emiss_cte == '7':
                registro_d100.COD_SIT = '06'
             elif cte.tp_emiss_cte == '8':
