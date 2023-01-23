@@ -9,38 +9,42 @@
                     <group>
                         <group>
                             <field name="company_id" options='{"no_create" : 1, "no_create_edit" : 1}'/>
-                            <field name="date_start" required="1"/>
-                            <field name="date_end" required="1"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
                             <field name="tipo_arquivo" widget="radio" />
+                            <field name="ind_ativ"/>
+                            <field name="cod_obrigacao"/>
+                            <field name="data_vencimento_e316"/>
                         </group>
-                        <group>
+                        <group col="3">
                             <field name="inventario"/>
                             <field name="date_stock"/>
                             <field name="stock_inv_mov"/>
                             <field name="cod_cta"/>
-                        </group>
-                        <group>
-                            <field name="ind_ativ"/>
-                            <field name="cod_obrigacao"/>
-                            <field name="cod_receita"/>
                             <field name="ind_apur"/>
+                            <field name="cod_receita"/>
                             <field name="clas_estab_ind"/>
                         </group>
+                    </group>
+                    <group>
                         <group>
-                            <field name="data_vencimento_e316"/>
                             <field name="vl_sld_cred_ant_difal"/>
                             <field name="vl_sld_cred_transp_difal"/>
+                        </group>
+                        <group>
                             <field name="vl_sld_cred_ant_fcp"/>
                             <field name="vl_sld_cred_transp_fcp"/>
                         </group>
-                        <group>
+                        <group col="3">
                             <field name="sped_file_name" invisible="1"/>
-                            <field widget="binary" height="64" name="sped_file" filename="sped_file_name" />
+                            <field widget="binary" height="64" name="sped_file" filename="sped_file_name" readonly="1" />
                         </group>
                     </group>
                     <field name="log_faturamento" readonly="1"/>
                     <footer>
                         <button name="create_file" string="Gerar Arquivo" type="object" default_focus="1" class="oe_highlight"/>
+                ou
+                        <button string="Cancelar" class="oe_link" special="cancel" />
                     </footer>
                 </sheet>
                 <div class="oe_chatter">

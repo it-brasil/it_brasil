@@ -49,7 +49,7 @@ from sped.efd.icms_ipi.registros import Registro1010
 class SpedEfdIcmsIpi(models.Model):
     _name = "sped.efd.icms.ipi"
     _inherit = ['portal.mixin', 'mail.thread', 'mail.activity.mixin']
-    _description = "Cria o arquivo para o Sped ICMS / IPI"
+    _description = "Cria o arquivo para o SPED ICMS / IPI"
     _rec_name = "sped_file_name"
     _order = "date_start desc"
 
@@ -121,9 +121,9 @@ class SpedEfdIcmsIpi(models.Model):
     log_faturamento = fields.Text('Log de Faturamento', copy=False)
     company_id = fields.Many2one('res.company', string='Empresa', required=True,
         default=lambda self: self.env['res.company']._company_default_get('account.account'))
-    sped_file = fields.Binary(string=u"Sped")
+    sped_file = fields.Binary(string=u"SPED")
     sped_file_name = fields.Char(
-        string=u"Arquivo Sped")
+        string=u"Arquivo SPED-EFD ICMS IPI")
     vl_sld_cred_ant_difal = fields.Float('Saldo Credor per. ant. Difal', default=0.0)
     vl_sld_cred_transp_difal = fields.Float('Saldo Credor per. seguinte Difal', default=0.0)
     vl_sld_cred_ant_fcp = fields.Float('Saldo Credor per. ant. FCP', default=0.0)
@@ -454,13 +454,14 @@ class SpedEfdIcmsIpi(models.Model):
             for uf_lista in self.query_registroE310(
                 self.company_id.state_id.code,
                 item_lista.UF,
-                perido):
-                arq.read_registro(self.junta_pipe(uf_lista))
-            for uf_lista in self.query_registroE316(
-                self.company_id.state_id.code,
-                item_lista.UF,
                 periodo):
                 arq.read_registro(self.junta_pipe(uf_lista))
+            # Rotina abaixo chamando no for acima
+            # for uf_lista in self.query_registroE316(
+            #     self.company_id.state_id.code,
+            #     uf_lista.UF,
+            #     periodo):
+            #     arq.read_registro(self.junta_pipe(uf_lista))
 
         if self.ind_ativ == '0':
             registro_E500 = RegistroE500()
@@ -856,6 +857,7 @@ class SpedEfdIcmsIpi(models.Model):
             # TODO Não podem ser informados GTINs iguais para fatores de conversões de produtos 
             # if resposta[5]:
             #     registro_0220.COD_BARRA = resposta[5]
+            registro_0220.COD_BARRA = ""
             lista.append(registro_0220)
         return lista
         
@@ -1487,30 +1489,39 @@ class SpedEfdIcmsIpi(models.Model):
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
         registro_e310 = registros.RegistroE310()
+        registro_e310.IND_MOV_FCP_DIFAL = tipo_mov
+        registro_e310.VL_SLD_CRED_ANT_DIFAL = 0.0
+        registro_e310.VL_TOT_DEBITOS_DIFAL = 0.0
+        registro_e310.VL_OUT_DEB_DIFAL = 0.0
+        registro_e310.VL_TOT_DEB_FCP = 0.0
+        registro_e310.VL_TOT_CREDITOS_DIFAL = 0.0
+        registro_e310.VL_TOT_CRED_FCP = 0.0
+        registro_e310.VL_OUT_CRED_DIFAL = 0.0
+        registro_e310.VL_SLD_DEV_ANT_DIFAL = 0.0
+        registro_e310.VL_DEDUCOES_DIFAL = '0'
+        registro_e310.VL_RECOL_DIFAL = 0.0
+        registro_e310.VL_SLD_CRED_TRANSPORTAR_DIFAL = '0'
+        registro_e310.DEB_ESP_DIFAL = '0'
+        registro_e310.VL_SLD_CRED_ANT_FCP = '0'
+        registro_e310.VL_OUT_DEB_FCP = '0'
+        registro_e310.VL_TOT_CRED_FCP = '0'
+        registro_e310.VL_OUT_CRED_FCP = '0'
+        registro_e310.VL_SLD_DEV_ANT_FCP = '0'
+        registro_e310.VL_DEDUCOES_FCP = '0'
+        registro_e310.VL_RECOL_FCP = '0'
+        registro_e310.VL_SLD_CRED_TRANSPORTAR_FCP = '0'
+        registro_e310.DEB_ESP_FCP = '0'        
         lista = []
         for id in query_resposta:
-            registro_e310.IND_MOV_FCP_DIFAL = tipo_mov
             registro_e310.VL_SLD_CRED_ANT_DIFAL = self.vl_sld_cred_ant_difal
             registro_e310.VL_TOT_DEBITOS_DIFAL = id[0]
-            registro_e310.VL_OUT_DEB_DIFAL = '0'
+            registro_e310.VL_OUT_DEB_DIFAL = 0.0
             registro_e310.VL_TOT_DEB_FCP = id[2]
-            registro_e310.VL_TOT_CREDITOS_DIFAL = '0'
-            registro_e310.VL_TOT_CRED_FCP = '0'
-            registro_e310.VL_OUT_CRED_DIFAL = '0'
+            registro_e310.VL_TOT_CREDITOS_DIFAL = 0.0
+            registro_e310.VL_TOT_CRED_FCP = 0.0
+            registro_e310.VL_OUT_CRED_DIFAL = 0.0
             registro_e310.VL_SLD_DEV_ANT_DIFAL = id[0]
-            registro_e310.VL_DEDUCOES_DIFAL = '0'
             registro_e310.VL_RECOL_DIFAL = id[0]
-            registro_e310.VL_SLD_CRED_TRANSPORTAR_DIFAL = '0'
-            registro_e310.DEB_ESP_DIFAL = '0'
-            registro_e310.VL_SLD_CRED_ANT_FCP = '0'
-            registro_e310.VL_OUT_DEB_FCP = '0'
-            registro_e310.VL_TOT_CRED_FCP = '0'
-            registro_e310.VL_OUT_CRED_FCP = '0'
-            registro_e310.VL_SLD_DEV_ANT_FCP = '0'
-            registro_e310.VL_DEDUCOES_FCP = '0'
-            registro_e310.VL_RECOL_FCP = '0'
-            registro_e310.VL_SLD_CRED_TRANSPORTAR_FCP = '0'
-            registro_e310.DEB_ESP_FCP = '0'
         lista.append(registro_e310)
         
         registro_e316 = registros.RegistroE316()
@@ -1519,16 +1530,17 @@ class SpedEfdIcmsIpi(models.Model):
         # import pudb;pu.db
         # mes_ref = f"{str(self.date_start.month).zfill(2), str(self.date_start.month).year}"
         mes_ref = self.date_start.strftime("%m%Y").zfill(4)
+        registro_e316.COD_OR = self.cod_obrigacao
+        registro_e316.VL_OR = 0.0
+        registro_e316.DT_VCTO = self.data_vencimento_e316.strftime("%d%m%Y").zfill(8)
+        registro_e316.COD_REC = self.cod_receita
+        registro_e316.NUM_PROC = ''
+        registro_e316.IND_PROC = ''
+        registro_e316.PROC = ''
+        registro_e316.TXT_COMPL = ''
+        registro_e316.MES_REF = mes_ref
         for id in query_resposta:
-            registro_e316.COD_OR = self.cod_obrigacao
             registro_e316.VL_OR = id[0]+id[2]
-            registro_e316.DT_VCTO = self.data_vencimento_e316
-            registro_e316.COD_REC = self.cod_receita
-            registro_e316.NUM_PROC = ''
-            registro_e316.IND_PROC = ''
-            registro_e316.PROC = ''
-            registro_e316.TXT_COMPL = ''
-            registro_e316.MES_REF = mes_ref
         lista.append(registro_e316)
         return lista
 
