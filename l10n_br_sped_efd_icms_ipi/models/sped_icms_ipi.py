@@ -154,6 +154,8 @@ class SpedEfdIcmsIpi(models.Model):
     cod_cta = fields.Char(string=u"Conta Contabil Estoque")
 
     def create_file(self):
+        if not self.date_start or not self.date_end:
+            raise UserError('Erro, data de início ou data de encerramento não informadas!')
         if self.date_start > self.date_end:
             raise UserError('Erro, a data de início é maior que a data de encerramento!')
         # self.log_faturamento = 'Gerando arquivo .. <br />'
@@ -164,6 +166,8 @@ class SpedEfdIcmsIpi(models.Model):
         # }
 
     def versao(self):
+        if not self.date_start:
+            raise UserError('Erro, data de início não informada!')
         if self.date_start.year == 2018:
             return '012'
         elif self.date_start.year == 2019:
