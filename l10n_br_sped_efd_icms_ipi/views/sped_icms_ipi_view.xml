@@ -15,6 +15,7 @@
                             <field name="ind_ativ"/>
                             <field name="cod_obrigacao"/>
                             <field name="data_vencimento_e316" required="1"/>
+                            <field name="ind_tp_leiaute" required="1"/>
                         </group>
                         <group col="3">
                             <field name="inventario"/>

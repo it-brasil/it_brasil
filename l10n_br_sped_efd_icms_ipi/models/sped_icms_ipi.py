@@ -40,6 +40,7 @@ from sped.efd.icms_ipi.registros import RegistroE520
 from sped.efd.icms_ipi.registros import RegistroH001
 from sped.efd.icms_ipi.registros import RegistroH005
 from sped.efd.icms_ipi.registros import RegistroH010
+from sped.efd.icms_ipi.registros import RegistroK010
 from sped.efd.icms_ipi.registros import RegistroK100
 from sped.efd.icms_ipi.registros import RegistroK200
 from sped.efd.icms_ipi.registros import Registro1001
@@ -153,6 +154,11 @@ class SpedEfdIcmsIpi(models.Model):
         ], string='Motivo do Inventário')
     cod_cta = fields.Char(string=u"Conta Contabil Estoque")
 
+    ind_tp_leiaute = fields.Selection([
+        ('0', 'Leiaute simplificado'),
+        ('1', 'Leiaute completo'),
+        ('2', 'Leiaute restrito aos saldos de estoque')
+        ], string='Tipo de leiaute')
     def create_file(self):
         if not self.date_start or not self.date_end:
             raise UserError('Erro, data de início ou data de encerramento não informadas!')
@@ -486,6 +492,10 @@ class SpedEfdIcmsIpi(models.Model):
                 arq.read_registro(self.junta_pipe(item_lista))
             for item_lista in bloco_h[1]:
                 arq.read_registro(self.junta_pipe(item_lista))
+        # K010
+        registro_K010 = RegistroK010()
+        registro_K010.IND_LEIAUTE = self.ind_tp_leiaute
+        arq._blocos['K'].add(registro_K010)
             
         # K100
         registro_K100 = RegistroK100()
