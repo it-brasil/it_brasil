@@ -13,7 +13,7 @@
                             <field name="date_end" required="1"/>
                             <field name="tipo_arquivo" widget="radio" />
                             <field name="ind_ativ"/>
-                            <field name="cod_obrigacao"/>
+                            <field name="cod_obrigacao" required="1"/>
                             <field name="data_vencimento_e316" required="1"/>
                             <field name="ind_tp_leiaute" required="1"/>
                         </group>
@@ -23,7 +23,7 @@
                             <field name="stock_inv_mov"/>
                             <field name="cod_cta"/>
                             <field name="ind_apur"/>
-                            <field name="cod_receita"/>
+                            <field name="cod_receita" required="1"/>
                             <field name="clas_estab_ind" required="1"/>
                         </group>
                     </group>
