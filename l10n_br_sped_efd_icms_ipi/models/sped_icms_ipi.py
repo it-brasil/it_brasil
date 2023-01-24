@@ -1716,15 +1716,18 @@ class SpedEfdIcmsIpi(models.Model):
         resposta_inv = product.search([])
         valor_total = 0.0
         for inv in resposta_inv:
-            if inv.qty_available > 0.0 and \
-                inv.l10n_br_sped_type in ('00','01','02','03','04','05','06','10'):
-                valor_total += inv.stock_value
+            # TODO: Verificar - AttributeError: 'product.product' object has no attribute 'l10n_br_sped_type'
+            # if inv.qty_available > 0.0 and inv.l10n_br_sped_type in ('00','01','02','03','04','05','06','10'):
+            if inv.qty_available > 0.0:
+                #TODO: Verificar qual é o valor de estoque a ser considerado, utilizando Custo
+                #TODO: Tratar erro O valor total do estoque (VL_INV do Registro H005) deve ser igual à soma dos valores dos itens (VL_ITEM) dos Registros H010.
+                valor_total += inv.standard_price
                 registro_H010 = RegistroH010()                                                                                                           
                 registro_H010.COD_ITEM = inv.default_code
-                registro_H010.UNID = inv.uom_id.name
+                registro_H010.UNID = inv.uom_id.code
                 registro_H010.QTD = inv.qty_available
-                registro_H010.VL_UNIT = inv.stock_value/inv.qty_available
-                registro_H010.VL_ITEM = inv.stock_value
+                registro_H010.VL_UNIT = inv.standard_price
+                registro_H010.VL_ITEM = inv.standard_price
                 registro_H010.IND_PROP = '0'
                 registro_H010.COD_CTA = self.cod_cta
                 listah10.append(registro_H010)
