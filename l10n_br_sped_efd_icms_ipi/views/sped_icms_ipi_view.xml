@@ -19,9 +19,9 @@
                         </group>
                         <group col="3">
                             <field name="inventario"/>
-                            <field name="date_stock"/>
-                            <field name="stock_inv_mov"/>
-                            <field name="cod_cta"/>
+                            <field name="date_stock" attrs="{'invisible': [('inventario', '=', False)], 'required': [('inventario', '=', True)]}"/>
+                            <field name="stock_inv_mov" attrs="{'invisible': [('inventario', '=', False)], 'required': [('inventario', '=', True)]}"/>
+                            <field name="cod_cta" attrs="{'invisible': [('inventario', '=', False)]}"/>
                             <field name="ind_apur"/>
                             <field name="cod_receita" required="1"/>
                             <field name="clas_estab_ind" required="1"/>
