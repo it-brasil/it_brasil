@@ -934,12 +934,6 @@ class NFe(spec_models.StackedModel):
                 )
         return
 
-    def _document_date(self):
-        super()._document_date()
-        for record in self.filtered(filter_processador_edoc_nfe):
-            if not record.date_in_out:
-                record.date_in_out = fields.Datetime.now()
-
     def view_pdf(self):
         # TODO  ver se teve evendo de Cancelamento ou Carta de correção
         if self.correction_event_ids or self.event_ids:
