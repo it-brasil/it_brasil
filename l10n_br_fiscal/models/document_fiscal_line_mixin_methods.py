@@ -518,11 +518,15 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             self.icms_percent = tax_dict.get("percent_amount")
             self.icms_reduction = tax_dict.get("percent_reduction")
             self.icms_value = tax_dict.get("tax_value")
-
-            if self.cfop_id.code == "6110":
+            if self.cfop_id.code in ('6109', '6110'):
                 desonera_icms = 1 - (self.icms_reduction/100)
                 desonera_base = round((self.icms_base / desonera_icms), 2)
                 self.icms_relief_value = (desonera_base * (self.icms_percent/100)) - self.icms_value
+                relief = "9" 
+                if self.icms_cst_id.code == "40":
+                    relief = "7"
+                relief_id = self.env['l10n_br_fiscal.icms.relief'].search([('code', '=', relief)])
+                self.icms_relief_id = relief_id.id
 
             # Carlos : da erro ao Criar uma fatura na Venda sem este IF
             if tax_dict.get("icms_dest_base"):

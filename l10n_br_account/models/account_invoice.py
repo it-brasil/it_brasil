@@ -254,6 +254,7 @@ class AccountMove(models.Model):
             if not vals.get("document_type_id"):
                 vals["fiscal_document_id"] = self.env.company.fiscal_dummy_id.id
         return vals_list
+
     @api.model_create_multi
     def create(self, values):
         for vals in values:
