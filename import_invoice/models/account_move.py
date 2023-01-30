@@ -349,34 +349,34 @@ class AccountMove(models.Model):
     #         }
     #     return remove_none_values(vals)
     
-    def _get_di(self, di):
-        state_code = get(di, 'UFDesemb')
-        state_id = self.env['res.country.state'].search([
-            ('code', '=', state_code),
-            ('country_id.code', '=', 'BR')
-        ])
-        vals = {
-            'name': get(di, 'nDI'),
-            'date_registration': get(di, 'dDI'),
-            'location': get(di, 'xLocDesemb'),
-            'state_id': state_id.id,
-            'date_release': get(di, 'dDesemb'),
-            'type_transportation': get(di, 'tpViaTransp', str),
-            'afrmm_value': get(di, 'vAFRMM', str),
-            'type_import': get(di, 'tpIntermedio', str),
-            'exporting_code': get(di, 'cExportador'),
-            'di_ids': []
-        }
+    # def _get_di(self, di):
+    #     state_code = get(di, 'UFDesemb')
+    #     state_id = self.env['res.country.state'].search([
+    #         ('code', '=', state_code),
+    #         ('country_id.code', '=', 'BR')
+    #     ])
+    #     vals = {
+    #         'name': get(di, 'nDI'),
+    #         'date_registration': get(di, 'dDI'),
+    #         'location': get(di, 'xLocDesemb'),
+    #         'state_id': state_id.id,
+    #         'date_release': get(di, 'dDesemb'),
+    #         'type_transportation': get(di, 'tpViaTransp', str),
+    #         'afrmm_value': get(di, 'vAFRMM', str),
+    #         'type_import': get(di, 'tpIntermedio', str),
+    #         'exporting_code': get(di, 'cExportador'),
+    #         'di_ids': []
+    #     }
 
-        if hasattr(di, 'adi'):
-            for adi in di.adi:
-                adi_vals = {
-                    'sequence_di': get(di.adi, 'nSeqAdic'),
-                    'name': get(di.adi, 'nAdicao'),
-                    'manufacturer_code': get(di.adi, 'cFabricante'),
-                }
-                adi_vals = remove_none_values(adi_vals)
-                adi = self.env['declaration.line'].create(adi_vals)
-                vals['di_ids'].append((4, adi.id, False))
+    #     if hasattr(di, 'adi'):
+    #         for adi in di.adi:
+    #             adi_vals = {
+    #                 'sequence_di': get(di.adi, 'nSeqAdic'),
+    #                 'name': get(di.adi, 'nAdicao'),
+    #                 'manufacturer_code': get(di.adi, 'cFabricante'),
+    #             }
+    #             adi_vals = remove_none_values(adi_vals)
+    #             adi = self.env['declaration.line'].create(adi_vals)
+    #             vals['di_ids'].append((4, adi.id, False))
 
-        return remove_none_values(vals)
+    #     return remove_none_values(vals)

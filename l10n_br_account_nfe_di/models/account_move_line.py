@@ -3,6 +3,91 @@ from copy import deepcopy
 from lxml import etree
 from odoo import models, _, api, fields
 
+class AccountMove(models.Model):
+    _inherit = "account.move"
+    
+    di_ids = fields.One2many(
+        "declaracao.importacao",
+        compute="_compute_di_ids",
+        string='Delcaração de Importação (NT 2011/004)',
+    )
+
+    @api.depends("invoice_line_ids")
+    def _compute_di_ids(self):
+        di_ids = self.env["declaracao.importacao"].search([
+            ("aml_id", "in", self.invoice_line_ids._ids)
+        ])
+        for record in self:
+            record.di_ids = di_ids
+
+    exp_ids = fields.One2many(
+        "detalhe.exportacao",
+        compute="_compute_exp_ids",
+        string='Delcaração de Importação (NT 2011/004)',
+    )
+
+    @api.depends("invoice_line_ids")
+    def _compute_exp_ids(self):
+        exp_ids = self.env["detalhe.exportacao"].search([
+            ("aml_id", "in", self.invoice_line_ids._ids)
+        ])
+        for record in self:
+            record.exp_ids = exp_ids
+
+    def button_wizard_di(self):
+        for move in self:
+            ctx = {
+                'default_am_id': move.id,
+                # 'default_am_id': move.id,
+                'di_id': 0,
+            }
+        return {
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'wizard.create.di',
+            'views': [(False, 'form')],
+            'view_id': False,
+            'target': 'new',
+            'context': ctx,
+        }
+
+    def button_copy_di(self):
+        di = {}
+        with_copy = []
+        for record in self.di_ids:
+            with_copy.append(record.aml_id.id)
+            di["name"] = record.name
+            di["date_registration"] = record.date_registration
+            di["state_id"] = record.state_id.id
+            di["location"] = record.location
+            di["date_release"] = record.date_release
+            di["type_transportation"] = record.type_transportation
+            di["afrmm_value"] = record.afrmm_value
+            di["tpIntermedio"] = record.tpIntermedio
+            di["thirdparty_state_id"] = record.thirdparty_state_id.id
+            di["thirdparty_cnpj"] = record.thirdparty_cnpj
+            di["exporting_code"] = record.exporting_code
+            di["company_id"] = record.company_id.id
+            adicao = []
+            for adic in record.adi_ids:
+                vals = {}
+                if adic.name:
+                    vals["name"] = adic.name
+                vals["sequence_di"] = adic.sequence_di + 1
+                vals["manufacturer_code"] = adic.manufacturer_code
+                vals["amount_discount"] = adic.amount_discount
+                if adic.drawback_number:
+                    vals["drawback_number"] = adic.drawback_number
+                vals["company_id"] = adic.company_id.id
+                adicao.append((0, 0, vals))
+        for item in self.invoice_line_ids:
+            if item.id in with_copy:
+                continue
+            di["aml_id"] = item.id
+            di["adi_ids"] = adicao
+            declaracao = self.env["declaracao.importacao"].create(di)
+
+
 class AccountMoveLine(models.Model):
     _name = "account.move.line"
     _inherit = [_name, "l10n_br_fiscal.document.line.mixin.methods"]
@@ -12,55 +97,18 @@ class AccountMoveLine(models.Model):
         'declaracao.importacao',
         'aml_id',
         string='Delcaração de Importação (NT 2011/004)',
-        copy=True
     )
 
     exp_ids = fields.One2many(
         'detalhe.exportacao',
         'aml_id',
         string='Detalhe da exportação',
-        store=True, check_company=True, copy=True,
+        store=True, check_company=True,
     )
-
-    # def write(self, values):
-    #     dummy_doc = self.env.company.fiscal_dummy_id
-    #     dummy_line = fields.first(dummy_doc.fiscal_line_ids)
-    #     non_dummy = self.filtered(lambda l: l.fiscal_document_line_id != dummy_line)
-    #     import pudb;pu.db
-    #     if values.get("move_id") and len(non_dummy) == len(self):
-    #         # we can write the document_id in all lines
-    #         values["document_id"] = (
-    #             self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-    #         )
-    #         result = super().write(values)
-    #     elif values.get("move_id"):
-    #         # we will only define document_id for non dummy lines
-    #         result = super().write(values)
-    #         doc_id = (
-    #             self.env["account.move"].browse(values["move_id"]).fiscal_document_id.id
-    #         )
-    #         super(AccountMoveLine, non_dummy).write({"document_id": doc_id})
-    #     else:
-    #         result = super().write(values)
-
-    #     for line in self:
-    #         if line.wh_move_line_id and (
-    #             "quantity" in values or "price_unit" in values
-    #         ):
-    #             raise UserError(
-    #                 _("You cannot edit an invoice related to a withholding entry")
-    #             )
-
-    #         if line.fiscal_document_line_id != dummy_line:
-    #             shadowed_fiscal_vals = line._prepare_shadowed_fields_dict()
-    #             if shadowed_fiscal_vals:
-    #                 line.fiscal_document_line_id.write(shadowed_fiscal_vals)
-
-    #     return result
 
 class DeclaracaoImportacao(models.Model):
     _name = 'declaracao.importacao'
-    _description = "Delcaração de Importação (NT 2011/004)"
+    _description = "Declaração de Importação (NT 2011/004)"
 
     brl_currency_id = fields.Many2one(
         comodel_name="res.currency",
@@ -115,45 +163,46 @@ class DeclaracaoImportacao(models.Model):
         store=True, check_company=True, copy=True,
         )
 
-    def write(self, values):
-        return super().write(values)
+    def edit_di(self):
+        adi = {}
+        adi_id = 0
+        for line in self.adi_ids:
+            adi['nAdicao'] = line.name
+            adi['nSeqAdic'] = line.sequence_di
+            adi['cFabricante'] = line.manufacturer_code
+            adi['vDescDI'] = line.amount_discount
+            adi['nDraw'] = line.drawback_number
+            adi_id = line.id
+            adi['company_id'] = line.company_id
+        ctx = {
+            'default_nfe40_nDI': self.name,
+            'default_nfe40_dDI': self.date_registration,
+            'default_nfe40_xLocDesemb': self.location,
+            'default_nfe40_UFDesemb': self.state_id.id,
+            'default_nfe40_tpViaTransp': self.type_transportation,
+            'default_nfe40_vAFRMM': self.afrmm_value,
+            'default_nfe40_tpIntermedio': self.tpIntermedio,
+            'default_nfe40_CNPJ': self.thirdparty_cnpj,
+            'default_nfe40_UFTerceiro': self.thirdparty_state_id.id,
+            'default_nfe40_cExportador': self.exporting_code,
+            'default_company_id': self.company_id.id,
+            'default_nfe40_dDesemb': self.date_release,
+            'adi': adi,
+            'default_aml_id': self.aml_id.id,
+            'di_id': self.id,
+            'adi_id': adi_id,
+            'default_am_id': self.aml_id.move_id.id,
+        }
+        return {
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'wizard.create.di',
+            'views': [(False, 'form')],
+            'view_id': False,
+            'target': 'new',
+            'context': ctx,
+        }
 
-    def create(self, values):
-        return super().create(values)
-
-    def copy_di(self):
-        di = {}
-        with_copy = []
-        for record in self:
-            with_copy.append(record.aml_id.id)
-            di["name"] = record.name
-            di["date_registration"] = record.date_registration
-            di["state_id"] = record.state_id.id
-            di["location"] = record.location
-            di["date_release"] = record.date_release
-            di["type_transportation"] = record.type_transportation
-            di["afrmm_value"] = record.afrmm_value
-            di["tpIntermedio"] = record.tpIntermedio
-            di["thirdparty_state_id"] = record.thirdparty_state_id.id
-            di["thirdparty_cnpj"] = record.thirdparty_cnpj
-            di["exporting_code"] = record.exporting_code
-            di["company_id"] = record.company_id.id
-            adicao = []
-            for adic in record.adi_ids:
-                vals = {}
-                vals["name"] = adic.name
-                vals["sequence_di"] = adic.sequence_di
-                vals["manufacturer_code"] = adic.manufacturer_code
-                vals["amount_discount"] = adic.amount_discount
-                vals["drawback_number"] = adic.drawback_number
-                vals["company_id"] = adic.company_id.id
-                adicao.append((0, 0, vals))
-        for item in self.aml_id.move_id.invoice_line_ids:
-            if item.id in with_copy:
-                continue
-            di["aml_id"] = item.id
-            di["adi_ids"] = adicao
-            declaracao = self.env["declaracao.importacao"].create(di)
 
 class DeclaracaoAdicao(models.Model):
     _name = 'declaracao.adicao'
@@ -174,10 +223,10 @@ class DeclaracaoAdicao(models.Model):
         for item in self:
             item.brl_currency_id = self.env.ref("base.BRL").id
 
-    name = fields.Char('Adição', size=3)
-    sequence_di = fields.Integer('Sequência', default=1, required=True)
-    manufacturer_code = fields.Char('Cód. Fabricante/Chave NFe', size=60, required=True)
-    amount_discount = fields.Monetary(string='Valor/Quantidade Exp.', currency_field="brl_currency_id", required=True)
+    name = fields.Char('Número da Adição', size=3)
+    sequence_di = fields.Integer('Número sequencial', default=1, required=True)
+    manufacturer_code = fields.Char('Código fabricante', size=60, required=True)
+    amount_discount = fields.Monetary(string='Valor desconto', currency_field="brl_currency_id", required=True)
     drawback_number = fields.Char('Número Drawback', size=11)
     company_id = fields.Many2one(comodel_name='res.company', string='Company', store=True, readonly=True, default=lambda s: s.env.company)
 
@@ -218,56 +267,5 @@ class AccountMoveLineMethods(models.AbstractModel):
         for move in self:
             move.company_id = move.journal_id.company_id or move.company_id or self.env.company
 
-    @api.model
-    def inject_fiscal_fields(
-        self,
-        view_arch,
-        view_ref="import_invoice.document_fiscal_line_mixin_form",
-        xpath_mappings=None,
-    ):
-        """
-        Injects common fiscal fields into view placeholder elements.
-        Used for invoice line, sale order line, purchase order line...
-        """
-        fiscal_view = self.env.ref(
-            "import_invoice.document_fiscal_line_mixin_form"
-        ).sudo()
-        fsc_doc = etree.fromstring(fiscal_view["arch"])
-        doc = etree.fromstring(view_arch)
 
-        if xpath_mappings is None:
-            xpath_mappings = (
-                # (placeholder_xpath, fiscal_xpath)
-                (".//group[@name='fiscal_fields']", "//group[@name='fiscal_fields']"),
-                (".//page[@name='fiscal_taxes']", "//page[@name='fiscal_taxes']"),
-                (
-                    ".//page[@name='fiscal_line_extra_info']",
-                    "//page[@name='fiscal_line_extra_info']",
-                ),
-                # these will only collect (invisible) fields for onchanges:
-                (
-                    ".//control[@name='fiscal_taxes_fields']...",
-                    "//page[@name='fiscal_taxes']//field",
-                ),
-                (
-                    ".//control[@name='fiscal_line_extra_info_fields']...",
-                    "//page[@name='fiscal_line_extra_info']//field",
-                ),
-            )
-        for placeholder_xpath, fiscal_xpath in xpath_mappings:
-            fiscal_nodes = fsc_doc.xpath(fiscal_xpath)
-            for target_node in doc.findall(placeholder_xpath):
-                if len(fiscal_nodes) == 1:
-                    # replace unique placeholder
-                    # (deepcopy is required to inject fiscal nodes in possible
-                    # next places)
-                    replace_node = deepcopy(fiscal_nodes[0])
-                    target_node.getparent().replace(target_node, replace_node)
-                else:
-                    # append multiple fields to placeholder container
-                    for fiscal_node in fiscal_nodes:
-                        field = deepcopy(fiscal_node)
-                        if not field.attrib.get("optional"):
-                            field.attrib["invisible"] = "1"
-                        target_node.append(field)
-        return doc
+ 
