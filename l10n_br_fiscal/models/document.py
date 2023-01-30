@@ -125,7 +125,7 @@ class Document(models.Model):
     )
 
     date_in_out = fields.Datetime(
-        string="Date Move",
+        string="Date IN/OUT",
         copy=False,
     )
 

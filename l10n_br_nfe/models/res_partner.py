@@ -100,7 +100,7 @@ class ResPartner(spec_models.SpecModel):
     def _compute_nfe40_xEnder(self):
         for rec in self:
             rec.nfe40_xEnder = ", ".join(
-                [i for i in [rec.street, rec.street_number] if i]
+                [i for i in [rec.street] if i]
             )
             if rec.street2:
                 rec.nfe40_xEnder = " - ".join((rec.nfe40_xEnder, rec.street2))
