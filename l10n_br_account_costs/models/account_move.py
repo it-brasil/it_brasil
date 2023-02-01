@@ -212,12 +212,12 @@ class AccountMove(models.Model):
             total = 0.0
             total_currency = 0.0
             total_other = 0.0
+            total_relief = 0.0
             currencies = move._get_lines_onchange_currency().currency_id
-            
             for line in move.line_ids:
                 if move.is_invoice(include_receipts=True):
-                    
-                    total_other += line.freight_value + line.insurance_value + line.other_value
+                    total_relief += line.icms_relief_value
+                    total_other += line.freight_value + line.insurance_value + line.other_value - line.icms_relief_value
                     # === Invoices ===
 
                     if not line.exclude_from_invoice_tab:
@@ -240,8 +240,8 @@ class AccountMove(models.Model):
                     if total_other:
                         # TODO melhorar este if
                         if total > 0:
-                            total += total_other
-                            total_currency += total_other
+                            total += total_other - total_relief
+                            total_currency += total_other - total_relief
                         else:
                             total -= total_other
                             total_currency -= total_other
@@ -257,6 +257,7 @@ class AccountMove(models.Model):
                 sign = 1
             else:
                 sign = -1
+            move.amount_icms_relief_value = total_relief
             move.amount_untaxed = sign * (total_untaxed_currency if len(currencies) == 1 else total_untaxed)
             move.amount_tax = sign * (total_tax_currency if len(currencies) == 1 else total_tax)
             move.amount_total = sign * (total_currency if len(currencies) == 1 else total)
