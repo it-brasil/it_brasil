@@ -387,9 +387,12 @@ class NFeLine(spec_models.StackedModel):
             "CSOSN": self.icms_cst_id.code,
             "pCredSN": str("%.04f" % self.icmssn_percent),
             "vCredICMSSN": str("%.02f" % self.icmssn_credit_value),
-            "motDesICMS": self.icms_relief_id.code,
-            "vICMSDeson": str("%.02f" % self.icms_relief_value),
         }
+        if self.icms_relief_id.code:
+            icms.update({
+                "motDesICMS": self.icms_relief_id.code,
+                "vICMSDeson": str("%.02f" % self.icms_relief_value),
+            })
         if self.icmsfcp_percent:
             icms.update(
                 {
