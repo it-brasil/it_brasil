@@ -136,6 +136,14 @@ class NFeLine(spec_models.StackedModel):
         related="icms_value",
     )
 
+    nfe40_vICMSDeson = fields.Monetary(
+        related="icms_relief_value",
+    )
+
+    nfe40_motDesICMS = fields.Char(
+        related="icms_relief_id.code",
+    )
+
     nfe40_vPIS = fields.Monetary(
         string="Valor do PIS (NFe)",
         related="pis_value",
@@ -379,6 +387,8 @@ class NFeLine(spec_models.StackedModel):
             "CSOSN": self.icms_cst_id.code,
             "pCredSN": str("%.04f" % self.icmssn_percent),
             "vCredICMSSN": str("%.02f" % self.icmssn_credit_value),
+            "motDesICMS": self.icms_relief_id.code,
+            "vICMSDeson": str("%.02f" % self.icms_relief_value),
         }
         if self.icmsfcp_percent:
             icms.update(
@@ -772,6 +782,40 @@ class NFeLine(spec_models.StackedModel):
         if key == "nfe40_ISSQN":
             pass
             # TODO ISSQN Fields
+    
+        elif key == "nfe20_ICMS":
+            # TODO extract method
+            icms_vals = {}
+            for tag in ICMS_TAGS:
+                if getattr(value, tag) is not None:
+                    icms = getattr(value, tag)
+
+                    # ICMSxx fields
+                    # TODO map icms_tax_id
+                    if hasattr(icms, "CST") and icms.CST is not None:
+                        icms_vals["icms_cst_id"] = self.env.ref(
+                            "l10n_br_fiscal.cst_icms_%s" % (icms.CST,)
+                        ).id
+                        # TODO search + log if not found
+                    if hasattr(icms, "modBC"):
+                        icms_vals["icms_base_type"] = float(icms.modBC)
+                    if hasattr(icms, "orig"):
+                        icms_vals["icms_origin"] = icms.orig
+                    if hasattr(icms, "vBC"):
+                        icms_vals["icms_base"] = float(icms.vBC)
+                    if hasattr(icms, "pICMS"):
+                        icms_vals["icms_percent"] = float(icms.pICMS)
+                    if hasattr(icms, "vICMS"):
+                        icms_vals["icms_value"] = float(icms.vICMS)
+                    if hasattr(icms, "pRedBC"):
+                        icms_vals["icms_reduction"] = float(icms.pRedBC)
+                    if hasattr(icms, "motDesICMS") and icms.motDesICMS is not None:
+                        icms_vals["icms_relief_id"] = self.env.ref(
+                            "l10n_br_fiscal.icms_relief_%s" % (icms.motDesICMS,)
+                        ).id
+                    if hasattr(icms, "vICMSDeson") and icms.vICMSDeson is not None:
+                        icms_vals["icms_relief_value"] = float(icms.vICMSDeson)
+            new_value.update(icms_vals)
         elif key == "nfe40_ICMS":
             # TODO extract method
             icms_vals = {}
