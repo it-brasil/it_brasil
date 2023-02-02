@@ -60,7 +60,6 @@ class WizardCreateDetexp(models.TransientModel):
                 adi["registro_exp"] = self.nfe40_exportInd.nfe40_nRE
                 adi["chava_nfe"] = self.nfe40_exportInd.nfe40_chNFe
                 adi["q_export"] = self.nfe40_exportInd.nfe40_qExport
-                # expind = self.env["export.ind"].browse([detexp])
                 self.aml_id.exp_ids.exportind_ids.write(adi)
                 expind = self.aml_id.exp_ids.exportind_ids
             else:
@@ -81,7 +80,7 @@ class WizardCreateDetexp(models.TransientModel):
                 adi["registro_exp"] = line.nfe40_nRE
                 adi["chava_nfe"] = line.nfe40_chNFe
                 adi["q_export"] = line.nfe40_qExport
-                expind = self.env["nfe.40.exportind"].create(adi).id
+                expind = self.env["export.ind"].create(adi).id
 
             self.aml_id.exp_ids = [(0, 0, {
                     'name': self.nfe40_nDraw,
