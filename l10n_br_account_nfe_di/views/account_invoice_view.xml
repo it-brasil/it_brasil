@@ -26,15 +26,6 @@
         <field name="model">declaracao.importacao</field>
         <field name="arch" type="xml">
             <form string="Declaração Importação">
-                <!-- <header>
-                    <button
-                        name="copy_di"
-                        string="Copiar para todos os itens"
-                        type="object"
-                        default_focus="1"
-                        class="oe_highlight"
-                    />
-                </header> -->
                 <sheet>
                     <group>
                         <field name="name" />
@@ -95,10 +86,27 @@
                 <sheet>
                     <group>
                         <field name="name" />
+                        <field name="exportind_ids" ></field>
                         <field name="company_id" />
                     </group>
                 </sheet>
             </form>
+        </field>
+    </record>
+
+    <record id="export_ind_form" model="ir.ui.view">
+        <field name="name">export.indireta.form</field>
+        <field name="model">export.ind</field>
+        <field name="arch" type="xml">
+                <form string="Exportação indireta">
+                    <group>
+                        <group>
+                            <field name="registro_exp" />
+                            <field name="chava_nfe" />
+                            <field name="q_export" />
+                        </group>
+                    </group>
+                </form>
         </field>
     </record>
 
@@ -183,23 +191,34 @@
                     attrs="{'invisible': [('fiscal_operation_type', '=', 'in')]}"
                 >
                 <!-- attrs="{'invisible': [('cfop_destination', '!=', '3'), ('fiscal_operation_type', '=', 'in')]}" -->
-                    <field name="exp_ids">
+                <header>
+                    <button
+                        name="button_wizard_detexp"
+                        string="Adicionar"
+                        class="btn-success"
+                        type="object"
+                        attrs="{'invisible': [('state', '!=', 'draft')]}"
+                    />
+                </header>                    
+                <field name="exp_ids">
                         <tree editable="bottom" string="Detalhe Exportação">
                             <field name="name" />
-                            <field name="registro_exp" />
-                            <field name="chava_nfe" />
-                            <field name="q_export" />
                             <field name="company_id" invisible="1" />
+                            <field name="exportind_ids" />
+                            <button 
+                                name="edit_detexp"
+                                string="Editar" 
+                                type="object"
+                                class="oe_highlight"
+                            />
                         </tree>
                         <form>
                             <sheet>
                                 <group string="Detalhe Exportação">
                                     <group>
                                         <field name="name" />
-                                        <field name="registro_exp" />
-                                        <field name="chava_nfe" />
-                                        <field name="q_export" />
-                                        <field name="company_id" invisible="1" />            
+                                        <field name="company_id" invisible="1" /> 
+                                        <field name="exportind_ids" />           
                                     </group>
                                 </group>
                             </sheet>
