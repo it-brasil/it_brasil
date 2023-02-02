@@ -95,6 +95,15 @@ class AccountMove(models.Model):
         #             line.with_context(check_move_validity=False).write({'credit': line.credit + alterado})
         #     self._recompute_dynamic_lines(recompute_all_taxes=True)
 
+    # @api.depends(
+    #     'amount_other_value',
+    # )
+    # def _compute_amount(self):
+    #     import pudb;pu.db
+    #     result = super()._compute_amount()
+    #     for record in self:
+    #         record._line_cost()
+
     # def _compute_amount_others(self):
     #     total = 0.0
         
@@ -104,16 +113,16 @@ class AccountMove(models.Model):
     #     if total:
     #         self.amount_total = total
 
-    @api.onchange("amount_freight_value")
-    def _onchange_amount_freight_value(self):
-        if self.amount_freight_value:
-            # import pudb;pu.db
-            # for line in self.line_ids:
-            #     if line.freight_value > 0:
-            #         line.update({"freight_value": 0.0})
-            # self._inverse_amount_freight()
-            self._compute_amount()
-            self._compute_taxes_mapped()
+    # @api.onchange("amount_freight_value")
+    # def _onchange_amount_freight_value(self):
+    #     if self.amount_freight_value:
+    #         # import pudb;pu.db
+    #         # for line in self.line_ids:
+    #         #     if line.freight_value > 0:
+    #         #         line.update({"freight_value": 0.0})
+    #         # self._inverse_amount_freight()
+    #         self._compute_amount()
+    #         # self._compute_taxes_mapped()
     #     import pudb;pu.db
     #     for line in self.line_ids:
     #         if line.name == "[FREIGHT]":
@@ -147,22 +156,21 @@ class AccountMove(models.Model):
     #             self.line_ids += new_line
     #             self.with_context(check_move_validity=False)._onchange_currency()
 
-    @api.model_create_multi
-    def create(self, values):
-        invoice = super().create(values)
-        # import pudb;pu.db
-        # for line in invoice.invoice_line_ids:
-        #     line._onchange_fiscal_tax_ids()
-        # invoice._finalize_invoices(invoice)
-        invoice._line_cost()
-        # invoice._compute_amount()
-        # invoice._compute_taxes_mapped()
-        # invoice.with_context(check_move_validity=False)._onchange_currency()
-        # import pudb;pu.db
-        return invoice
+    # @api.model_create_multi
+    # def create(self, values):
+    #     invoice = super().create(values)
+    #     # import pudb;pu.db
+    #     # for line in invoice.invoice_line_ids:
+    #     #     line._onchange_fiscal_tax_ids()
+    #     # invoice._finalize_invoices(invoice)
+    #     # invoice._line_cost()
+    #     # invoice._compute_amount()
+    #     # invoice._compute_taxes_mapped()
+    #     # invoice.with_context(check_move_validity=False)._onchange_currency()
+    #     # import pudb;pu.db
+    #     return invoice
 
     # def write(self, vals):
-    #     result = super().write(vals)
     #     import pudb;pu.db
     #     if (
     #         "amount_freight_value" in vals 
@@ -170,7 +178,7 @@ class AccountMove(models.Model):
     #         or "amount_other_value" in vals
     #     ):
     #         self._line_cost()
-    #     return result
+    #     return super().write(vals)
 
 
     # def action_post(self):
