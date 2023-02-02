@@ -63,7 +63,7 @@ class NFeLine(spec_models.StackedModel):
                             vals_adi = {
                                 "nfe40_nRE": line.registro_exp,
                                 "nfe40_chNFe": line.chava_nfe,
-                                "nfe40_qExport": "{:.2f}".format(line.q_export) if line.q_export != 0.0 else False,
+                                "nfe40_qExport": "{:.11f}".format(line.q_export) if line.q_export != 0.0 else False,
                             }
                             obj = self.env["nfe.40.exportind"].create(vals_adi)
                             list_adi.append(obj.id)

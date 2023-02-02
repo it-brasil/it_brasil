@@ -69,6 +69,7 @@ class AccountMove(models.Model):
     def button_copy_di(self):
         di = {}
         with_copy = []
+        sequence_di = 0
         for record in self.di_ids:
             with_copy.append(record.aml_id.id)
             di["name"] = record.name
@@ -88,16 +89,22 @@ class AccountMove(models.Model):
                 vals = {}
                 if adic.name:
                     vals["name"] = adic.name
-                vals["sequence_di"] = adic.sequence_di + 1
                 vals["manufacturer_code"] = adic.manufacturer_code
                 vals["amount_discount"] = adic.amount_discount
                 if adic.drawback_number:
                     vals["drawback_number"] = adic.drawback_number
                 vals["company_id"] = adic.company_id.id
+                sequence_di = adic.sequence_di
                 adicao.append((0, 0, vals))
+        sequence = 0
         for item in self.invoice_line_ids:
             if item.id in with_copy:
                 continue
+            if not sequence:
+                sequence = sequence_di + 1
+            else:
+                sequence += 1
+            adicao[0][2]['sequence_di'] = sequence  
             di["aml_id"] = item.id
             di["adi_ids"] = adicao
             declaracao = self.env["declaracao.importacao"].create(di)
@@ -285,22 +292,11 @@ class ExportInd(models.Model):
     _description = "Exportação indireta"
     _rec_name = "registro_exp"
 
-    brl_currency_id = fields.Many2one(
-        comodel_name="res.currency",
-        string="Moeda",
-        compute="_compute_brl_currency_id",
-        default=lambda self: self.env.ref('base.BRL').id,
-    )
-
-    def _compute_brl_currency_id(self):
-        for item in self:
-            item.brl_currency_id = self.env.ref("base.BRL").id
-
     registro_exp = fields.Char('Registro exportação')
     chava_nfe = fields.Char('Chave NF-e rec.')
-    q_export = fields.Monetary(
+    q_export = fields.Float(
         'Quantidade exportado', 
-        currency_field="brl_currency_id")
+    )
 
 class AccountMoveLineMethods(models.AbstractModel):
     _inherit = "l10n_br_fiscal.document.line.mixin.methods"

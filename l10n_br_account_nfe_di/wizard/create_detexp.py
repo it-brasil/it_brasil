@@ -105,6 +105,6 @@ class ExpInd(models.TransientModel):
         required=True,    
         help="Chave de acesso da NF-e recebida para exportação")
     nfe40_qExport = fields.Float(
-        digits=(16,4), string="Quantidade do item efetivamente exportado",
+        string="Quantidade do item efetivamente exportado",
         required=True,
     )

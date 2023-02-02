@@ -149,6 +149,7 @@
                                 type="object"
                                 class="oe_highlight"
                             />
+                            <button type="object" icon="fa-trash-o" name="unlink"/>
                         </tree>
                         <form>
                             <sheet>
@@ -200,8 +201,8 @@
                         attrs="{'invisible': [('state', '!=', 'draft')]}"
                     />
                 </header>                    
-                <field name="exp_ids">
-                        <tree editable="bottom" string="Detalhe Exportação">
+                <field name="exp_ids" context="{'default_am_id': active_id}" readonly="1" >
+                        <tree string="Detalhe Exportação">
                             <field name="name" />
                             <field name="company_id" invisible="1" />
                             <field name="exportind_ids" />
@@ -211,6 +212,7 @@
                                 type="object"
                                 class="oe_highlight"
                             />
+                            <button type="object" icon="fa-trash-o" name="unlink"/>
                         </tree>
                         <form>
                             <sheet>
