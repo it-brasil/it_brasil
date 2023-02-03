@@ -56,18 +56,17 @@ class NFeLine(spec_models.StackedModel):
                     for det in aml.exp_ids:
                         vals_detexp = {
                             "nfe40_detExport_prod_id": det.aml_id.product_id.id,
-                            "nfe40_nDraw": det.name
+                            "nfe40_nDraw": det.name,
                         }
                         list_adi = []
-                        for line in det.exportind_ids:
+                        if det.registro_exp or det.chava_nfe:
                             vals_adi = {
-                                "nfe40_nRE": line.registro_exp,
-                                "nfe40_chNFe": line.chava_nfe,
-                                "nfe40_qExport": "{:.11f}".format(line.q_export) if line.q_export != 0.0 else False,
+                                "nfe40_nRE": det.registro_exp,
+                                "nfe40_chNFe": det.chava_nfe,
+                                "nfe40_qExport": "{:.11f}".format(det.q_export) if det.q_export != 0.0 else False,
                             }
                             obj = self.env["nfe.40.exportind"].create(vals_adi)
                             list_adi.append(obj.id)
-
                         if len(list_adi):     
                             vals_detexp["nfe40_exportInd"] = list_adi[0]
                         obj_di = self.env["nfe.40.detexport"].create(vals_detexp).id

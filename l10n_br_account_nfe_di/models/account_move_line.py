@@ -263,15 +263,22 @@ class DetalheExportacao(models.Model):
         help="Linha da NFe.")
     name = fields.Char('Número Drawback', size=20)
     company_id = fields.Many2one(comodel_name='res.company', string='Company', store=True, readonly=True, default=lambda s: s.env.company)
-    exportind_ids = fields.Many2one(
-        'export.ind',
-        string='Exportação indireta',
+    # exportind_ids = fields.Many2one(
+    #     'export.ind',
+    #     string='Exportação indireta',
+    # )
+    registro_exp = fields.Char('Registro exportação')
+    chava_nfe = fields.Char('Chave NF-e rec.')
+    q_export = fields.Float(
+        'Quantidade exportado', 
     )
 
     def edit_detexp(self):
         ctx = {
             'default_nfe40_nDraw': self.name,
-            'default_nfe40_exportInd': self.exportind_ids.id,
+            'default_nfe40_nRE': self.registro_exp,
+            'default_nfe40_chNFe': self.chava_nfe,
+            'default_nfe40_qExport': self.q_export,
             'default_company_id': self.company_id.id,
             'default_aml_id': self.aml_id.id,
             'detexp_id': self.id,
@@ -287,16 +294,12 @@ class DetalheExportacao(models.Model):
             'context': ctx,
         }
 
-class ExportInd(models.Model):
-    _name = "export.ind"
-    _description = "Exportação indireta"
-    _rec_name = "registro_exp"
+# class ExportInd(models.Model):
+#     _name = "export.ind"
+#     _description = "Exportação indireta"
+#     _rec_name = "registro_exp"
 
-    registro_exp = fields.Char('Registro exportação')
-    chava_nfe = fields.Char('Chave NF-e rec.')
-    q_export = fields.Float(
-        'Quantidade exportado', 
-    )
+
 
 class AccountMoveLineMethods(models.AbstractModel):
     _inherit = "l10n_br_fiscal.document.line.mixin.methods"

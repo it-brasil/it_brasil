@@ -86,27 +86,13 @@
                 <sheet>
                     <group>
                         <field name="name" />
-                        <field name="exportind_ids" ></field>
+                        <field name="registro_exp" />
+                        <field name="chava_nfe" />
+                        <field name="q_export" />
                         <field name="company_id" />
                     </group>
                 </sheet>
             </form>
-        </field>
-    </record>
-
-    <record id="export_ind_form" model="ir.ui.view">
-        <field name="name">export.indireta.form</field>
-        <field name="model">export.ind</field>
-        <field name="arch" type="xml">
-                <form string="Exportação indireta">
-                    <group>
-                        <group>
-                            <field name="registro_exp" />
-                            <field name="chava_nfe" />
-                            <field name="q_export" />
-                        </group>
-                    </group>
-                </form>
         </field>
     </record>
 
@@ -205,7 +191,9 @@
                         <tree string="Detalhe Exportação">
                             <field name="name" />
                             <field name="company_id" invisible="1" />
-                            <field name="exportind_ids" />
+                            <field name="registro_exp" />
+                            <field name="chava_nfe" />
+                            <field name="q_export" />
                             <button 
                                 name="edit_detexp"
                                 string="Editar" 
@@ -220,7 +208,9 @@
                                     <group>
                                         <field name="name" />
                                         <field name="company_id" invisible="1" /> 
-                                        <field name="exportind_ids" />           
+                                        <field name="registro_exp" />
+                                        <field name="chava_nfe" />
+                                        <field name="q_export" />           
                                     </group>
                                 </group>
                             </sheet>

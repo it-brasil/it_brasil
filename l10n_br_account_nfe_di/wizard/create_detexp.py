@@ -19,16 +19,24 @@ class WizardCreateDetexp(models.TransientModel):
         string="Número do ato concessório de Drawback",
     )
 
-    nfe40_exportInd = fields.Many2one(
-        "exp.ind",
-        string="Exportação indireta",
-    )
+    # nfe40_exportInd = fields.Many2one(
+    #     "exp.ind",
+    #     string="Exportação indireta",
+    # )
 
+    nfe40_nRE = fields.Char(
+        string="Registro de exportação",
+    )
+    nfe40_chNFe = fields.Char(
+        string="Chave de acesso da NF",
+        help="Chave de acesso da NF-e recebida para exportação")
+    nfe40_qExport = fields.Float(
+        string="Quantidade do item efetivamente exportado",
+    )
     am_id = fields.Many2one(
         comodel_name="account.move",
         string="Accoutn Move"
     )
-
     aml_id = fields.Many2one(
         comodel_name="account.move.line",
         domain=[('display_type', 'in', ('product', 'line_section', 'line_note'))],
@@ -36,74 +44,63 @@ class WizardCreateDetexp(models.TransientModel):
         required=True,
     )
 
-    @api.onchange('nfe40_nDraw')
-    def onchange_nfe40_nDraw(self):
-        ctx = self.env.context
-        # exp = ctx.get("detexp_id")
-        exp = ""
-        exp_ids = ctx.get("exp")
-        detexp_line = []
-        if exp:
-            detexp_line.append((0, 0, exp_ids))
-            self.write({'nfe40_exportInd': detexp_line})
+    # @api.onchange('nfe40_nDraw')
+    # def onchange_nfe40_nDraw(self):
+    #     ctx = self.env.context
+    #     # exp = ctx.get("detexp_id")
+    #     exp = ""
+    #     exp_ids = ctx.get("exp")
+    #     detexp_line = []
+    #     if exp:
+    #         detexp_line.append((0, 0, exp_ids))
+    #         self.write({'nfe40_exportInd': detexp_line})
 
     def action_create_expind(self):
-        ctx = self.env.context
-        detexp = ctx.get("detexp_id")
-        adi_line = []
-        adi = {}
+        detexp = self.env.context.get("detexp_id")
+        # adi_line = []
+        # adi = {}
         if detexp:
             if self.aml_id.move_id.state != "draft":
                 raise UserError(_("Documento confirmado, alteração não permitida."))
 
-            if self.nfe40_exportInd:
-                adi["registro_exp"] = self.nfe40_exportInd.nfe40_nRE
-                adi["chava_nfe"] = self.nfe40_exportInd.nfe40_chNFe
-                adi["q_export"] = self.nfe40_exportInd.nfe40_qExport
-                self.aml_id.exp_ids.exportind_ids.write(adi)
-                expind = self.aml_id.exp_ids.exportind_ids
-            else:
-                adi["registro_exp"] = line.nfe40_nRE
-                adi["chava_nfe"] = line.nfe40_chNFe
-                adi["q_export"] = line.nfe40_qExport
-                expind = self.env["export.ind"].create(adi)
+            # if self.nfe40_exportInd:
+            #     self.aml_id.exp_ids.exportind_ids.write(adi)
+            #     expind = self.aml_id.exp_ids.exportind_ids
+            # else:
+            #     adi["registro_exp"] = line.nfe40_nRE
+            #     adi["chava_nfe"] = line.nfe40_chNFe
+            #     adi["q_export"] = line.nfe40_qExport
+            #     expind = self.env["export.ind"].create(adi)
 
             self.aml_id.exp_ids = [(1, detexp, {
-                    'name': self.nfe40_nDraw,
-                    'aml_id': self.aml_id.id,
-                    'company_id': self.aml_id.company_id.id,
-                    'exportind_ids': expind.id,
+                'name': self.nfe40_nDraw,
+                'aml_id': self.aml_id.id,
+                'company_id': self.aml_id.company_id.id,
+                'registro_exp': self.nfe40_nRE,
+                'chava_nfe': self.nfe40_chNFe,
+                'q_export': self.nfe40_qExport,
                 })]
         else:
-            expind = False 
-            for line in self.nfe40_exportInd:
-                adi["registro_exp"] = line.nfe40_nRE
-                adi["chava_nfe"] = line.nfe40_chNFe
-                adi["q_export"] = line.nfe40_qExport
-                expind = self.env["export.ind"].create(adi).id
+            # expind = False 
+            # for line in self.nfe40_exportInd:
+            #     adi["registro_exp"] = line.nfe40_nRE
+            #     adi["chava_nfe"] = line.nfe40_chNFe
+            #     adi["q_export"] = line.nfe40_qExport
+            #     expind = self.env["export.ind"].create(adi).id
 
             self.aml_id.exp_ids = [(0, 0, {
-                    'name': self.nfe40_nDraw,
-                    'aml_id': self.aml_id.id,
-                    'company_id': self.aml_id.company_id.id,
-                    'exportind_ids': expind,
+                'name': self.nfe40_nDraw,
+                'aml_id': self.aml_id.id,
+                'company_id': self.aml_id.company_id.id,
+                'registro_exp': self.nfe40_nRE,
+                'chava_nfe': self.nfe40_chNFe,
+                'q_export': self.nfe40_qExport,
                 })]
 
 
-class ExpInd(models.TransientModel):
-    _name = "exp.ind"
-    _description = "Exportação indireta"
-    _rec_name = "nfe40_nRE"
+# class ExpInd(models.TransientModel):
+#     _name = "exp.ind"
+#     _description = "Exportação indireta"
+#     _rec_name = "nfe40_nRE"
 
-    nfe40_nRE = fields.Char(
-        string="Registro de exportação",
-        required=True,
-    )
-    nfe40_chNFe = fields.Char(
-        string="Chave de acesso da NF",
-        required=True,    
-        help="Chave de acesso da NF-e recebida para exportação")
-    nfe40_qExport = fields.Float(
-        string="Quantidade do item efetivamente exportado",
-        required=True,
-    )
+
