@@ -296,8 +296,9 @@ class SpedEfdIcmsIpi(models.Model):
         dt = self.date_end
         dta_e = '%s-%s-%s' %(str(dt.year),str(dt.month).zfill(2),
             str(dt.day).zfill(2))
-        periodo = 'date_trunc(\'day\', ie.document_date) \
-            between \'%s\' and \'%s\'' %(dta_s, dta_e)
+        periodo = 'ie.company_id = %s and \
+            date_trunc(\'day\', ie.document_date) \
+            between \'%s\' and \'%s\'' %(str(self.company_id.id), dta_s, dta_e)
         com_movimento = '1'
 
         # Nao da pra usar assim, preciso do DISTINCT no 150 por exemplo
@@ -369,7 +370,6 @@ class SpedEfdIcmsIpi(models.Model):
                 continue
             nf = id[0]
             for item_lista in self.query_registroC100(nf):
-                # import pudb;pu.db
                 if item_lista.VL_ICMS:
                     if item_lista.IND_OPER == "0" and id[1] == "autorizada":
                         # Nota entrada
@@ -908,10 +908,10 @@ class SpedEfdIcmsIpi(models.Model):
         for nfe in nfe_ids:    
             # removendo Emissao de Terceiros canceladas
             if nfe.issuer == "partner" and nfe.state_edoc == "cancelada":
-                return True
+                return lista
             # Ajustes SINIEF 34/2021 e 38/2021 (01/12/2021)
             if nfe.state_edoc == "denegada":
-                return True
+                return lista
             cancel = False
             # Obrigatorio para todos STATE_EDOC, exceto a CHV_NF-e nao obrig. INUTLIZADA
             # REG, IND_OPER,IND_EMIT, COD_MOD, COD_SIT, SER, NUM_DOC e CHV_NF-e
@@ -1021,7 +1021,9 @@ class SpedEfdIcmsIpi(models.Model):
                 ('document_id','=', nf),
                 ], order='nfe40_nItem, id')
         n_item = 1
-        for item in nfe_line:     
+        for item in nfe_line:
+            if item.document_id.state_edoc != "autorizada":
+                continue
             registro_c170 = registros.RegistroC170()
             # saida
             registro_c170.NUM_ITEM = str(item.nfe40_nItem or n_item)
