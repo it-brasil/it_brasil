@@ -65,7 +65,7 @@ class SpedEfdIcmsIpi(models.Model):
         ('005', 'Antecipação tributária'),
         ('006', 'ICMS resultante da alíquota adicional dos itens incluídos no Fundo de Combate à Pobreza'),
         ('090', 'Outras obrigações do ICMS'),       
-        ], string= 'Código Obrigação', dafault='000')
+        ], string= 'Código Obrigação', default='000')
         
     cod_receita = fields.Selection([     
         ('046-2', 'Regime Periódico de Apuração'),
@@ -511,7 +511,7 @@ class SpedEfdIcmsIpi(models.Model):
         
         arq.prepare()
         data_mod = datetime.now().strftime("%d%m%y%H%M")
-        mes_ano = self.date_start.strftime("%m%y").zfill(4)
+        mes_ano = self.date_start.strftime("%m%y")
         self.sped_file_name = f"Sped-{mes_ano}-{data_mod}.txt"
         msg_post = f"Arquivo gerado : {self.sped_file_name}."
         #arqxx = open('/opt/odoo/novo_arquivo.txt', 'w')
@@ -1210,8 +1210,8 @@ class SpedEfdIcmsIpi(models.Model):
             if cte.chave_nfe:
                 registro_d100.CHV_CTE = str(cte.chave_nfe)
             registro_d100.NUM_DOC = self.limpa_formatacao(str(cte.numero))
-            registro_d100.DT_A_P = cte.data_fatura or cte.date_invoice
-            registro_d100.DT_DOC = cte.data_emissao or cte.date_invoice
+            registro_d100.DT_A_P = cte.document_date
+            registro_d100.DT_DOC = cte.document_date
             registro_d100.VL_DOC = cte.valor_final
             registro_d100.VL_DESC = cte.valor_desconto
             registro_d100.IND_FRT = cte.modalidade_frete
@@ -1353,7 +1353,7 @@ class SpedEfdIcmsIpi(models.Model):
         #     str(self.date_start.month).zfill(2), 
         #     str(self.date_start.year))
 
-        registro_E116.MES_REF = self.date_start.strftime("%m%Y").zfill(4)
+        registro_E116.MES_REF = self.date_start.strftime("%m%Y")
 
         lista.append(registro_E116)
         return lista
@@ -1545,10 +1545,10 @@ class SpedEfdIcmsIpi(models.Model):
             raise UserError('Erro, a data de vencimento (E-316) não informada.')
         # import pudb;pu.db
         # mes_ref = f"{str(self.date_start.month).zfill(2), str(self.date_start.month).year}"
-        mes_ref = self.date_start.strftime("%m%Y").zfill(4)
+        mes_ref = self.date_start.strftime("%m%Y")
         registro_e316.COD_OR = self.cod_obrigacao
         registro_e316.VL_OR = 0.0
-        registro_e316.DT_VCTO = self.data_vencimento_e316.strftime("%d%m%Y").zfill(8)
+        registro_e316.DT_VCTO = self.data_vencimento_e316.strftime("%d%m%Y")
         registro_e316.COD_REC = self.cod_receita
         registro_e316.NUM_PROC = ''
         registro_e316.IND_PROC = ''
