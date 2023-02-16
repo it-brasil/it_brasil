@@ -85,6 +85,10 @@ class SpedEfdContribuicoes(models.Model):
         ('1', 'Método de Apropriação Direta'),
         ('2', 'Método de Rateio Proporcional (Receita Bruta)'),
         ], string='Método apropriação de créditos')
+    ind_apur = fields.Selection([
+        ('0', 'Mensal'),
+        ('1', 'Decendial'),
+        ], string='Indicador período de apuração IPI')
     cod_tipo_cont = fields.Selection([
         ('1', 'Apuração da Contribuição Exclusivamente a Alíquota Básica'),
         ('2', 'Apuração da Contribuição a Alíquotas Específicas (Diferenciadas e/ou por Unidade de Medida de Produto)'),
@@ -162,7 +166,6 @@ class SpedEfdContribuicoes(models.Model):
                 msg_err = 'Cadastre o contador Pessoa Fisica dentro do Contato da Contabilidade'
                 raise UserError(msg_err)
             contador = ctd.name
-            cod_mun = ctd.city_id.ibge_code
             contabilista.NOME = contador
             contabilista.CPF = self.limpa_formatacao(ctd.cnpj_cpf)
             contabilista.CRC = self.limpa_formatacao(ctd.crc_code)
@@ -173,7 +176,7 @@ class SpedEfdContribuicoes(models.Model):
             contabilista.BAIRRO = ctd.district
             contabilista.FONE = self.limpa_formatacao(ctd.phone)
             contabilista.EMAIL = ctd.email
-            contabilista.COD_MUN = cod_mun
+            contabilista.COD_MUN = ctd.city_id.ibge_code
             arq._blocos['0'].add(contabilista)
          
         reg110 = Registro0110()
@@ -189,7 +192,7 @@ class SpedEfdContribuicoes(models.Model):
         reg0140.CNPJ = self.limpa_formatacao(self.company_id.cnpj_cpf)
         reg0140.UF = self.company_id.state_id.code
         reg0140.IE = self.limpa_formatacao(self.company_id.inscr_est)
-        reg0140.COD_MUN = cod_mun
+        reg0140.COD_MUN = self.company_id.city_id.ibge_code
         reg0140.IM = ''
         reg0140.SUFRAMA = ''
         arq._blocos['0'].add(reg0140)            
@@ -201,7 +204,7 @@ class SpedEfdContribuicoes(models.Model):
         dta_e = '%s-%s-%s' %(str(dt.year),str(dt.month).zfill(2),
             str(dt.day).zfill(2))
         periodo = 'ie.company_id = %s and \
-            date_trunc(\'day\', ie.data_fatura) \
+            date_trunc(\'day\', ie.document_date) \
             between \'%s\' and \'%s\'' %(str(self.company_id.id), dta_s, dta_e)
         # FORNECEDORES
         for item_lista in self.query_registro0150(periodo):
@@ -226,7 +229,7 @@ class SpedEfdContribuicoes(models.Model):
            
         for conta in self.contas_entrada_saida:
             reg500 = Registro0500()
-            reg500.DT_ALT = datetime.strptime(conta.write_date, '%Y-%m-%d')
+            reg500.DT_ALT = conta.write_date
             # Conta de resultado
             if conta.internal_group == "asset":
                 reg500.COD_NAT_CC = '01'
@@ -363,28 +366,32 @@ class SpedEfdContribuicoes(models.Model):
         regP001 = RegistroP001()
         regP001.IND_MOV = '1'
         
-        #import pudb;pu.db
         registro_1001 = Registro1001()
         registro_1001.IND_MOV = '1'
         #arq._blocos['1'].add(registro_1001)
         arq.prepare()
-        self.sped_file_name =  'PisCofins-%s_%s.txt' % (
-            str(dt.month).zfill(2), str(dt.year))
-        #arqxx = open('/opt/odoo/novo_arquivo.txt', 'w')
-        #arqxx.write(arq.getstring())
-        #arqxx.close()
-        self.sped_file = base64.encodestring(bytes(arq.getstring(), 'iso-8859-1'))
+        data_mod = datetime.now().strftime("%d%m%y%H%M")
+        mes_ano = self.date_start.strftime("%m%y")
+        self.sped_file_name = f"SpedPisCofins-{mes_ano}-{data_mod}.txt"
+        msg_post = f"Arquivo gerado : {self.sped_file_name}."
+
+        self.sped_file = base64.encodebytes(bytes(arq.getstring(), 'iso-8859-1'))
+        self.message_post(
+            body=msg_post,
+            subject=_('Geração do Sped Contribuições Pis/Cofins concluída!'),
+            message_type='notification'
+        )
 
     def query_registro0150(self, periodo):
         query = """
                     select distinct
                         ie.partner_id
                     from
-                        invoice_eletronic ie
+                        l10n_br_fiscal_document as ie
                     where
                         %s
-                        and (ie.model in ('55','01','57','67'))
-                        and (ie.state = 'done')
+                        and (ie.document_type in ('55','01','57','67'))
+                        and (ie.state_edoc = 'autorizada')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -397,7 +404,7 @@ class SpedEfdContribuicoes(models.Model):
             cod_pais = resposta_participante.country_id.bc_code
             registro_0150.COD_PAIS = cod_pais
             cpnj_cpf = self.limpa_formatacao(resposta_participante.cnpj_cpf)
-            cod_mun = '%s%s' %(resposta_participante.state_id.ibge_code, resposta_participante.city_id.ibge_code)
+            cod_mun = resposta_participante.city_id.ibge_code
             if cod_pais == '01058':
                 registro_0150.COD_MUN = self.formata_cod_municipio(cod_mun)
                 if len(cpnj_cpf) == 11:
@@ -410,8 +417,8 @@ class SpedEfdContribuicoes(models.Model):
             registro_0150.SUFRAMA = self.limpa_formatacao(resposta_participante.suframa)
             if resposta_participante.street:
                 registro_0150.END = resposta_participante.street.strip()
-            if resposta_participante.number:
-                registro_0150.NUM = resposta_participante.number.strip()
+            if resposta_participante.street_number:
+                registro_0150.NUM = resposta_participante.street_number.strip()
             if resposta_participante.street2:
                 registro_0150.COMPL = resposta_participante.street2.strip()
             if resposta_participante.district:
@@ -423,25 +430,21 @@ class SpedEfdContribuicoes(models.Model):
     def query_registro0190(self, periodo):
         query = """
                     select distinct
-                        substr(UPPER(pu.name), 1,6)
-                        , UPPER(pu.l10n_br_description)
+                          uom.code,
+                          uom.name
                     from
-                        invoice_eletronic as ie
+                        l10n_br_fiscal_document as ie
                     inner join
-                        invoice_eletronic_item as det
-                            on ie.id = det.invoice_eletronic_id 
-                    inner join product_product pp
-                        on pp.id = det.product_id    
-                    inner join product_template pt
-                       on pt.id = pp.product_tmpl_id
+                        l10n_br_fiscal_document_line as aml
+                            on ie.id = aml.document_id 
                     inner join
-                        uom_uom pu
-                            on pu.id = det.uom_id or pu.id = pt.uom_id
+                        uom_uom uom
+                            on uom.id = aml.uom_id
                     where
                         %s
-                        and (ie.model in ('55','01'))
-                        and ie.state = 'done'
-                        and ie.emissao_doc = '2'
+                        and (ie.document_type in ('55','01'))
+                        and (ie.state_edoc = 'autorizada') 
+						and (ie.issuer = 'partner')
                     order by 1
                 """ % (periodo)
         self._cr.execute(query)
@@ -472,17 +475,18 @@ class SpedEfdContribuicoes(models.Model):
 
     def query_registro0200(self, periodo):
         query = """
-                    select distinct
-                        det.product_id
-                    from
-                        invoice_eletronic as ie
-                    inner join
-                        invoice_eletronic_item as det 
-                            on ie.id = det.invoice_eletronic_id
-                    where
-                        %s
-                        and (ie.model in ('55','01'))
-                        and ie.state = 'done'
+            select distinct
+                aml.product_id
+            from
+                l10n_br_fiscal_document as ie
+            inner join
+                l10n_br_fiscal_document_line as aml
+                on ie.id = aml.document_id                 
+            where
+                %s
+                and (ie.document_type in ('55','01'))
+                and (ie.state_edoc = 'autorizada')
+                and (ie.issuer = 'partner')
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
@@ -515,37 +519,31 @@ class SpedEfdContribuicoes(models.Model):
             unidade = unidade.upper()
             unidade = unidade[:6]
             registro_0200.UNID_INV = unidade[:6]
-            registro_0200.TIPO_ITEM = resposta_produto.l10n_br_sped_type
-            registro_0200.COD_NCM = self.limpa_formatacao(resposta_produto.fiscal_classification_id.code)
+            registro_0200.TIPO_ITEM = resposta_produto.fiscal_type
+            registro_0200.COD_NCM = self.limpa_formatacao(resposta_produto.ncm_id.code)
             lista.append(registro_0200)                        
         return lista
 
     def query_registro0400(self, periodo):
         query = """
-                    select distinct
-                        d.fiscal_position_id
-                    from
-                        account_invoice as d
-                    inner join
-                        invoice_eletronic as ie
-                            on ie.invoice_id = d.id
-                    left join
-                        br_account_fiscal_document fd 
-                            on fd.id = d.product_document_id
-                    where
-                        %s
-                        and (ie.model in ('55','01'))
-                        and ie.state in ('done')
-                        and d.fiscal_position_id is not null 
+                select distinct
+                    ie.fiscal_operation_id
+                from
+                    l10n_br_fiscal_document as ie
+                where
+                    %s
+                    and (ie.document_type in ('55','01'))
+                    and (ie.state_edoc in ('autorizada', 'cancelada')) 
+                    and (ie.issuer = 'partner') 
                 """ % (periodo)
         self._cr.execute(query)
         query_resposta = self._cr.fetchall()
         lista = []
         for resposta in query_resposta:
-            resposta_nat = self.env['account.fiscal.position'].browse(resposta[0])
+            resposta_nat = self.env['l10n_br_fiscal.operation'].browse(resposta[0])
             registro_0400 = registros.Registro0400()
             registro_0400.COD_NAT = str(resposta_nat.id)
-            registro_0400.DESCR_NAT = resposta_nat.natureza_operacao
+            registro_0400.DESCR_NAT = resposta_nat.name
             lista.append(registro_0400)
         return lista        
 
@@ -727,8 +725,8 @@ class SpedEfdContribuicoes(models.Model):
             if cte.chave_nfe:
                 registro_d100.CHV_CTE = str(cte.chave_nfe)
             registro_d100.NUM_DOC = self.limpa_formatacao(str(cte.numero))
-            registro_d100.DT_A_P = cte.data_fatura or cte.date_invoice
-            registro_d100.DT_DOC = cte.data_emissao or cte.date_invoice
+            registro_d100.DT_A_P = cte.document_date
+            registro_d100.DT_DOC = cte.document_date
             registro_d100.VL_DOC = cte.valor_final
             registro_d100.VL_DESC = cte.valor_desconto
             registro_d100.IND_FRT = cte.modalidade_frete
@@ -911,8 +909,11 @@ class SpedEfdContribuicoes(models.Model):
                         l10n_br_fiscal_document_line as det 
                             on ie.id = det.document_id
                     inner join
-                        account.account AS aa
-                            on aa.id det.account_id
+                        account_move_line aml
+                            on aml.fiscal_document_line_id = det.id
+                    inner join
+                        account_account AS aa
+                            on aa.id = aml.account_id
                     where
                         %s
                         and (ie.document_type in ('55','01'))
@@ -946,8 +947,11 @@ class SpedEfdContribuicoes(models.Model):
                         l10n_br_fiscal_document_line as det 
                             on ie.id = det.document_id
                     inner join
-                        account.account AS aa
-                            on aa.id det.account_id
+                        account_move_line aml
+                            on aml.fiscal_document_line_id = det.id
+                    inner join
+                        account_account AS aa
+                            on aa.id = aml.account_id
                     where
                         %s
                         and (ie.document_type in ('55','01'))
@@ -1050,8 +1054,11 @@ class SpedEfdContribuicoes(models.Model):
                         l10n_br_fiscal_document_line as det 
                             on ie.id = det.document_id
                     inner join
-                        account.account AS aa
-                            on aa.id det.account_id
+                        account_move_line aml
+                            on aml.fiscal_document_line_id = det.id
+                    inner join
+                        account_account AS aa
+                            on aa.id = aml.account_id
                     where
                         %s
                         and (ie.document_type in ('55','01'))
@@ -1084,8 +1091,11 @@ class SpedEfdContribuicoes(models.Model):
                         l10n_br_fiscal_document_line as det 
                             on ie.id = det.document_id
                     inner join
-                        account.account AS aa
-                            on aa.id det.account_id
+                        account_move_line aml
+                            on aml.fiscal_document_line_id = det.id
+                    inner join
+                        account_account AS aa
+                            on aa.id = aml.account_id
                     where
                         %s
                         and (ie.document_type in ('55','01'))
