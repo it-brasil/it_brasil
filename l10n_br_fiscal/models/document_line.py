@@ -2,7 +2,6 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
 
 
 class DocumentLine(models.Model):
@@ -97,8 +96,3 @@ class DocumentLine(models.Model):
         related="document_id.force_compute_delivery_costs_by_total"
     )
     
-    def unlink(self):
-        dummy_docs = self.env["res.company"].search([]).mapped("fiscal_dummy_id")
-        if any(line.document_id in dummy_docs for line in self):
-            raise UserError(_("You cannot unlink Fiscal Document Line Dummy !"))
-        return super().unlink()

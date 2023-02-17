@@ -11,9 +11,10 @@
     "category": "Localisation",
     "license": "AGPL-3",
     "author": "Engenere," "Akretion," "Odoo Community Association (OCA)",
+    "maintainers": ["antoniospneto", "felipemotter", "mbcosta"],
     "website": "https://github.com/OCA/l10n-brazil",
-    "version": "12.0.1.0.0",
-    "development_status": "Alpha",
+    "version": "14.0.2.0.0",
+    "development_status": "Beta",
     "depends": [
         "l10n_br_nfe",
         "l10n_br_account",
@@ -22,9 +23,7 @@
     "data": [
         "views/account_payment_mode.xml",
     ],
-    "demo": [
-        "demo/account_invoice_demo.xml",
-    ],
+    "post_init_hook": "post_init_hook",
     "installable": True,
     "auto_install": True,
 }

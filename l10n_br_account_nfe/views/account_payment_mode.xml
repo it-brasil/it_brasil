@@ -9,7 +9,6 @@
         <field name="arch" type="xml">
             <field name="payment_type" position="after">
                 <field name="fiscal_payment_mode" />
-                <field name="ind_pag" />
             </field>
         </field>
     </record>

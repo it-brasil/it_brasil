@@ -2,7 +2,6 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 from odoo import SUPERUSER_ID, api
-from odoo.tools.sql import column_exists, create_column
 
 
 def pre_init_hook(cr):
@@ -17,36 +16,6 @@ def pre_init_hook(cr):
     that we use to fill these new foreign keys.
     """
     env = api.Environment(cr, SUPERUSER_ID, {})
-    # Create fiscal_document_id fields
-    if not column_exists(cr, "account_move", "fiscal_document_id"):
-        create_column(cr, "account_move", "fiscal_document_id", "INTEGER")
-
-    # Create fiscal_document_line_id fields
-    if not column_exists(cr, "account_move_line", "fiscal_document_line_id"):
-        create_column(cr, "account_move_line", "fiscal_document_line_id", "INTEGER")
-
-    companies = env["res.company"].search([])
-    for company in companies:
-        cr.execute(
-            """
-            UPDATE
-                account_move
-            SET fiscal_document_id=%s
-            WHERE
-                fiscal_document_id IS NULL;""",
-            (company.fiscal_dummy_id.id,),
-        )
-        cr.execute(
-            """
-            UPDATE
-                account_move_line
-            SET
-                fiscal_document_line_id=%s
-            WHERE
-                fiscal_document_line_id IS NULL;""",
-            (company.fiscal_dummy_id.fiscal_line_ids[0].id,),
-        )
-
 
 def load_fiscal_taxes(env, l10n_br_coa_chart):
     companies = env["res.company"].search(

@@ -6,7 +6,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo.exceptions import UserError
-from odoo.tests import SavepointCase, tagged
+from odoo.tests import Form, SavepointCase, tagged
 
 
 @tagged("post_install", "-at_install")
@@ -16,6 +16,11 @@ class TestGeneratePaymentInfo(SavepointCase):
         super().setUpClass()
 
         cls.company = cls.env.ref("l10n_br_base.empresa_lucro_presumido")
+
+        # set default user company
+        companies = cls.env["res.company"].search([])
+        cls.env.user.company_ids = [(6, 0, companies.ids)]
+        cls.env.user.company_id = cls.company
 
         cls.payment_mode = cls.env["account.payment.mode"].create(
             {
@@ -44,8 +49,7 @@ class TestGeneratePaymentInfo(SavepointCase):
                 "company_id": cls.company.id,
                 "name": "Invoice Journal - (test)",
                 "code": "INVTEST",
-                "type": "purchase",
-                "update_posted": True,
+                "type": "sale",
             }
         )
 
@@ -66,93 +70,105 @@ class TestGeneratePaymentInfo(SavepointCase):
             }
         )
 
-        cls.invoice = cls.env["account.invoice"].create(
+        cls.invoice_line_account_id = cls.env["account.account"].create(
             {
                 "company_id": cls.company.id,
-                "partner_id": cls.env.ref("l10n_br_base.res_partner_cliente1_sp").id,
+                "user_type_id": cls.env.ref("account.data_account_type_revenue").id,
+                "code": "705070",
+                "name": "Product revenue account (test)",
+            }
+        )
+
+        cls.fiscal_operation_id = cls.env.ref("l10n_br_fiscal.fo_venda")
+        cls.fiscal_operation_id.deductible_taxes = True
+
+        move_form = Form(
+            cls.env["account.move"]
+            .with_company(cls.company)
+            .with_context(default_move_type="out_invoice")
+        )
+        move_form.partner_id = cls.env.ref("l10n_br_base.res_partner_cliente1_sp")
+        move_form.document_type_id = cls.env.ref("l10n_br_fiscal.document_55")
+        move_form.fiscal_operation_id = cls.fiscal_operation_id
+        invoice_vals = move_form._values_to_save(all_fields=True)
+        invoice_vals.update(
+            {
+                "company_id": cls.company.id,
+                "currency_id": cls.company.currency_id.id,
                 "payment_mode_id": cls.payment_mode.id,
-                "document_type_id": cls.env.ref("l10n_br_fiscal.document_55").id,
-                "fiscal_operation_id": cls.env.ref("l10n_br_fiscal.fo_venda").id,
                 "document_serie_id": cls.env.ref(
                     "l10n_br_fiscal.empresa_lc_document_55_serie_1"
                 ).id,
                 "journal_id": cls.invoice_journal.id,
-                "payment_term_id": cls.payment_term.id,
+                "invoice_payment_term_id": cls.payment_term.id,
+                "invoice_origin": "Teste l10n_br_account_nfe",
+                "invoice_user_id": cls.env.user.id,
             }
         )
 
-        cls.invoice_line_account_id = cls.env["account.account"].create(
+        line_form = move_form.invoice_line_ids.new()
+        line_form.product_id = cls.env.ref("product.product_product_7")
+        line_form.fiscal_operation_id = cls.fiscal_operation_id
+        invoice_line_vals = line_form._values_to_save(all_fields=True)
+        invoice_line_vals.update(
             {
-                "company_id": cls.company.id,
-                "user_type_id": cls.env.ref("account.data_account_type_expenses").id,
-                "code": "EXPTEST",
-                "name": "Test expense account",
-            }
-        )
-
-        cls.line = cls.env["account.invoice.line"].create(
-            {
-                "product_id": cls.env.ref("product.product_product_3").id,
-                "quantity": 1,
-                "price_unit": 100,
-                "invoice_id": cls.invoice.id,
-                "name": "something",
-                "fiscal_operation_id": cls.env.ref("l10n_br_fiscal.fo_venda").id,
-                "fiscal_operation_line_id": cls.env.ref(
-                    "l10n_br_fiscal.fo_venda_venda"
-                ).id,
                 "account_id": cls.invoice_line_account_id.id,
+                "quantity": 1,
+                "price_unit": 450.0,
+                "name": "Product - Invoice Line Test",
+                "fiscal_operation_line_id": cls.env.ref(
+                    "l10n_br_fiscal.fo_venda_revenda"
+                ).id,
+                "company_id": cls.company.id,
+                "partner_id": cls.env.ref("l10n_br_base.res_partner_cliente1_sp").id,
             }
         )
 
-        cls.line._onchange_product_id_fiscal()
-        cls.line._onchange_commercial_quantity()
-        cls.line._onchange_ncm_id()
-        cls.line._onchange_fiscal_operation_id()
-        cls.line._onchange_fiscal_operation_line_id()
-        cls.line._onchange_fiscal_taxes()
-
-        cls.invoice.action_invoice_open()
+        invoice_vals["invoice_line_ids"].append((0, 0, invoice_line_vals))
+        del invoice_vals["line_ids"]
+        cls.invoice = cls.env["account.move"].create(invoice_vals)
+        cls.invoice.invoice_line_ids._onchange_fiscal_tax_ids()
+        cls.invoice.invoice_line_ids._onchange_fiscal_operation_line_id()
+        cls.invoice.action_post()
 
         # Dado de Demonstração
         cls.invoice_demo_data = cls.env.ref(
             "l10n_br_account_nfe.demo_nfe_dados_de_cobranca"
         )
+        cls.env.user.company_id = cls.invoice_demo_data.company_id
+        for line in cls.invoice_demo_data.invoice_line_ids:
+            line.with_context(
+                check_move_validity=False
+            )._onchange_fiscal_operation_line_id()
+            line.with_context(check_move_validity=False)._onchange_fiscal_tax_ids()
+        cls.invoice_demo_data.action_post()
 
     def test_nfe_generate_tag_pag(self):
-        """ Test NFe generate TAG PAG."""
+        """Test NFe generate TAG PAG."""
         # Dados criados no teste
         for detPag in self.invoice.nfe40_detPag:
             self.assertEqual(detPag.nfe40_indPag, "1", "Error in nfe40_indPag field.")
             self.assertEqual(detPag.nfe40_tPag, "18", "Error in nfe40_tPag field.")
-            self.assertEqual(detPag.nfe40_vPag, 472.5, "Error in nfe40_vPag field.")
+            self.assertEqual(detPag.nfe40_vPag, 450.0, "Error in nfe40_vPag field.")
 
         # Dados criados no dados de demonstração
-        self.invoice_demo_data.action_invoice_open()
         for detPag in self.invoice_demo_data.nfe40_detPag:
             self.assertEqual(detPag.nfe40_indPag, "1", "Error in nfe40_indPag field.")
             self.assertEqual(detPag.nfe40_tPag, "15", "Error in nfe40_tPag field.")
             self.assertEqual(detPag.nfe40_vPag, 1000.0, "Error in nfe40_vPag field.")
 
     def test_nfe_generate_tag_cobr_and_dup(self):
-        """ Test NFe generate TAG COBR e DUP."""
+        """Test NFe generate TAG COBR e DUP."""
         # Dados criados no teste
-        self.assertEqual(self.invoice.nfe40_vOrig, 472.5)
+        self.assertEqual(self.invoice.nfe40_vOrig, 450.0)
         self.assertEqual(self.invoice.nfe40_vDesc, 0.0)
-        self.assertEqual(self.invoice.nfe40_vLiq, 472.5)
+        self.assertEqual(self.invoice.nfe40_vLiq, 450.0)
         self.assertEqual(self.invoice.nfe40_dup[0].nfe40_nDup, "001")
         venc = self.invoice.financial_move_line_ids[0].date_maturity
         self.assertEqual(self.invoice.nfe40_dup[0].nfe40_dVenc, venc)
-        # TODO: por algum motivo o valor da Duplicata está vindo 399.37
-        #  tanto nesse PR quanto no original com rebase, valores abaixo
-        #  amount_total | amount_financial_total | amount_financial_total_gross
-        #  472.5        | 472.5                  | 472.5
-        #  amount_untaxed | amount_tax | aml.debit | aml.amount_residual
-        #  450.0          | 22.5       | 399.37    | 399.37
-        # self.assertEqual(self.invoice.nfe40_dup[0].nfe40_vDup, 472.5)
+        self.assertEqual(self.invoice.nfe40_dup[0].nfe40_vDup, 450.0)
 
         # Dados criados no dados de demonstração
-        self.invoice_demo_data.action_invoice_open()
         self.assertEqual(self.invoice_demo_data.nfe40_vOrig, 1000)
         self.assertEqual(self.invoice_demo_data.nfe40_vDesc, 0.0)
         self.assertEqual(self.invoice_demo_data.nfe40_vLiq, 1000)
@@ -176,4 +192,19 @@ class TestGeneratePaymentInfo(SavepointCase):
         )
         self.invoice_demo_data.payment_mode_id = self.pay_mode.id
         with self.assertRaises(UserError):
-            self.invoice_demo_data.action_invoice_open()
+            self.invoice_demo_data.action_post()
+
+    def test_invoice_without_payment_mode(self):
+        """Test Invoice without Payment Mode."""
+        invoice = self.env.ref("l10n_br_account_nfe.demo_nfe_sem_dados_de_cobranca")
+        invoice.action_post()
+        self.assertFalse(
+            invoice.nfe40_dup,
+            "Error field nfe40_dup should not filled when Fiscal Operation are Bonificação.",
+        )
+        for detPag in invoice.nfe40_detPag:
+            self.assertEqual(
+                detPag.nfe40_tPag,
+                "90",
+                "Error in nfe40_tPag field, should be 90 - Sem Pagamento.",
+            )
