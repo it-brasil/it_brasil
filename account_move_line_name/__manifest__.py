@@ -3,7 +3,7 @@
 
 {
     'name': 'Account Move Line Name',
-    'version': '1.0',
+    'version': '1.1',
     'category': 'Account',
     'description': """
        Adiciona no número da Parcela o número da NF e a parcela.
@@ -11,9 +11,7 @@
     'author': 'ATS Solucoes',
     'website': 'http://www.atsti.com.br',
     'depends': ['l10n_br_account'],
-    'data': [
-        # "views/account_move_line_views.xml",
-    ],
+    'data': [],
     'demo': [],
     'installable': True,
     'auto_install': False,

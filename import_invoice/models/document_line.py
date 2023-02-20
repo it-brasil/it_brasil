@@ -59,7 +59,7 @@ class NFeLine(spec_models.StackedModel):
                     vals_adi = {
                         "nfe40_nRE": line.name,
                         "nfe40_chNFe": line.manufacturer_code,
-                        "nfe40_qExport": "{:.2f}".format(line.amount_discount) if line.amount_discount != 0.0 else False,
+                        "nfe40_qExport": "{:.6f}".format(line.amount_discount) if line.amount_discount != 0.0 else False,
                     }
                 # TODO estou gravando so uma linha , se tiver mais vai dar erro
                 if len(vals_adi):

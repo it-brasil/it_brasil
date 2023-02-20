@@ -1,21 +1,33 @@
 # -*- coding: utf-8 -*-
-
-from odoo import api, fields, models, _
-from odoo.tools.misc import formatLang, format_date
+from odoo import models, api, _
+import logging
+_logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
     _inherit = "account.move"
 
     def action_post(self, invoice=False):
+        installments = 1
         result = super().action_post()
-        recompute_payment_terms = False
-        if self.document_number:
-            for line in self.line_ids:
-                if line.account_id.user_type_id.type in ('receivable', 'payable'):
-                    if ((not line.name) or (
-                        line.name and self.document_number not in line.name)):
-                        recompute_payment_terms = True
-        if recompute_payment_terms:
-            self._recompute_payment_terms_lines()
+        invoice_name = self.document_number if self.document_number else self.payment_reference if self.payment_reference else self.name
+        invoice_lines = self.line_ids.filtered(
+            lambda l: l.account_id.internal_type in ('receivable', 'payable'))
+        payment_term = self.invoice_payment_term_id
+        if invoice_lines:
+            if payment_term:
+                for line in invoice_lines:
+                    line.write({
+                        'name': _('%s - %s/%s') % (str(invoice_name), str(installments), str(len(invoice_lines)) )
+                    })
+                    installments += 1
+        return result
+
+    def button_draft(self):
+        result = super().button_draft()
+        # Apaga o campo rotulo da linha
+        for line in self.line_ids:
+            line.write({
+                'name': False
+            })
         return result
