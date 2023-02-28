@@ -4,7 +4,9 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import _, models
+import logging
 
+_logger = logging.getLogger(__name__)
 
 class CashFlowReportXlsx(models.AbstractModel):
     _name = "report.cash_flow_report.cash_flow_report_xlsx"
@@ -120,7 +122,9 @@ class CashFlowReportXlsx(models.AbstractModel):
         partners_data = res_data["partners_data"]
         journals_data = res_data["journals_data"]
         balance_list = res_data["balance_list"]
-        balance = balance_list[0]['balance_value']
+        balance = 0.0
+        for balance_item in balance_list:
+            balance += balance_item["balance_value"]
         total_amount = res_data["total_amount"]
         show_partner_details = res_data["show_partner_details"]
         for date_ocor in Open_items.keys():
@@ -225,27 +229,54 @@ class CashFlowReportXlsx(models.AbstractModel):
             super(CashFlowReportXlsx, self).write_ending_balance_from_dict(
                 my_object, name, label, report_data
             )
+    
+    def format_br_value(self, value):
+        """Format value to Brazilian currency with symbol"""
+        return "R$ {:,.2f}".format(value)
 
     def _write_filters(self, filters, report_data, objects, data):
         res_data = self.env[
             "report.cash_flow_report.cash_flow_report"
         ]._get_report_values(objects, data)
-        balance_list = res_data["balance_list"]        
+        balance_list = res_data["balance_list"]
         # For each account
         col_name = 1
         res = super(CashFlowReportXlsx, self)._write_filters(
             filters, report_data
         )
-        balance_start = "%s - %s" %(balance_list[0]['bank'], str(balance_list[0]['balance_value']))
-        report_data["sheet"].merge_range(
+        if len (balance_list) > 0:
+            report_data["row_pos"] += 1
+            report_data["sheet"].merge_range(
                 report_data["row_pos"],
                 col_name,
                 report_data["row_pos"],
                 col_name + 3,
-                balance_start,
+                _("Saldo do Período"),
                 report_data["formats"]["format_header_left"],
             )
-        report_data["row_pos"] += 1
+            report_data["row_pos"] += 1
+            for balance in balance_list:
+                value_balance = self.format_br_value(balance["balance_value"])
+                report_data["sheet"].merge_range(
+                    report_data["row_pos"],
+                    col_name,
+                    report_data["row_pos"],
+                    col_name + 3,
+                    "%s - %s" % (balance["bank"], value_balance),
+                    report_data["formats"]["format_header_left"],
+                )
+                report_data["row_pos"] += 1
+        else:
+            report_data["row_pos"] += 1
+            report_data["sheet"].merge_range(
+                report_data["row_pos"],
+                col_name,
+                report_data["row_pos"],
+                col_name + 3,
+                _("Não selecionado nenhum banco"),
+                report_data["formats"]["format_header_left"],
+            )
+            report_data["row_pos"] += 1
 
         return res
 
