@@ -79,8 +79,9 @@ class CashFlowReportXlsx(models.AbstractModel):
         return res
 
     def _get_report_filters(self, report):
+        date_period = report.date_from.strftime("%d/%m/%Y") + " - " + report.date_at.strftime("%d/%m/%Y")
         return [
-            [_("Date at filter"), report.date_at.strftime("%d/%m/%Y")],
+            [_("Date at filter"), date_period],
             [
                 _("Target moves filter"),
                 _("All posted entries")
