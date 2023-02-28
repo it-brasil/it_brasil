@@ -14,7 +14,7 @@ class CashFlowReportWizard(models.TransientModel):
     _inherit = "account_financial_report_abstract_wizard"
 
     date_at = fields.Date(string="Data final", required=True, default=fields.Date.context_today)
-    date_from = fields.Date(string="Data inicio")
+    date_from = fields.Date(string="Data inicio", required=True)
     target_move = fields.Selection(
         [("posted", "Todas entradas postadas"), ("all", "Todas Entradas")],
         string="Movimentos",
