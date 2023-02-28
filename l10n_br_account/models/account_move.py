@@ -130,6 +130,18 @@ class AccountMove(models.Model):
         self._withholding_validate()
         return super().button_cancel()
 
+    # TODO: Por ora esta solução contorna o problema
+    #  AttributeError: 'Boolean' object has no attribute 'depends_context'
+    #  Este erro está relacionado com o campo active implementado via localização
+    #  nos modelos account.move.line e l10n_br_fiscal.document.line
+    #  Este problema começou após este commit:
+    #  https://github.com/oca/ocb/commit/1dcd071b27779e7d6d8f536c7dce7002d27212ba
+    def _get_integrity_hash_fields_and_subfields(self):
+        return self._get_integrity_hash_fields() + [
+            f"line_ids.{subfield}"
+            for subfield in self.env["account.move.line"]._get_integrity_hash_fields()
+        ]
+
     # estou replicando aqui para remover o financeiro qdo o CFOP nao tem Financeiro
     @api.depends("line_ids", "state")
     def _compute_financial(self):
