@@ -77,6 +77,7 @@ class CashFlowReport(models.AbstractModel):
         move_lines = self.env["account.move.line"].search_read(
             domain=domain, fields=ml_fields, order="date_maturity"
         )
+        _logger.warning("move_lines 77: %s", move_lines)
         journals_ids = set()
         partners_ids = set()
         partners_data = {}
@@ -106,113 +107,114 @@ class CashFlowReport(models.AbstractModel):
                     partner_ids,
                     only_posted_moves,
                 )
-        move_lines = [
-            move_line
-            for move_line in move_lines
-            if move_line["date_maturity"] <= date_at_object
-            and not float_is_zero(move_line["amount_residual"], precision_digits=2)
-        ]
-
+        # move_lines = [
+        #     move_line
+        #     for move_line in move_lines
+        #     if move_line["date_maturity"] <= date_at_object
+        #     # and not float_is_zero(move_line["amount_residual"], precision_digits=2)
+        # ]
+        # _logger.warning("move_lines 110: %s", move_lines)
         open_items_move_lines_data = {}
         balance = 0
         contas_key = []
         for move_line in move_lines:
-            journals_ids.add(move_line["journal_id"][0])
-            contas_key.append(move_line["account_id"][0])
-            if move_line["date_maturity"]:
-                dt_time = move_line["date_maturity"]
-            else:
-                dt_time = move_line["date"]
-            date_vcto = 10000*dt_time.year + 100*dt_time.month + dt_time.day
-            acc_id = date_vcto
-            # Partners data
-            if move_line["partner_id"]:
-                prt_id = move_line["partner_id"][0]
-                prt_name = move_line["partner_id"][1]
-            else:
-                # TODO se for banco, pegar Conta e Agencia
-                prt_id = 0
-                prt_name = "Missing Partner"
-            if prt_id not in partners_ids:
-                partners_data.update({prt_id: {"id": prt_id, "name": prt_name}})
-                partners_ids.add(prt_id)
+            if move_line["date_maturity"] <= date_at_object:
+                journals_ids.add(move_line["journal_id"][0])
+                contas_key.append(move_line["account_id"][0])
+                if move_line["date_maturity"]:
+                    dt_time = move_line["date_maturity"]
+                else:
+                    dt_time = move_line["date"]
+                date_vcto = 10000*dt_time.year + 100*dt_time.month + dt_time.day
+                acc_id = date_vcto
+                # Partners data
+                if move_line["partner_id"]:
+                    prt_id = move_line["partner_id"][0]
+                    prt_name = move_line["partner_id"][1]
+                else:
+                    # TODO se for banco, pegar Conta e Agencia
+                    prt_id = 0
+                    prt_name = "Missing Partner"
+                if prt_id not in partners_ids:
+                    partners_data.update({prt_id: {"id": prt_id, "name": prt_name}})
+                    partners_ids.add(prt_id)
 
-            # Move line update
-            original = 0
+                # Move line update
+                original = 0
 
-            if not float_is_zero(move_line["credit"], precision_digits=2):
-                original = move_line["credit"] * (-1)
-                balance += move_line["credit"]
-            if not float_is_zero(move_line["debit"], precision_digits=2):
-                original = move_line["debit"]
-                balance += move_line["debit"]
+                if not float_is_zero(move_line["credit"], precision_digits=2):
+                    original = move_line["credit"] * (-1)
+                    balance += move_line["credit"]
+                if not float_is_zero(move_line["debit"], precision_digits=2):
+                    original = move_line["debit"]
+                    balance += move_line["debit"]
 
-            if move_line["ref"] == move_line["name"]:
-                if move_line["ref"]:
+                if move_line["ref"] == move_line["name"]:
+                    if move_line["ref"]:
+                        ref_label = move_line["ref"]
+                    else:
+                        ref_label = ""
+                elif not move_line["ref"]:
+                    ref_label = move_line["name"]
+                elif not move_line["name"]:
                     ref_label = move_line["ref"]
                 else:
-                    ref_label = ""
-            elif not move_line["ref"]:
-                ref_label = move_line["name"]
-            elif not move_line["name"]:
-                ref_label = move_line["ref"]
-            else:
-                ref_label = move_line["ref"] + str(" - ") + move_line["name"]
-            account_name = ""
-            if move_line["account_id"]:
-                account_name = move_line["account_id"][1]
-            # move_id = self.env["account.move"].browse([move_line["move_id"][0]])
-            # if move_id.ref:
-            #     if ref_label:
-            #         ref_label += ', ' + move_id.ref
-            #     else:
-            #         ref_label = move_id.ref
-            # payment_mode = move_id.payment_mode_id.name
-            payment_mode = ""
-            payment_mode_id = 0
-            if move_line["payment_mode_id"]:
-                payment_mode = move_line["payment_mode_id"][1]
-                payment_mode_id = move_line["payment_mode_id"][0]
-            move_line.update(
-                {
-                    "date": move_line["date"],
-                    "date_maturity": move_line["date_maturity"]
-                    and move_line["date_maturity"].strftime("%d/%m/%Y"),
-                    "original": original,
-                    "partner_id": prt_id,
-                    "partner_name": prt_name,
-                    "payment_mode_id": payment_mode_id,
-                    "payment_mode_name": payment_mode,
-                    "account_name": account_name,
-                    "ref_label": ref_label,
-                    "journal_id": move_line["journal_id"][0],
-                    "move_name": move_line["move_id"][1],
-                    "entry_id": move_line["move_id"][0],
-                    "currency_id": move_line["currency_id"][0]
-                    if move_line["currency_id"]
-                    else False,
-                    "currency_name": move_line["currency_id"][1]
-                    if move_line["currency_id"]
-                    else False,
-                    "amount_balance": balance,
-                }
-            )
+                    ref_label = move_line["ref"] + str(" - ") + move_line["name"]
+                account_name = ""
+                if move_line["account_id"]:
+                    account_name = move_line["account_id"][1]
+                # move_id = self.env["account.move"].browse([move_line["move_id"][0]])
+                # if move_id.ref:
+                #     if ref_label:
+                #         ref_label += ', ' + move_id.ref
+                #     else:
+                #         ref_label = move_id.ref
+                # payment_mode = move_id.payment_mode_id.name
+                payment_mode = ""
+                payment_mode_id = 0
+                if move_line["payment_mode_id"]:
+                    payment_mode = move_line["payment_mode_id"][1]
+                    payment_mode_id = move_line["payment_mode_id"][0]
+                move_line.update(
+                    {
+                        "date": move_line["date"],
+                        "date_maturity": move_line["date_maturity"]
+                        and move_line["date_maturity"].strftime("%d/%m/%Y"),
+                        "original": original,
+                        "partner_id": prt_id,
+                        "partner_name": prt_name,
+                        "payment_mode_id": payment_mode_id,
+                        "payment_mode_name": payment_mode,
+                        "account_name": account_name,
+                        "ref_label": ref_label,
+                        "journal_id": move_line["journal_id"][0],
+                        "move_name": move_line["move_id"][1],
+                        "entry_id": move_line["move_id"][0],
+                        "currency_id": move_line["currency_id"][0]
+                        if move_line["currency_id"]
+                        else False,
+                        "currency_name": move_line["currency_id"][1]
+                        if move_line["currency_id"]
+                        else False,
+                        "amount_balance": balance,
+                    }
+                )
 
-            # Open Items Move Lines Data
-            # if acc_id not in open_items_move_lines_data.keys():
-            #     open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
-            # else:
-            #     if prt_id not in open_items_move_lines_data[acc_id].keys():
-            #         open_items_move_lines_data[acc_id][prt_id] = [move_line]
-            #     else:
-            #         open_items_move_lines_data[acc_id][prt_id].append(move_line)
-            if acc_id not in open_items_move_lines_data.keys():
-                open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
-            else:
-                if prt_id not in open_items_move_lines_data[acc_id].keys():
-                    open_items_move_lines_data[acc_id][prt_id] = [move_line]
+                # Open Items Move Lines Data
+                # if acc_id not in open_items_move_lines_data.keys():
+                #     open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
+                # else:
+                #     if prt_id not in open_items_move_lines_data[acc_id].keys():
+                #         open_items_move_lines_data[acc_id][prt_id] = [move_line]
+                #     else:
+                #         open_items_move_lines_data[acc_id][prt_id].append(move_line)
+                if acc_id not in open_items_move_lines_data.keys():
+                    open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
                 else:
-                    open_items_move_lines_data[acc_id][prt_id].append(move_line)
+                    if prt_id not in open_items_move_lines_data[acc_id].keys():
+                        open_items_move_lines_data[acc_id][prt_id] = [move_line]
+                    else:
+                        open_items_move_lines_data[acc_id][prt_id].append(move_line)
         journals_data = self._get_journals_data(list(journals_ids))
         # accounts_data = self._get_accounts_data(open_items_move_lines_data.keys())
         accounts_data = self._get_accounts_data(contas_key)
