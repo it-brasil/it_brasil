@@ -8,6 +8,8 @@ from datetime import date, datetime
 from odoo import api, models
 from odoo.tools import float_is_zero
 
+import logging
+_logger = logging.getLogger(__name__)
 
 class CashFlowReport(models.AbstractModel):
     _name = "report.cash_flow_report.cash_flow_report"
@@ -330,6 +332,18 @@ class CashFlowReport(models.AbstractModel):
             ["account_id", "balance:sum"], #fields
             ["account_id"] #group_by
         )
+        # Utilizado o código abaixo para lista os diários do tipo Dinheiro
+        # onde as contas das "Configurações de Pagamento", são diferentes
+        # da conta principal do diário.
+        # cash_journal = self.env["account.move.line"].read_group([
+        #     ("journal_id.type", "=", "cash"),
+        #     ("date", "<=", data["date_from"])
+        # ],  # domain
+        #     ["journal_id", "balance:sum", "account_id"],  # fields
+        #     ["account_id"]  # group_by
+        # )
+        # if cash_journal:
+        #     balance_values += cash_journal
         balance_list = []
         for balance in balance_values:
             vals = {
