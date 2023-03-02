@@ -4,7 +4,9 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from odoo import api, fields, models
-
+from odoo.osv import expression
+import logging
+_logger = logging.getLogger(__name__)
 
 class CashFlowReportWizard(models.TransientModel):
     """Open items report wizard."""
@@ -14,7 +16,7 @@ class CashFlowReportWizard(models.TransientModel):
     _inherit = "account_financial_report_abstract_wizard"
 
     date_at = fields.Date(string="Data final", required=True, default=fields.Date.context_today)
-    date_from = fields.Date(string="Data inicio")
+    date_from = fields.Date(string="Data inicio", required=True)
     target_move = fields.Selection(
         [("posted", "Todas entradas postadas"), ("all", "Todas Entradas")],
         string="Movimentos",
@@ -37,6 +39,7 @@ class CashFlowReportWizard(models.TransientModel):
     )
     receivable_accounts_only = fields.Boolean()
     payable_accounts_only = fields.Boolean()
+    bank_accounts_only = fields.Boolean()
     partner_ids = fields.Many2many(
         comodel_name="res.partner",
         string="Filtro parceiros",
@@ -103,7 +106,7 @@ class CashFlowReportWizard(models.TransientModel):
                 lambda p: p.company_id == self.company_id or not p.company_id
             )
         if self.company_id and self.account_ids:
-            if self.receivable_accounts_only or self.payable_accounts_only:
+            if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
                 self.onchange_type_accounts_only()
             else:
                 self.account_ids = self.account_ids.filtered(
@@ -121,17 +124,25 @@ class CashFlowReportWizard(models.TransientModel):
     def onchange_account_ids(self):
         return {"domain": {"account_ids": ["|", ("reconcile", "=", True), ("user_type_id", "=", 3)]}}
 
-    @api.onchange("receivable_accounts_only", "payable_accounts_only")
+    @api.onchange("receivable_accounts_only", "payable_accounts_only", "bank_accounts_only")
     def onchange_type_accounts_only(self):
         """Handle receivable/payable accounts only change."""
         domain = [("company_id", "=", self.company_id.id)]
-        if self.receivable_accounts_only or self.payable_accounts_only:
-            if self.receivable_accounts_only and self.payable_accounts_only:
-                domain += [("internal_type", "in", ("receivable", "payable"))]
-            elif self.receivable_accounts_only:
+        if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
+            if self.receivable_accounts_only:
                 domain += [("internal_type", "=", "receivable")]
-            elif self.payable_accounts_only:
+            if self.payable_accounts_only:
                 domain += [("internal_type", "=", "payable")]
+            if self.bank_accounts_only:
+                domain += [("internal_type", "=", "liquidity")]
+            if self.receivable_accounts_only and self.payable_accounts_only:
+                domain = [("internal_type", "in", ("receivable", "payable"))]
+            if self.receivable_accounts_only and self.bank_accounts_only:
+                domain = [("internal_type", "in", ("receivable", "liquidity"))]
+            if self.payable_accounts_only and self.bank_accounts_only:
+                domain = [("internal_type", "in", ("payable", "liquidity"))]
+            if self.receivable_accounts_only and self.payable_accounts_only and self.bank_accounts_only:
+                domain = [("internal_type", "in", ("receivable", "payable", "liquidity"))]
             self.account_ids = self.env["account.account"].search(domain)
         else:
             self.account_ids = None
