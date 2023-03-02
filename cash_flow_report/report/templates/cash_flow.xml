@@ -143,8 +143,6 @@
                 <!-- coloco o saldo inicial aqui dos caixas -->
                 <div class="act_as_row">
                     <div class="act_as_cell">
-                        <span t-esc="line['account_id']" />
-                        - 
                         <span t-esc="line['bank']" />
                     </div>
                     <div class="act_as_cell amount">
