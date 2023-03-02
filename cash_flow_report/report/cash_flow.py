@@ -118,7 +118,7 @@ class CashFlowReport(models.AbstractModel):
         balance = 0
         contas_key = []
         for move_line in move_lines:
-            if move_line["date_maturity"] <= date_at_object:
+            if move_line["date_maturity"] and move_line["date_maturity"] <= date_at_object:
                 journals_ids.add(move_line["journal_id"][0])
                 contas_key.append(move_line["account_id"][0])
                 if move_line["date_maturity"]:
