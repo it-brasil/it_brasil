@@ -26,7 +26,7 @@ class CashFlowReportWizard(models.TransientModel):
     account_ids = fields.Many2many(
         comodel_name="account.account",
         string="Filtro contas",
-        domain=["&", "|",("deprecated", "=", False), ("reconcile", "=", True), ("user_type_id", "=", 3)],
+        # domain=["|", ("reconcile", "=", True), ("user_type_id", "=", 3)],
         required=True,
     )
     hide_account_at_0 = fields.Boolean(
