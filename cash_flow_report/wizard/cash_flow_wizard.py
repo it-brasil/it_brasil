@@ -26,7 +26,7 @@ class CashFlowReportWizard(models.TransientModel):
     account_ids = fields.Many2many(
         comodel_name="account.account",
         string="Filtro contas",
-        domain=["|",("reconcile", "=", True), ("user_type_id", "=", 3)],
+        domain=["&", "|",("deprecated", "=", False), ("reconcile", "=", True), ("user_type_id", "=", 3)],
         required=True,
     )
     hide_account_at_0 = fields.Boolean(
@@ -127,7 +127,7 @@ class CashFlowReportWizard(models.TransientModel):
     @api.onchange("receivable_accounts_only", "payable_accounts_only", "bank_accounts_only")
     def onchange_type_accounts_only(self):
         """Handle receivable/payable accounts only change."""
-        domain = [("company_id", "=", self.company_id.id)]
+        domain = [("company_id", "=", self.company_id.id), ("deprecated", "=", False)]
         if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
             if self.receivable_accounts_only:
                 domain += [("internal_type", "=", "receivable")]

@@ -54,12 +54,17 @@
                             />
                         </div>
                     </div>
+                    <!-- TODO: Ao exibir o wizard, clicando sobre o campo de contas
+                        mesmo com o filtro de apenas contas ativas, está sendo exibido
+                        contas inativas. Apenas quando clica em Pesquisar mais, o domain funciona.
+                    -->
                     <field
                         name="account_ids"
                         nolabel="1"
                         widget="many2many_tags"
                         options="{'no_create': True}"
                         colspan="4"
+                        context="{'search_default_activeacc': True}"
                     />
                 </group>
                 <footer>
