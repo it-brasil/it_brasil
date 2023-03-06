@@ -104,23 +104,26 @@ class CashFlowReport(models.AbstractModel):
                     partner_ids,
                     only_posted_moves,
                 )
-        move_lines = [
-            move_line
-            for move_line in move_lines
-            if move_line["date_maturity"] <= date_at_object
-            and not float_is_zero(move_line["amount_residual"], precision_digits=2)
-        ]
+        ml = []
+        for move_line in move_lines:
+            if (move_line["date_maturity"] and move_line["date_maturity"] <= date_at_object 
+                and not float_is_zero(move_line["amount_residual"], precision_digits=2)):
+                ml.append(move_line)
 
         open_items_move_lines_data = {}
         balance = 0
         contas_key = []
         for move_line in move_lines:
+            move_id = self.env["account.move"].browse([move_line["move_id"][0]])
+            if move_id.payment_mode_id and move_id.payment_mode_id.fiscal_payment_mode == "90":
+                continue
             journals_ids.add(move_line["journal_id"][0])
             contas_key.append(move_line["account_id"][0])
             if move_line["date_maturity"]:
                 dt_time = move_line["date_maturity"]
             else:
                 dt_time = move_line["date"]
+                move_line["date_maturity"] = dt_time
             date_vcto = 10000*dt_time.year + 100*dt_time.month + dt_time.day
             acc_id = date_vcto
             # Partners data
@@ -168,9 +171,18 @@ class CashFlowReport(models.AbstractModel):
             # payment_mode = move_id.payment_mode_id.name
             payment_mode = ""
             payment_mode_id = 0
-            if move_line["payment_mode_id"]:
+            if "payment_mode_id" in move_line and move_line["payment_mode_id"]:
                 payment_mode = move_line["payment_mode_id"][1]
                 payment_mode_id = move_line["payment_mode_id"][0]
+            else:
+                if move_id.ref:
+                    if ref_label:
+                        ref_label += ', ' + move_id.ref
+                    else:
+                        ref_label = move_id.ref
+                payment_mode = move_id.payment_mode_id.name
+                payment_mode_id = move_id.payment_mode_id.id
+
             move_line.update(
                 {
                     "date": move_line["date"],
