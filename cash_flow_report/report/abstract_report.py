@@ -23,7 +23,7 @@ class CashFlowReportAbstract(models.AbstractModel):
             domain += [("move_id.state", "=", "posted")]
         else:
             domain += [("move_id.state", "in", ["posted", "draft"])]
-        domain += [("date_maturity", ">=", date_from)]
+        domain += [("date_due", ">=", date_from)]
             
         return domain
 
@@ -95,7 +95,7 @@ class CashFlowReportAbstract(models.AbstractModel):
             "account_id",
             "partner_id",
             "amount_residual",
-            "date_maturity",
+            "date_due",
             "ref",
             "debit",
             "credit",
