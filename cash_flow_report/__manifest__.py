@@ -9,7 +9,7 @@
     "author": "ATSTi Soluções,"
     "Odoo Community Association (OCA)",
     "website": "",
-    "depends": ["account", "date_range", "report_xlsx"],
+    "depends": ["account", "date_range", "report_xlsx", "account_invoice_line_due"],
     "data": [
         "security/ir.model.access.csv",
         # "wizard/aged_partner_balance_wizard_view.xml",
