@@ -8,6 +8,7 @@ from odoo.osv import expression
 import logging
 _logger = logging.getLogger(__name__)
 
+
 class CashFlowReportWizard(models.TransientModel):
     """Open items report wizard."""
 
@@ -15,7 +16,8 @@ class CashFlowReportWizard(models.TransientModel):
     _description = "Cash Flow Report Wizard"
     _inherit = "account_financial_report_abstract_wizard"
 
-    date_at = fields.Date(string="Data final", required=True, default=fields.Date.context_today)
+    date_at = fields.Date(string="Data final", required=True,
+                          default=fields.Date.context_today)
     date_from = fields.Date(string="Data inicio", required=True)
     target_move = fields.Selection(
         [("posted", "Todas entradas postadas"), ("all", "Todas Entradas")],
@@ -26,7 +28,7 @@ class CashFlowReportWizard(models.TransientModel):
     account_ids = fields.Many2many(
         comodel_name="account.account",
         string="Filtro contas",
-        # domain=["|", ("reconcile", "=", True), ("user_type_id", "=", 3)],
+        domain=lambda self: self._get_account_ids_domain(),
         required=True,
     )
     hide_account_at_0 = fields.Boolean(
@@ -42,8 +44,7 @@ class CashFlowReportWizard(models.TransientModel):
     bank_accounts_only = fields.Boolean()
     partner_ids = fields.Many2many(
         comodel_name="res.partner",
-        string="Filtro parceiros",
-        default=lambda self: self._default_partners(),
+        string="Filtro parceiros"
     )
     foreign_currency = fields.Boolean(
         string="Mostrar moeda estrangeira",
@@ -60,11 +61,13 @@ class CashFlowReportWizard(models.TransientModel):
         comodel_name="account.account",
         string="Conta inicial",
         help="Starting account in a range",
+        domain=lambda self: self._get_account_ids_domain(),
     )
     account_code_to = fields.Many2one(
         comodel_name="account.account",
         string="Conta final",
         help="Ending account in a range",
+        domain=lambda self: self._get_account_ids_domain(),
     )
 
     @api.onchange("account_code_from", "account_code_to")
@@ -81,54 +84,34 @@ class CashFlowReportWizard(models.TransientModel):
                 [
                     ("code", ">=", start_range),
                     ("code", "<=", end_range),
-                    ("reconcile", "=", True),
                 ]
             )
-            if self.company_id:
-                self.account_ids = self.account_ids.filtered(
-                    lambda a: a.company_id == self.company_id
-                )
-        return {
-            "domain": {
-                "account_code_from": [("reconcile", "=", True)],
-                "account_code_to": [("reconcile", "=", True)],
-            }
-        }
 
     def _default_foreign_currency(self):
         return self.env.user.has_group("base.group_multi_currency")
 
     @api.onchange("company_id")
     def onchange_company_id(self):
-        """Handle company change."""
-        if self.company_id and self.partner_ids:
-            self.partner_ids = self.partner_ids.filtered(
-                lambda p: p.company_id == self.company_id or not p.company_id
+        if self.company_id:
+            self.account_ids = self.env["account.account"].search(
+                self._get_account_ids_domain(self.company_id.id)
             )
-        if self.company_id and self.account_ids:
-            if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
-                self.onchange_type_accounts_only()
-            else:
-                self.account_ids = self.account_ids.filtered(
-                    lambda a: a.company_id == self.company_id
-                )
-        res = {"domain": {"account_ids": [], "partner_ids": []}}
-        if not self.company_id:
-            return res
-        else:
-            res["domain"]["account_ids"] += [("company_id", "=", self.company_id.id)]
-            res["domain"]["partner_ids"] += self._get_partner_ids_domain()
-        return res
-
-    @api.onchange("account_ids")
-    def onchange_account_ids(self):
-        return {"domain": {"account_ids": ["|", ("reconcile", "=", True), ("user_type_id", "=", 3)]}}
+            self.account_code_from = None
+            self.account_code_to = None
+            self.partner_ids = None
+            self.receivable_accounts_only = False
+            self.payable_accounts_only = False
+            self.bank_accounts_only = False
+            self.foreign_currency = self._default_foreign_currency()
 
     @api.onchange("receivable_accounts_only", "payable_accounts_only", "bank_accounts_only")
     def onchange_type_accounts_only(self):
         """Handle receivable/payable accounts only change."""
-        domain = [("company_id", "=", self.company_id.id), ("deprecated", "=", False)]
+        domain = [("company_id", "=", self.company_id.id),
+                  ("deprecated", "=", False)]
         if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
+            self.account_code_from = False
+            self.account_code_to = False
             if self.receivable_accounts_only:
                 domain += [("internal_type", "=", "receivable")]
             if self.payable_accounts_only:
@@ -142,7 +125,8 @@ class CashFlowReportWizard(models.TransientModel):
             if self.payable_accounts_only and self.bank_accounts_only:
                 domain = [("internal_type", "in", ("payable", "liquidity"))]
             if self.receivable_accounts_only and self.payable_accounts_only and self.bank_accounts_only:
-                domain = [("internal_type", "in", ("receivable", "payable", "liquidity"))]
+                domain = [
+                    ("internal_type", "in", ("receivable", "payable", "liquidity"))]
             self.account_ids = self.env["account.account"].search(domain)
         else:
             self.account_ids = None
@@ -155,7 +139,8 @@ class CashFlowReportWizard(models.TransientModel):
         else:
             report_name = "cash_flow_report.cash_flow_report"
         report = self.env["ir.actions.report"].search(
-            [("report_name", "=", report_name), ("report_type", "=", report_type)],
+            [("report_name", "=", report_name),
+             ("report_type", "=", report_type)],
             limit=1,
         )
         return (
