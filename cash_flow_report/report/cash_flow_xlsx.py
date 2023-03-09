@@ -132,7 +132,7 @@ class CashFlowReportXlsx(models.AbstractModel):
                 # Open_items[account_id][0]['account_name'] 
                 # Write account title
                 self.write_array_title(
-                    str(Open_items[date_ocor][0]['date_maturity']),
+                    str(Open_items[date_ocor][0]['date_due']),
                     report_data,
                 )
 
