@@ -77,7 +77,6 @@ class CashFlowReport(models.AbstractModel):
         move_lines = self.env["account.move.line"].search_read(
             domain=domain, fields=ml_fields, order="date_due"
         )
-        _logger.warning("move_lines 77: %s", move_lines)
         journals_ids = set()
         partners_ids = set()
         partners_data = {}
