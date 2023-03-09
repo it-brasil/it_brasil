@@ -46,13 +46,10 @@ class CashFlowReport(models.AbstractModel):
         only_posted_moves,
         company_id,
         date_from,
-        tipo,
     ):
 
-        # como carregar este cara duas vezes ... com tipo == liquidity
-
         domain = self._get_move_lines_domain_not_reconciled(
-            company_id, account_ids, partner_ids, only_posted_moves, date_from, tipo
+            company_id, account_ids, partner_ids, only_posted_moves, date_from
         )
         ml_fields = [
             "id",
@@ -288,7 +285,7 @@ class CashFlowReport(models.AbstractModel):
 
     @api.model
     def _order_open_items_by_date(
-        self, open_items_move_lines_data, show_partner_details, partners_data, tipo
+        self, open_items_move_lines_data, show_partner_details, partners_data
     ):
         new_open_items = {}
         if not show_partner_details:
@@ -327,6 +324,7 @@ class CashFlowReport(models.AbstractModel):
         company = self.env["res.company"].browse(data["company_id"])
         company_id = data["company_id"]
         account_ids = data["account_ids"]
+        liquidity_accounts_ids = data["liquidity_accounts_ids"]
         partner_ids = data["partner_ids"]
         date_at = data["date_at"]
         date_at_object = datetime.strptime(date_at, "%Y-%m-%d").date()
@@ -339,15 +337,14 @@ class CashFlowReport(models.AbstractModel):
         
         # contas bancarias e caixa
         account_bank = self.env["account.account"].search([
-            ("id", "in", account_ids),
+            ("id", "in", liquidity_accounts_ids),
             ("internal_type", "=", "liquidity"),
         ])
         copy_account_ids = account_ids
         # Removo as contas Caixa e Banco
-        acc_ids = account_ids
+        acc_ids = account_ids + liquidity_accounts_ids
         # for acc in account_bank.ids:
         #     acc_ids.remove(acc)
-        tipo = "outros"
         (
             move_lines_data,
             partners_data,
@@ -361,12 +358,11 @@ class CashFlowReport(models.AbstractModel):
             only_posted_moves,
             company_id,
             date_from_object,
-            tipo,
         )
 
         total_amount = self._calculate_amounts(open_items_move_lines_data)
         open_items_move_lines_data = self._order_open_items_by_date(
-            open_items_move_lines_data, show_partner_details, partners_data, tipo
+            open_items_move_lines_data, show_partner_details, partners_data
         )
 
         balance_values = self.env["account.move.line"].read_group([

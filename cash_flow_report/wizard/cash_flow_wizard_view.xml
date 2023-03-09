@@ -64,11 +64,19 @@
                     -->
                     <field
                         name="account_ids"
-                        nolabel="1"
                         widget="many2many_tags"
                         options="{'no_create': True}"
                         colspan="4"
                         context="{'search_default_activeacc': True}"
+                        domain="[('internal_type', 'in', ['receivable', 'payable'])]"
+                    />
+                    <field
+                        name="liquidity_accounts_ids"
+                        widget="many2many_tags"
+                        options="{'no_create': True}"
+                        colspan="4"
+                        context="{'search_default_activeacc': True}"
+                        domain="[('internal_type', '=', 'liquidity')]"
                     />
                 </group>
                 <footer>

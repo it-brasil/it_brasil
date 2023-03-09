@@ -10,7 +10,7 @@ class CashFlowReportAbstract(models.AbstractModel):
 
     @api.model
     def _get_move_lines_domain_not_reconciled(
-        self, company_id, account_ids, partner_ids, only_posted_moves, date_from, tipo
+        self, company_id, account_ids, partner_ids, only_posted_moves, date_from
     ):
         domain = [
             ("account_id", "in", account_ids),
@@ -29,12 +29,17 @@ class CashFlowReportAbstract(models.AbstractModel):
 
     @api.model
     def _get_move_lines_domain_reconciled(
-        self, company_id, account_ids, partner_ids, only_posted_moves, date_from, tipo
+        self, company_id, account_ids, partner_ids, only_posted_moves, date_from, liquidity_accounts_ids
     ):
         domain = [
-            ("account_id", "in", account_ids),
             ("company_id", "=", company_id),
         ]
+        if account_ids:
+            domain += [("account_id", "in", account_ids)]
+        if liquidity_accounts_ids:
+            domain += [("account_id", "in", liquidity_accounts_ids)]
+        if account_ids and liquidity_accounts_ids:
+            domain += [("account_id", "in", account_ids + liquidity_accounts_ids)]
         if partner_ids:
             domain += [("partner_id", "in", partner_ids)]
         if only_posted_moves:

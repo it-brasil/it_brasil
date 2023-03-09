@@ -27,10 +27,17 @@ class CashFlowReportWizard(models.TransientModel):
     )
     account_ids = fields.Many2many(
         comodel_name="account.account",
-        string="Filtro contas",
+        string="Contas a receber e pagar",
         domain=lambda self: self._get_account_ids_domain(),
-        required=True,
     )
+    liquidity_accounts_ids = fields.Many2many(
+        comodel_name="account.account",
+        string="Contas de liquidez",
+        domain=lambda self: self._get_account_ids_domain(),
+        relation="cash_flow_report_wizard_liquidity_accounts_rel",
+    )
+    
+
     hide_account_at_0 = fields.Boolean(
         string="Ocultar saldo zerado",
         default=True,
@@ -104,32 +111,36 @@ class CashFlowReportWizard(models.TransientModel):
             self.bank_accounts_only = False
             self.foreign_currency = self._default_foreign_currency()
 
-    @api.onchange("receivable_accounts_only", "payable_accounts_only", "bank_accounts_only")
+    @api.onchange("receivable_accounts_only", "payable_accounts_only")
     def onchange_type_accounts_only(self):
         """Handle receivable/payable accounts only change."""
         domain = [("company_id", "=", self.company_id.id),
                   ("deprecated", "=", False)]
-        if self.receivable_accounts_only or self.payable_accounts_only or self.bank_accounts_only:
+        if self.receivable_accounts_only or self.payable_accounts_only:
             self.account_code_from = False
             self.account_code_to = False
             if self.receivable_accounts_only:
                 domain += [("internal_type", "=", "receivable")]
             if self.payable_accounts_only:
                 domain += [("internal_type", "=", "payable")]
-            if self.bank_accounts_only:
-                domain += [("internal_type", "=", "liquidity")]
             if self.receivable_accounts_only and self.payable_accounts_only:
                 domain = [("internal_type", "in", ("receivable", "payable"))]
-            if self.receivable_accounts_only and self.bank_accounts_only:
-                domain = [("internal_type", "in", ("receivable", "liquidity"))]
-            if self.payable_accounts_only and self.bank_accounts_only:
-                domain = [("internal_type", "in", ("payable", "liquidity"))]
-            if self.receivable_accounts_only and self.payable_accounts_only and self.bank_accounts_only:
-                domain = [
-                    ("internal_type", "in", ("receivable", "payable", "liquidity"))]
             self.account_ids = self.env["account.account"].search(domain)
         else:
             self.account_ids = None
+    
+    @api.onchange("bank_accounts_only")
+    def onchange_bank_accounts_only(self):
+        """Handle bank accounts only change."""
+        domain = [("company_id", "=", self.company_id.id),
+                  ("deprecated", "=", False)]
+        if self.bank_accounts_only:
+            self.account_code_from = False
+            self.account_code_to = False
+            domain += [("internal_type", "=", "liquidity")]
+            self.liquidity_accounts_ids = self.env["account.account"].search(domain)
+        else:
+            self.liquidity_accounts_ids = None
 
     def _print_report(self, report_type):
         self.ensure_one()
@@ -160,6 +171,7 @@ class CashFlowReportWizard(models.TransientModel):
             "company_id": self.company_id.id,
             "target_move": self.target_move,
             "account_ids": self.account_ids.ids,
+            "liquidity_accounts_ids": self.liquidity_accounts_ids.ids,
             "partner_ids": self.partner_ids.ids or [],
             "account_financial_report_lang": self.env.lang,
         }
