@@ -223,10 +223,12 @@ class CashFlowReport(models.AbstractModel):
                     "partner_id": prt_id,
                     "partner_name": prt_name,
                     "payment_mode_id": payment_mode_id,
-                    "payment_mode_name": payment_mode,
+                    "payment_mode_name": payment_mode if payment_mode else move_line["journal_id"][1],
+                    "account_id": move_line["account_id"][0],
                     "account_name": account_name,
                     "ref_label": ref_label,
                     "journal_id": move_line["journal_id"][0],
+                    "journal_name": move_line["journal_id"][1],
                     "move_name": move_line["move_id"][1],
                     "entry_id": move_line["move_id"][0],
                     "currency_id": move_line["currency_id"][0]

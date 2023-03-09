@@ -167,7 +167,7 @@
             <div class="act_as_row labels">
                 <!--## date-->
                 <div class="act_as_cell first_column" style="width: 8.0%;">
-                    Data Vencto
+                    Vencimento
                 </div>
                 <!--## move-->
                 <div class="act_as_cell" style="width: 8.0%;">Lançamento</div>
@@ -177,17 +177,11 @@
                 <div class="act_as_cell" style="width: 14.0%;">Conta</div>
                 <!--## partner-->
                 <div class="act_as_cell" style="width: 27.0%;">Parceiro</div>
-                <div class="act_as_cell" style="width: 5.0%;">Tipo</div>
+                <div class="act_as_cell" style="width: 5.0%;">Modo de Pagamento / Diário</div>
                 <!--## ref - label-->
-                <div class="act_as_cell" style="width: 20.0%;">
-                    Ref. -
-                    Descrição
-                </div>
+                <div class="act_as_cell" style="width: 20.0%;">Ref. - Descrição</div>
                 <!--## date_due-->
-                <div class="act_as_cell" style="width: 8.0%;">
-                    Data
-                    Emissão
-                </div>
+                <div class="act_as_cell" style="width: 8.0%;">Emissão</div>
                 <!--## amount_total_due-->
                 <div class="act_as_cell" style="width: 6.0%;">Receber</div>
                 <div class="act_as_cell" style="width: 6.0%;">Pagar</div>
@@ -230,7 +224,7 @@
             </div> -->
             <!--## account code-->
             <div class="act_as_cell left">
-                <span t-if="line.get('account_id', False)" t-att-res-id="line['account_id']" res-model="account.account" view-type="form">
+                <span t-if="line.get('account_id')" t-att-res-id="line['account_id']" res-model="account.account" view-type="form">
                     <t t-esc="line['account_name']" />
                 </span>
             </div>
@@ -244,6 +238,9 @@
             <div class="act_as_cell left">
                 <span t-if="line.get('payment_mode_id', False)" t-att-res-id="line['payment_mode_id']" res-model="account.payment.mode" view-type="form">
                     <t t-esc="line['payment_mode_name']" />
+                </span>
+                <span t-elif="line.get('journal_id', False)" t-att-res-id="line['journal_id']" res-model="account.journal" view-type="form">
+                    <t t-esc="line['journal_name']" />
                 </span>
             </div>
             <!--## ref - label-->
@@ -304,9 +301,9 @@
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" />
             <div class="act_as_cell" />
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
         </div>        
         <div class="act_as_row labels" style="font-weight: bold;">
             <div class="act_as_cell first_column" style="width: 6.0%;" />

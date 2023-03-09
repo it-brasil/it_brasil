@@ -24,13 +24,13 @@ class CashFlowReportXlsx(models.AbstractModel):
 
     def _get_report_columns(self, report):
         res = {
-            0: {"header": _("Data"), "field": "date_maturity", "width": 11},
-            1: {"header": _("Lançamento"), "field": "move_name", "width": 18},
-            2: {"header": _("Conta"), "field": "account", "width": 9},
+            0: {"header": _("Vencimento"), "field": "date_due", "width": 11},
+            1: {"header": _("Lançamento"), "field": "move_name", "width": 23},
+            2: {"header": _("Conta"), "field": "account", "width": 60},
             3: {"header": _("Parceiro"), "field": "partner_name", "width": 25},
-            4: {"header": _("Tipo"), "field": "payment", "width": 8},
+            4: {"header": _("Modo de Pagamento / Diário"), "field": "payment_mode_name", "width": 18},
             5: {"header": _("Ref - Descrição"), "field": "ref_label", "width": 40},
-            6: {"header": _("Data emissao"), "field": "date", "width": 11},
+            6: {"header": _("Emissão"), "field": "date", "width": 11},
             7: {
                 "header": _("Receber"),
                 "field": "debit",
@@ -131,10 +131,10 @@ class CashFlowReportXlsx(models.AbstractModel):
             if Open_items[date_ocor]:
                 # Open_items[account_id][0]['account_name'] 
                 # Write account title
-                self.write_array_title(
-                    str(Open_items[date_ocor][0]['date_due']),
-                    report_data,
-                )
+                # self.write_array_title(
+                #     str(Open_items[date_ocor][0]['date_due']),
+                #     report_data,
+                # )
 
                 # imprime o codigo da Conta no topo de cada data
                 # for balance in balance_list:
@@ -217,12 +217,17 @@ class CashFlowReportXlsx(models.AbstractModel):
             my_object["residual"] = total_amount[account_id][partner_id]["residual"]
             label = _("Partner ending balance")
         elif type_object == "account":
-            name = account_id[0]
+            name = account_id
             my_object["credit"] = total_credit
             my_object["debit"] = total_debit
             label = _("Ending balance")
         elif type_object == "balance":
-            name = account_id[0]
+            formated_date_ocor = "%s/%s/%s" % (
+                str(date_ocor)[6:8],
+                str(date_ocor)[4:6],
+                str(date_ocor)[:4],
+            )
+            name = "Balanço %s" % formated_date_ocor
             my_object["balance"] = balance_list
             label = _("Total acumulado")
         if type_object in ("partner", "balance"):
@@ -266,6 +271,7 @@ class CashFlowReportXlsx(models.AbstractModel):
                     report_data["formats"]["format_header_left"],
                 )
                 report_data["row_pos"] += 1
+            report_data["row_pos"] += 2
         else:
             report_data["row_pos"] += 1
             report_data["sheet"].merge_range(
@@ -276,7 +282,7 @@ class CashFlowReportXlsx(models.AbstractModel):
                 _("Não selecionado nenhum banco"),
                 report_data["formats"]["format_header_left"],
             )
-            report_data["row_pos"] += 1
+            report_data["row_pos"] += 2
 
         return res
 
