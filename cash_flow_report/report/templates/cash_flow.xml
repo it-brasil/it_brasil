@@ -272,7 +272,8 @@
                 <!-- <span t-if="line.get('original', False)" t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" /> -->
             </div>
             <div class="act_as_cell amount">
-                <t t-if="line['reconciled']">
+                <t t-if="line['account_bank'] != 'liquidity'">
+                    <!-- <t t-if="line['reconciled']"> -->
                     <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
                 </t>
                 <!-- <t t-if="not line['reconciled']">
@@ -283,7 +284,8 @@
                 <!-- <t t-if="not line['reconciled']">
                     <span t-esc="0.0" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
                 </t> -->
-                <t t-if="line['reconciled']">
+                <!-- <t t-if="line['reconciled']"> -->
+                <t t-if="line['account_bank'] != 'liquidity'">
                     <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
                 </t>
                 
