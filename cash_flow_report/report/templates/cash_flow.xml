@@ -179,18 +179,19 @@
                 <div class="act_as_cell" style="width: 14.0%;">Conta</div>
                 <!--## partner-->
                 <div class="act_as_cell" style="width: 27.0%;">Parceiro</div>
-                <div class="act_as_cell" style="width: 5.0%;">Tipo</div>
+                <div class="act_as_cell" style="width: 4.0%;">Tipo</div>
                 <!--## ref - label-->
-                <div class="act_as_cell" style="width: 20.0%;">
+                <div class="act_as_cell" style="width: 19.0%;">
                     Ref. -
                     Descrição
                 </div>
                 <!--## date_due-->
-                <div class="act_as_cell" style="width: 8.0%;">
+                <div class="act_as_cell" style="width: 6.0%;">
                     Data
                     Emissão
                 </div>
                 <!--## amount_total_due-->
+                <div class="act_as_cell" style="width: 6.0%;">Recebido/Pago</div>
                 <div class="act_as_cell" style="width: 6.0%;">Receber</div>
                 <div class="act_as_cell" style="width: 6.0%;">Pagar</div>
                 <!--## amount_residual-->
@@ -262,10 +263,30 @@
             </div> -->
             <!--## amount_residual-->
             <div class="act_as_cell amount">
-                <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                <t t-if="line['account_bank'] == 'liquidity'">
+                    <span t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse(line['currency_id'])}" />
+                </t>
+                <!-- <t t-if="line['reconciled']">
+                    <span t-esc="amount_residual" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t> -->
+                <!-- <span t-if="line.get('original', False)" t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" /> -->
             </div>
             <div class="act_as_cell amount">
-                <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                <t t-if="line['reconciled']">
+                    <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t>
+                <!-- <t t-if="not line['reconciled']">
+                    <span t-esc="0.0" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t> -->
+            </div>
+            <div class="act_as_cell amount">
+                <!-- <t t-if="not line['reconciled']">
+                    <span t-esc="0.0" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t> -->
+                <t t-if="line['reconciled']">
+                    <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t>
+                
             </div>
             <div class="act_as_cell amount">
                 <span t-esc="saldo_ini" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
@@ -306,6 +327,7 @@
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" />
             <div class="act_as_cell" />
+            <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
@@ -319,6 +341,7 @@
             <div class="act_as_cell left">
                     Saldo - <span t-esc="date_due" />
             </div>
+            <div class="act_as_cell" />
             <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;">
                 <span t-esc="balance_debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
@@ -341,6 +364,7 @@
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" />
             <div class="act_as_cell" />
+            <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
@@ -350,6 +374,7 @@
             <div class="act_as_cell" style="width: 10.0%;" />
             <div class="act_as_cell" style="width: 5.0%;" />
             <div class="act_as_cell" style="width: 14.0%;" />
+            <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell left">
                     Total - <span t-esc="date_due" />
