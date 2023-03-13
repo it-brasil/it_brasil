@@ -258,7 +258,7 @@
             </div> -->
             <!--## amount_residual-->
             <div class="act_as_cell amount">
-                <t t-if="line['account_bank'] == 'liquidity'">
+                <t t-if="line['account_type'] == 'liquidity'">
                     <span t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse(line['currency_id'])}" />
                 </t>
                 <!-- <t t-if="line['reconciled']">

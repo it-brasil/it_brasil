@@ -201,7 +201,7 @@ class CashFlowReport(models.AbstractModel):
             if move_line["account_id"]:
                 account_name = move_line["account_id"][1]
                 account = self.env["account.account"].browse([move_line["account_id"][0]])
-                account_bank = account.internal_type
+                account_type = account.internal_type
             payment_mode = ""
             payment_mode_id = 0
             if "payment_mode_id" in move_line and move_line["payment_mode_id"]:
@@ -228,7 +228,7 @@ class CashFlowReport(models.AbstractModel):
                     "payment_mode_name": payment_mode if payment_mode else move_line["journal_id"][1],
                     "account_id": move_line["account_id"][0],
                     "account_name": account_name,
-                    "account_bank": account_bank,
+                    "account_type": account_type,
                     "ref_label": ref_label,
                     "journal_id": move_line["journal_id"][0],
                     "journal_name": move_line["journal_id"][1],
