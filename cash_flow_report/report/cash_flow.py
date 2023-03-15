@@ -171,23 +171,17 @@ class CashFlowReport(models.AbstractModel):
                 partners_ids.add(prt_id)
 
                 # Move line update
-                original = 0
+            original = 0
 
-                if not float_is_zero(move_line["credit"], precision_digits=2):
-                    original = move_line["credit"] * (-1)
-                    balance += move_line["credit"]
-                if not float_is_zero(move_line["debit"], precision_digits=2):
-                    original = move_line["debit"]
-                    balance += move_line["debit"]
+            if not float_is_zero(move_line["credit"], precision_digits=2):
+                original = move_line["credit"] * (-1)
+                balance += move_line["credit"]
+            if not float_is_zero(move_line["debit"], precision_digits=2):
+                original = move_line["debit"]
+                balance += move_line["debit"]
 
-                if move_line["ref"] == move_line["name"]:
-                    if move_line["ref"]:
-                        ref_label = move_line["ref"]
-                    else:
-                        ref_label = ""
-                elif not move_line["ref"]:
-                    ref_label = move_line["name"]
-                elif not move_line["name"]:
+            if move_line["ref"] == move_line["name"]:
+                if move_line["ref"]:
                     ref_label = move_line["ref"]
                 else:
                     ref_label = ""
