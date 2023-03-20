@@ -32,20 +32,27 @@ class CashFlowReportXlsx(models.AbstractModel):
             5: {"header": _("Ref - Descrição"), "field": "ref_label", "width": 40},
             6: {"header": _("Emissão"), "field": "date", "width": 11},
             7: {
-                "header": _("Receber"),
-                "field": "debit",
-                "field_final_balance": "debit",
+                "header": _("Recebido/Pago"),
+                "field": "rec_pag",
+                "field_final_balance": "rec_pag",
                 "type": "amount",
                 "width": 14,
             },
             8: {
-                "header": _("Pagar"),
-                "field": "credit",
-                "field_final_balance": "credit",
+                "header": _("Receber"),
+                "field": "debit_t",
+                "field_final_balance": "debit_t",
                 "type": "amount",
                 "width": 14,
             },
             9: {
+                "header": _("Pagar"),
+                "field": "credit_t",
+                "field_final_balance": "credit_t",
+                "type": "amount",
+                "width": 14,
+            },
+            10: {
                 "header": _("Saldo"),
                 "field": "balance",
                 "field_final_balance": "balance",
@@ -55,21 +62,21 @@ class CashFlowReportXlsx(models.AbstractModel):
         }
         if report.foreign_currency:
             foreign_currency = {
-                10: {
+                11: {
                     "header": _("Cur."),
                     "field": "currency_name",
                     "field_currency_balance": "currency_name",
                     "type": "currency_name",
                     "width": 7,
                 },
-                11: {
+                12: {
                     "header": _("Cur. Original"),
                     "field": "amount_currency",
                     "field_final_balance": "amount_currency",
                     "type": "amount_currency",
                     "width": 14,
                 },
-                12: {
+                13: {
                     "header": _("Cur. Residual"),
                     "field": "amount_residual_currency",
                     "field_final_balance": "amount_currency",
@@ -151,12 +158,22 @@ class CashFlowReportXlsx(models.AbstractModel):
 
                     # Display account move lines
                     for line in Open_items[date_ocor]:
-                        if line['debit']:
+                        if line['debit'] and line['account_type'] != 'liquidity':
                             balance += line['debit']
                             total_debit += line['debit']
-                        if line['credit']:
+                            line['debit_t'] = line['debit']
+                            line['rec_pag'] = 0.0
+                        if line['credit'] and line['account_type'] != 'liquidity':
                             balance -= line['credit']
                             total_credit += line['credit']
+                            line['credit_t'] = line['credit']
+                            line['rec_pag'] = 0.0
+                        if line['account_type'] == 'liquidity':
+                            balance += line['amount_residual']
+                            # total_credit += line['amount_residual']
+                            line['rec_pag'] = line['amount_residual']
+                            line['debit_t'] = 0.0
+                            line['credit_t'] = 0.0
                         line.update(
                             {
                                 "account": line['account_name'],
@@ -218,8 +235,8 @@ class CashFlowReportXlsx(models.AbstractModel):
             label = _("Partner ending balance")
         elif type_object == "account":
             name = account_id
-            my_object["credit"] = total_credit
-            my_object["debit"] = total_debit
+            my_object["credit_t"] = total_credit
+            my_object["debit_t"] = total_debit
             label = _("Ending balance")
         elif type_object == "balance":
             formated_date_ocor = "%s/%s/%s" % (

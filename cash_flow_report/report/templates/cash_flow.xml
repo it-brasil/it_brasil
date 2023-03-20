@@ -64,16 +64,16 @@
                             <t t-set="credit" t-value="0.0" />
                             <t t-set="debit" t-value="0.0" />
                             <t t-if="line['amount_residual'] &gt; 0">
-                                <t t-set="debit" t-value="line['amount_residual']" />
                                 <t t-if="line['account_type'] != 'liquidity'">
+                                    <t t-set="debit" t-value="line['amount_residual']" />
                                     <t t-set="balance_debit" t-value="balance_debit + line['amount_residual']" />
                                 </t>
                                 <t t-set="total_balance_debit" t-value="total_balance_debit + line['amount_residual']" />
                                 <!-- <t t-set="total_balance" t-value="total_balance + line['amount_residual']" /> -->
                             </t>
                             <t t-if="line['amount_residual'] &lt; 0">
-                                <t t-set="credit" t-value="line['amount_residual']" />
                                 <t t-if="line['account_type'] != 'liquidity'">
+                                    <t t-set="credit" t-value="line['amount_residual']" />
                                     <t t-set="balance_credit" t-value="balance_credit + line['amount_residual']" />
                                 </t>
                                 <t t-set="total_balance_credit" t-value="total_balance_credit + line['amount_residual']" />
@@ -256,38 +256,20 @@
             <div class="act_as_cell left">
                 <span t-esc="line['date'].strftime('%d/%m/%Y')" />
             </div>
-            <!--## amount_total_due-->
-            <!-- <div class="act_as_cell amount">
-                <span t-if="line.get('original', False)" t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
-            </div> -->
-            <!--## amount_residual-->
             <div class="act_as_cell amount">
                 <t t-if="line['account_type'] == 'liquidity'">
-                    <span t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse(line['currency_id'])}" />
+                    <span t-esc="line['amount_residual']" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse(line['currency_id'])}" />
                 </t>
-                <!-- <t t-if="line['reconciled']">
-                    <span t-esc="amount_residual" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
-                </t> -->
-                <!-- <span t-if="line.get('original', False)" t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" /> -->
             </div>
             <div class="act_as_cell amount">
                 <t t-if="line['account_type'] != 'liquidity'">
-                    <!-- <t t-if="line['reconciled']"> -->
                     <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
                 </t>
-                <!-- <t t-if="not line['reconciled']">
-                    <span t-esc="0.0" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
-                </t> -->
             </div>
             <div class="act_as_cell amount">
-                <!-- <t t-if="not line['reconciled']">
-                    <span t-esc="0.0" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
-                </t> -->
-                <!-- <t t-if="line['reconciled']"> -->
                 <t t-if="line['account_type'] != 'liquidity'">
                     <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
                 </t>
-                
             </div>
             <div class="act_as_cell amount">
                 <span t-esc="saldo_ini" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
