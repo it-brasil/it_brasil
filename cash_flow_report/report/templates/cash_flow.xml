@@ -56,7 +56,7 @@
                         <!-- <t t-set="saldo_dia" t-value="0.0" /> -->
                         <t t-set="balance_debit" t-value="0" />
                         <t t-set="balance_credit" t-value="0" />
-                        <t t-set="date_maturity" t-value="0.0" />
+                        <t t-set="date_due" t-value="0.0" />
                         <!-- Display account move lines -->
                         <t t-foreach="Open_Items[account_id]" t-as="line">
                             <t t-set="saldo_ini" t-value="total_geral + saldo_ini + line['amount_residual']" />
@@ -64,20 +64,24 @@
                             <t t-set="credit" t-value="0.0" />
                             <t t-set="debit" t-value="0.0" />
                             <t t-if="line['amount_residual'] &gt; 0">
-                                <t t-set="debit" t-value="line['amount_residual']" />
-                                <t t-set="balance_debit" t-value="balance_debit + line['amount_residual']" />
+                                <t t-if="line['account_type'] != 'liquidity'">
+                                    <t t-set="debit" t-value="line['amount_residual']" />
+                                    <t t-set="balance_debit" t-value="balance_debit + line['amount_residual']" />
+                                </t>
                                 <t t-set="total_balance_debit" t-value="total_balance_debit + line['amount_residual']" />
                                 <!-- <t t-set="total_balance" t-value="total_balance + line['amount_residual']" /> -->
                             </t>
                             <t t-if="line['amount_residual'] &lt; 0">
-                                <t t-set="credit" t-value="line['amount_residual']" />
-                                <t t-set="balance_credit" t-value="balance_credit + line['amount_residual']" />
+                                <t t-if="line['account_type'] != 'liquidity'">
+                                    <t t-set="credit" t-value="line['amount_residual']" />
+                                    <t t-set="balance_credit" t-value="balance_credit + line['amount_residual']" />
+                                </t>
                                 <t t-set="total_balance_credit" t-value="total_balance_credit + line['amount_residual']" />
                             </t>
                             <t t-call="cash_flow_report.cash_flow_report_lines" />
                             <!-- <t t-if="data_nova != '0' and data_nova != line['date_maturity']"> -->
                             <!-- <t t-set="saldo_dia" t-value="saldo_dia + line['amount_residual']" /> -->
-                            <t t-set="date_maturity" t-value="line['date_maturity']" />
+                            <t t-set="date_due" t-value="line['date_due']" />
                             <!-- </t> -->
                             <!-- <t t-set="data_nova" t-value="line['date_maturity']" /> -->
                         </t>
@@ -143,8 +147,6 @@
                 <!-- coloco o saldo inicial aqui dos caixas -->
                 <div class="act_as_row">
                     <div class="act_as_cell">
-                        <span t-esc="line['account_id']" />
-                        - 
                         <span t-esc="line['bank']" />
                     </div>
                     <div class="act_as_cell amount">
@@ -169,7 +171,7 @@
             <div class="act_as_row labels">
                 <!--## date-->
                 <div class="act_as_cell first_column" style="width: 8.0%;">
-                    Data Vencto
+                    Vencimento
                 </div>
                 <!--## move-->
                 <div class="act_as_cell" style="width: 8.0%;">Lançamento</div>
@@ -179,18 +181,13 @@
                 <div class="act_as_cell" style="width: 14.0%;">Conta</div>
                 <!--## partner-->
                 <div class="act_as_cell" style="width: 27.0%;">Parceiro</div>
-                <div class="act_as_cell" style="width: 5.0%;">Tipo</div>
+                <div class="act_as_cell" style="width: 5.0%;">Modo de Pagamento / Diário</div>
                 <!--## ref - label-->
-                <div class="act_as_cell" style="width: 20.0%;">
-                    Ref. -
-                    Descrição
-                </div>
+                <div class="act_as_cell" style="width: 20.0%;">Ref. - Descrição</div>
                 <!--## date_due-->
-                <div class="act_as_cell" style="width: 8.0%;">
-                    Data
-                    Emissão
-                </div>
+                <div class="act_as_cell" style="width: 8.0%;">Emissão</div>
                 <!--## amount_total_due-->
+                <div class="act_as_cell" style="width: 6.0%;">Recebido/Pago</div>
                 <div class="act_as_cell" style="width: 6.0%;">Receber</div>
                 <div class="act_as_cell" style="width: 6.0%;">Pagar</div>
                 <!--## amount_residual-->
@@ -216,7 +213,7 @@
         <div class="act_as_row lines">
             <!--## date-->
             <div class="act_as_cell left">
-                <span t-raw="line['date_maturity']" />
+                <span t-raw="line['date_due']" />
             </div>
             <!--## move-->
             <div class="act_as_cell left">
@@ -232,7 +229,7 @@
             </div> -->
             <!--## account code-->
             <div class="act_as_cell left">
-                <span t-if="line.get('account_id', False)" t-att-res-id="line['account_id']" res-model="account.account" view-type="form">
+                <span t-if="line.get('account_id')" t-att-res-id="line['account_id']" res-model="account.account" view-type="form">
                     <t t-esc="line['account_name']" />
                 </span>
             </div>
@@ -247,6 +244,9 @@
                 <span t-if="line.get('payment_mode_id', False)" t-att-res-id="line['payment_mode_id']" res-model="account.payment.mode" view-type="form">
                     <t t-esc="line['payment_mode_name']" />
                 </span>
+                <span t-elif="line.get('journal_id', False)" t-att-res-id="line['journal_id']" res-model="account.journal" view-type="form">
+                    <t t-esc="line['journal_name']" />
+                </span>
             </div>
             <!--## ref - label-->
             <div class="act_as_cell left">
@@ -256,16 +256,20 @@
             <div class="act_as_cell left">
                 <span t-esc="line['date'].strftime('%d/%m/%Y')" />
             </div>
-            <!--## amount_total_due-->
-            <!-- <div class="act_as_cell amount">
-                <span t-if="line.get('original', False)" t-esc="line['original']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
-            </div> -->
-            <!--## amount_residual-->
             <div class="act_as_cell amount">
-                <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                <t t-if="line['account_type'] == 'liquidity'">
+                    <span t-esc="line['amount_residual']" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse(line['currency_id'])}" />
+                </t>
             </div>
             <div class="act_as_cell amount">
-                <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                <t t-if="line['account_type'] != 'liquidity'">
+                    <span t-esc="debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t>
+            </div>
+            <div class="act_as_cell amount">
+                <t t-if="line['account_type'] != 'liquidity'">
+                    <span t-esc="credit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
+                </t>
             </div>
             <div class="act_as_cell amount">
                 <span t-esc="saldo_ini" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
@@ -306,9 +310,9 @@
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" />
             <div class="act_as_cell" />
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
-            <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
+            <div class="act_as_cell amount" style="width: 10.0%;" >----------</div>
         </div>        
         <div class="act_as_row labels" style="font-weight: bold;">
             <div class="act_as_cell first_column" style="width: 6.0%;" />
@@ -317,8 +321,9 @@
             <div class="act_as_cell" style="width: 14.0%;" />
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell left">
-                    Saldo - <span t-esc="date_maturity" />
+                    Saldo - <span t-esc="date_due" />
             </div>
+            <div class="act_as_cell" />
             <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;">
                 <span t-esc="balance_debit" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}" />
@@ -341,6 +346,7 @@
             <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell" />
             <div class="act_as_cell" />
+            <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
             <div class="act_as_cell amount" style="width: 10.0%;" >--------------</div>
@@ -351,8 +357,9 @@
             <div class="act_as_cell" style="width: 5.0%;" />
             <div class="act_as_cell" style="width: 14.0%;" />
             <div class="act_as_cell" style="width: 15.0%;" />
+            <div class="act_as_cell" style="width: 15.0%;" />
             <div class="act_as_cell left">
-                    Total - <span t-esc="date_maturity" />
+                    Total - <span t-esc="date_due" />
             </div>
             <div class="act_as_cell" />
             <div class="act_as_cell amount" style="width: 10.0%;">

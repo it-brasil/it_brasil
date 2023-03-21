@@ -8,6 +8,8 @@ from datetime import date, datetime
 from odoo import api, models
 from odoo.tools import float_is_zero
 
+import logging
+_logger = logging.getLogger(__name__)
 
 class CashFlowReport(models.AbstractModel):
     _name = "report.cash_flow_report.cash_flow_report"
@@ -44,13 +46,10 @@ class CashFlowReport(models.AbstractModel):
         only_posted_moves,
         company_id,
         date_from,
-        tipo,
     ):
 
-        # como carregar este cara duas vezes ... com tipo == liquidity
-
         domain = self._get_move_lines_domain_not_reconciled(
-            company_id, account_ids, partner_ids, only_posted_moves, date_from, tipo
+            company_id, account_ids, partner_ids, only_posted_moves, date_from
         )
         ml_fields = [
             "id",
@@ -62,7 +61,7 @@ class CashFlowReport(models.AbstractModel):
             "partner_id",
             "payment_mode_id",
             "amount_residual",
-            "date_maturity",
+            "date_due",
             "ref",
             "debit",
             "credit",
@@ -73,7 +72,7 @@ class CashFlowReport(models.AbstractModel):
             "balance",
         ]
         move_lines = self.env["account.move.line"].search_read(
-            domain=domain, fields=ml_fields, order="date_maturity"
+            domain=domain, fields=ml_fields, order="date_due"
         )
         journals_ids = set()
         partners_ids = set()
@@ -104,23 +103,59 @@ class CashFlowReport(models.AbstractModel):
                     partner_ids,
                     only_posted_moves,
                 )
-        move_lines = [
-            move_line
-            for move_line in move_lines
-            if move_line["date_maturity"] <= date_at_object
-            and not float_is_zero(move_line["amount_residual"], precision_digits=2)
-        ]
+        ml = []
+        for move_line in move_lines:
+            if (move_line["date_due"] and move_line["date_due"] <= date_at_object 
+                and not float_is_zero(move_line["amount_residual"], precision_digits=2)):
+                ml.append(move_line)
 
+        # RECONCILIADOS
+        # account_bank = self.env["account.account"].search([
+        #     ("id", "in", account_ids),
+        #     ("internal_type", "=", "liquidity"),
+        # ])
+        # domain = self._get_move_lines_domain_reconciled(
+        #     company_id, account_bank.ids, partner_ids, only_posted_moves, date_from, tipo
+        # )
+        # ml_fields = [
+        #     "id",
+        #     "name",
+        #     "date",
+        #     "move_id",
+        #     "journal_id",
+        #     "account_id",
+        #     "partner_id",
+        #     "payment_mode_id",
+        #     "amount_residual",
+        #     "date_maturity",
+        #     "ref",
+        #     "debit",
+        #     "credit",
+        #     "reconciled",
+        #     "currency_id",
+        #     "amount_currency",
+        #     "amount_residual_currency",
+        #     "balance",
+        # ]
+        # move_lines = self.env["account.move.line"].search_read(
+        #     domain=domain, fields=ml_fields, order="date"
+        # )
+
+        # for move_line in move_lines:
+        #     if move_line["date"] <= date_at_object:
+        #         ml.append(move_line)
+        move_lines = ml
         open_items_move_lines_data = {}
         balance = 0
         contas_key = []
         for move_line in move_lines:
+            move_id = self.env["account.move"].browse([move_line["move_id"][0]])
+            if move_id.payment_mode_id and move_id.payment_mode_id.fiscal_payment_mode == "90":
+                continue
             journals_ids.add(move_line["journal_id"][0])
             contas_key.append(move_line["account_id"][0])
-            if move_line["date_maturity"]:
-                dt_time = move_line["date_maturity"]
-            else:
-                dt_time = move_line["date"]
+            dt_time = move_line["date_due"]
+            move_line["date_due"] = dt_time
             date_vcto = 10000*dt_time.year + 100*dt_time.month + dt_time.day
             acc_id = date_vcto
             # Partners data
@@ -135,7 +170,7 @@ class CashFlowReport(models.AbstractModel):
                 partners_data.update({prt_id: {"id": prt_id, "name": prt_name}})
                 partners_ids.add(prt_id)
 
-            # Move line update
+                # Move line update
             original = 0
 
             if not float_is_zero(move_line["credit"], precision_digits=2):
@@ -159,31 +194,38 @@ class CashFlowReport(models.AbstractModel):
             account_name = ""
             if move_line["account_id"]:
                 account_name = move_line["account_id"][1]
-            # move_id = self.env["account.move"].browse([move_line["move_id"][0]])
-            # if move_id.ref:
-            #     if ref_label:
-            #         ref_label += ', ' + move_id.ref
-            #     else:
-            #         ref_label = move_id.ref
-            # payment_mode = move_id.payment_mode_id.name
+                account = self.env["account.account"].browse([move_line["account_id"][0]])
+                account_type = account.internal_type
             payment_mode = ""
             payment_mode_id = 0
-            if move_line["payment_mode_id"]:
+            if "payment_mode_id" in move_line and move_line["payment_mode_id"]:
                 payment_mode = move_line["payment_mode_id"][1]
                 payment_mode_id = move_line["payment_mode_id"][0]
+            else:
+                if move_id.ref:
+                    if ref_label:
+                        ref_label += ', ' + move_id.ref
+                    else:
+                        ref_label = move_id.ref
+                payment_mode = move_id.payment_mode_id.name
+                payment_mode_id = move_id.payment_mode_id.id
+
             move_line.update(
                 {
                     "date": move_line["date"],
-                    "date_maturity": move_line["date_maturity"]
-                    and move_line["date_maturity"].strftime("%d/%m/%Y"),
+                    "date_due": move_line["date_due"]
+                    and move_line["date_due"].strftime("%d/%m/%Y"),
                     "original": original,
                     "partner_id": prt_id,
                     "partner_name": prt_name,
                     "payment_mode_id": payment_mode_id,
-                    "payment_mode_name": payment_mode,
+                    "payment_mode_name": payment_mode if payment_mode else move_line["journal_id"][1],
+                    "account_id": move_line["account_id"][0],
                     "account_name": account_name,
+                    "account_type": account_type,
                     "ref_label": ref_label,
                     "journal_id": move_line["journal_id"][0],
+                    "journal_name": move_line["journal_id"][1],
                     "move_name": move_line["move_id"][1],
                     "entry_id": move_line["move_id"][0],
                     "currency_id": move_line["currency_id"][0]
@@ -196,14 +238,14 @@ class CashFlowReport(models.AbstractModel):
                 }
             )
 
-            # Open Items Move Lines Data
-            # if acc_id not in open_items_move_lines_data.keys():
-            #     open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
-            # else:
-            #     if prt_id not in open_items_move_lines_data[acc_id].keys():
-            #         open_items_move_lines_data[acc_id][prt_id] = [move_line]
-            #     else:
-            #         open_items_move_lines_data[acc_id][prt_id].append(move_line)
+                # Open Items Move Lines Data
+                # if acc_id not in open_items_move_lines_data.keys():
+                #     open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
+                # else:
+                #     if prt_id not in open_items_move_lines_data[acc_id].keys():
+                #         open_items_move_lines_data[acc_id][prt_id] = [move_line]
+                #     else:
+                #         open_items_move_lines_data[acc_id][prt_id].append(move_line)
             if acc_id not in open_items_move_lines_data.keys():
                 open_items_move_lines_data[acc_id] = {prt_id: [move_line]}
             else:
@@ -242,7 +284,7 @@ class CashFlowReport(models.AbstractModel):
 
     @api.model
     def _order_open_items_by_date(
-        self, open_items_move_lines_data, show_partner_details, partners_data, tipo
+        self, open_items_move_lines_data, show_partner_details, partners_data
     ):
         new_open_items = {}
         if not show_partner_details:
@@ -281,6 +323,7 @@ class CashFlowReport(models.AbstractModel):
         company = self.env["res.company"].browse(data["company_id"])
         company_id = data["company_id"]
         account_ids = data["account_ids"]
+        liquidity_accounts_ids = data["liquidity_accounts_ids"]
         partner_ids = data["partner_ids"]
         date_at = data["date_at"]
         date_at_object = datetime.strptime(date_at, "%Y-%m-%d").date()
@@ -293,15 +336,14 @@ class CashFlowReport(models.AbstractModel):
         
         # contas bancarias e caixa
         account_bank = self.env["account.account"].search([
-            ("id", "in", account_ids),
+            ("id", "in", liquidity_accounts_ids),
             ("internal_type", "=", "liquidity"),
         ])
         copy_account_ids = account_ids
         # Removo as contas Caixa e Banco
-        acc_ids = account_ids
+        acc_ids = account_ids + liquidity_accounts_ids
         # for acc in account_bank.ids:
         #     acc_ids.remove(acc)
-        tipo = "outros"
         (
             move_lines_data,
             partners_data,
@@ -315,12 +357,11 @@ class CashFlowReport(models.AbstractModel):
             only_posted_moves,
             company_id,
             date_from_object,
-            tipo,
         )
 
         total_amount = self._calculate_amounts(open_items_move_lines_data)
         open_items_move_lines_data = self._order_open_items_by_date(
-            open_items_move_lines_data, show_partner_details, partners_data, tipo
+            open_items_move_lines_data, show_partner_details, partners_data
         )
 
         balance_values = self.env["account.move.line"].read_group([
@@ -330,6 +371,18 @@ class CashFlowReport(models.AbstractModel):
             ["account_id", "balance:sum"], #fields
             ["account_id"] #group_by
         )
+        # Utilizado o código abaixo para lista os diários do tipo Dinheiro
+        # onde as contas das "Configurações de Pagamento", são diferentes
+        # da conta principal do diário.
+        # cash_journal = self.env["account.move.line"].read_group([
+        #     ("journal_id.type", "=", "cash"),
+        #     ("date", "<=", data["date_from"])
+        # ],  # domain
+        #     ["journal_id", "balance:sum", "account_id"],  # fields
+        #     ["account_id"]  # group_by
+        # )
+        # if cash_journal:
+        #     balance_values += cash_journal
         balance_list = []
         for balance in balance_values:
             vals = {
