@@ -125,7 +125,7 @@ class AccountMove(models.Model):
 
     def create_invoice_item_2(self, item, invoice, freight):
         product_id = self.search_product(item, invoice)
-        import pudb;pu.db
+
         product_credit = {
             "name": product_id.name, 
             "move_id": invoice.id, 
@@ -148,7 +148,6 @@ class AccountMove(models.Model):
         return product_credit 
      
     def invoice_with_payment(self, nfe, invoice):
-        import pudb;pu.db
         itens = []
         for line in nfe.NFe.infNFe.det: 
                 freight_debit = line.prod.vFrete / line.prod.qCom if hasattr(line.prod, "vFrete") else 0
@@ -174,7 +173,6 @@ class AccountMove(models.Model):
         return itens
 
     def create_invoice_item(self, item, invoice, freight):
-        import pudb;pu.db
         product_id = self.search_product(item, invoice)
         product_debit = {
             "name": product_id.name, 

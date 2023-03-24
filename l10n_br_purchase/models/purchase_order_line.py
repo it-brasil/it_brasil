@@ -93,7 +93,6 @@ class PurchaseOrderLine(models.Model):
     def _compute_amount(self):
         """Compute the amounts of the PO line."""
         result = super()._compute_amount()
-        import pudb;pu.db
         for line in self:
             # Update taxes fields
             line._update_taxes()

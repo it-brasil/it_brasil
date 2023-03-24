@@ -203,11 +203,6 @@ class FiscalDocumentLineMixin(models.AbstractModel):
         compute="_compute_amounts",
     )
 
-    amount_untaxed_total = fields.Monetary(
-        string="Amount Untaxed",
-        compute="_compute_amounts",
-    )
-
     amount_tax = fields.Monetary(
         string="Amount Tax",
         compute="_compute_amounts",
