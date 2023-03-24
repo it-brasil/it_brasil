@@ -94,6 +94,7 @@ class FiscalDocumentMixinMethods(models.AbstractModel):
 
     @api.onchange("fiscal_operation_id")
     def _onchange_fiscal_operation_id(self):
+        import pudb;pu.db
         if self.fiscal_operation_id:
             self.operation_name = self.fiscal_operation_id.name
             self.comment_ids = self.fiscal_operation_id.comment_ids

@@ -11,16 +11,6 @@ from ..constants.fiscal import CFOP_DESTINATION_EXPORT, FISCAL_IN
 from ..constants.icms import ICMS_BASE_TYPE_DEFAULT, ICMS_ST_BASE_TYPE_DEFAULT
 from .tax import TAX_DICT_VALUES
 
-from ..constants.fiscal import (
-    CFOP_DESTINATION_EXPORT,
-    FISCAL_IN
-)
-
-from ..constants.fiscal import (
-    CFOP_DESTINATION_EXPORT,
-    FISCAL_IN
-)
-
 FISCAL_TAX_ID_FIELDS = [
     "cofins_tax_id",
     "cofins_wh_tax_id",
@@ -140,16 +130,19 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
         "freight_value",
         "fiscal_quantity",
         "amount_tax_not_included",
+        "amount_tax_included",
+        "amount_tax_withholding",
         "uot_id",
         "product_id",
         "partner_id",
         "company_id",
+        "price_unit",
+        "quantity",
     )
     def _compute_amounts(self):
         for record in self:
             round_curr = record.currency_id or self.env.ref("base.BRL")
             # Valor dos produtos
-            
             record.price_gross = round_curr.round(record.price_unit * record.quantity)
 
             record.amount_untaxed = record.price_gross - record.discount_value
@@ -164,14 +157,16 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             add_to_amount = sum([record[a] for a in record._add_fields_to_amount()])
             rm_to_amount = sum([record[r] for r in record._rm_fields_to_amount()])
 
-            # Valor do documento (NF)
-            record.amount_total = (
-                record.amount_untaxed + record.amount_tax + add_to_amount - rm_to_amount
+            record.amount_untaxed_total = (
+                record.amount_untaxed + add_to_amount - rm_to_amount
             )
+
+            # Valor do documento (NF)
+            record.amount_total = record.amount_untaxed_total + record.amount_tax
 
             # Valor Liquido (TOTAL + IMPOSTOS - RETENÇÕES)
             record.amount_taxed = record.amount_total - record.amount_tax_withholding
-            
+
             # Valor financeiro
             if (
                 record.fiscal_operation_line_id
