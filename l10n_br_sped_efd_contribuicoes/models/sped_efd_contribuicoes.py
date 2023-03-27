@@ -183,7 +183,8 @@ class SpedEfdContribuicoes(models.Model):
         reg110.COD_INC_TRIB = self.cod_inc_trib #  Cód. ind. da incidência tributária
         reg110.IND_APRO_CRED = self.ind_apro_cred # Cód. ind. de método de apropriação de créditos comuns
         reg110.COD_TIPO_CONT = self.cod_tipo_cont # Cód. ind. do Tipo de Contribuição Apurada
-        reg110.IND_REG_CUM = self.ind_reg_cum # Cód. ind. do critério de escrituração e apuração adotado
+        if self.cod_inc_trib == '2':
+            reg110.IND_REG_CUM = self.ind_reg_cum # Cód. ind. do critério de escrituração e apuração adotado
         arq._blocos['0'].add(reg110)
         
         reg0140 = Registro0140()
@@ -287,8 +288,9 @@ class SpedEfdContribuicoes(models.Model):
             # TODO C110 - Inf. Adiciontal
             
             # TODO C170 - Itens Nota Fiscal de Compras = Fazendo
-            for item_lista in self.query_registroC170(id[0]):
-                arq.read_registro(self.junta_pipe(item_lista))
+            if id[1] == 'autorizada':
+                for item_lista in self.query_registroC170(id[0]):
+                    arq.read_registro(self.junta_pipe(item_lista))
                                         
         # TODO BLOCO D - prestações ou contratações de serviços 
         # de comunicação, transporte interestadual e intermunicipa
