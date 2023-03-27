@@ -127,6 +127,22 @@ class AccountMoveLine(models.Model):
         ondelete="restrict",
     )
 
+    discount = fields.Float(
+        compute="_compute_discounts",
+        store=True,
+    )
+
+    @api.depends(
+        "quantity",
+        "price_unit",
+        "discount_value",
+    )
+    def _compute_discounts(self):
+        for line in self:
+            line.discount = (line.discount_value * 100) / (
+                line.quantity * line.price_unit or 1
+            )
+
     @api.onchange('product_id')
     def _onchange_product_id(self):
         super()._onchange_product_id()
