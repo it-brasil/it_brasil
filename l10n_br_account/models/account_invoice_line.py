@@ -129,6 +129,22 @@ class AccountMoveLine(models.Model):
 
     is_stock_only = fields.Boolean(compute="_compute_is_stock_only", store=True)
 
+    discount = fields.Float(
+        compute="_compute_discounts",
+        store=True,
+    )
+
+    @api.depends(
+        "quantity",
+        "price_unit",
+        "discount_value",
+    )
+    def _compute_discounts(self):
+        for line in self:
+            line.discount = (line.discount_value * 100) / (
+                line.quantity * line.price_unit or 1
+            )
+
     @api.depends("cfop_id")
     @api.onchange("cfop_id")
     def _compute_is_stock_only(self):
