@@ -15,6 +15,7 @@ from odoo.addons.l10n_br_fiscal.constants.fiscal import (
     DOCUMENT_ISSUER_PARTNER,
     FISCAL_IN_OUT_ALL,
     FISCAL_OUT,
+    MODELO_FISCAL_NFE,
     SITUACAO_EDOC_CANCELADA,
     SITUACAO_EDOC_EM_DIGITACAO,
 )
@@ -444,6 +445,9 @@ class AccountMove(models.Model):
     @api.onchange("fiscal_operation_id")
     def _onchange_fiscal_operation_id(self):
         result = super()._onchange_fiscal_operation_id()
+        # /!\ Inherits limitation ?
+        # hack so that the onchange of the fiscal_document_line model is also called
+        self.fiscal_document_id._onchange_fiscal_operation_id()
         if self.fiscal_operation_id and self.fiscal_operation_id.journal_id:
             self.journal_id = self.fiscal_operation_id.journal_id
         return result
@@ -577,6 +581,61 @@ class AccountMove(models.Model):
         # for all these invoices.
         if not self.document_type_id:
             self.document_number = ""
+    
+    def _reverse_moves(self, default_values_list=None, cancel=False):
+        new_moves = super()._reverse_moves(
+            default_values_list=default_values_list, cancel=cancel
+        )
+        force_fiscal_operation_id = False
+        if self.env.context.get("force_fiscal_operation_id"):
+            force_fiscal_operation_id = self.env["l10n_br_fiscal.operation"].browse(
+                self.env.context.get("force_fiscal_operation_id")
+            )
+        for record in new_moves.filtered(lambda i: i.document_type_id):
+            if (
+                not force_fiscal_operation_id
+                and not record.fiscal_operation_id.return_fiscal_operation_id
+            ):
+                raise UserError(
+                    _("""Document without Return Fiscal Operation! \n Force one!""")
+                )
+
+            record.fiscal_operation_id = (
+                force_fiscal_operation_id
+                or record.fiscal_operation_id.return_fiscal_operation_id
+            )
+            record._onchange_fiscal_operation_id()
+
+            for line in record.invoice_line_ids:
+                if (
+                    not force_fiscal_operation_id
+                    and not line.fiscal_operation_id.return_fiscal_operation_id
+                ):
+                    raise UserError(
+                        _(
+                            """Line without Return Fiscal Operation! \n
+                            Please force one! \n{}""".format(
+                                line.name
+                            )
+                        )
+                    )
+
+                line.fiscal_operation_id = (
+                    force_fiscal_operation_id
+                    or line.fiscal_operation_id.return_fiscal_operation_id
+                )
+                line._onchange_fiscal_operation_id()
+
+            # Adds the related document to the NF-e.
+            # this is required for correct xml validation
+            if record.document_type_id and record.document_type_id.code in (
+                MODELO_FISCAL_NFE
+            ):
+                record.fiscal_document_id._document_reference(
+                    record.reversed_entry_id.fiscal_document_id
+                )
+
+        return new_moves
 
     # TODO FIXME migrate. refund method are very different in Odoo 13+
     # def _get_refund_common_fields(self):
