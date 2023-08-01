@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+  <record id="res_company_view_form_cnpjws" model="ir.ui.view">
+    <field name="name">res.company.form.cnpjws</field>
+    <field name="model">res.company</field>
+    <field name="inherit_id" ref="l10n_br_base.l10n_br_base_res_company_form" />
+    <field name="arch" type="xml">
+      <field name="cnpj_cpf" position="replace">
+        <label for="cnpj_cpf" string="CNPJ" attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}"/>
+        <div class="o_row" colspan="1" attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}">
+          <field name="cnpj_cpf" attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}"/>
+          <button
+            name="action_consult_cnpj"
+            type="object"
+            class="btn-sm btn-link mb4 fa fa-search oe_edit_only oe_inline"
+            aria-label="Pesquisar CNPJ"
+            title="Pesquisar CNPJ"
+            attrs="{'invisible': [('country_id', '!=', %(base.br)d)]}"
+          />
+        </div>
+      </field>
+    </field>
+  </record>
+</odoo>
