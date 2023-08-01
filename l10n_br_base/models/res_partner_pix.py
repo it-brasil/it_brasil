@@ -62,7 +62,7 @@ class PartnerPix(models.Model):
             )
         except EmailSyntaxError as e:
             raise ValidationError(_(f"{email.strip()} is an invalid email")) from e
-        normalized_email = result["local"].lower() + "@" + result["domain_i18n"]
+        normalized_email = result.local_part + "@" + result.domain
         if len(normalized_email) > 77:
             raise ValidationError(
                 _(
@@ -129,10 +129,11 @@ class PartnerPix(models.Model):
                 ) from e
         return key
 
-    @api.model
-    def create(self, vals):
-        self.check_vals(vals)
-        return super(PartnerPix, self).create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self.check_vals(vals)
+        return super(PartnerPix, self).create(vals_list)
 
     def write(self, vals):
         self.check_vals(vals)
