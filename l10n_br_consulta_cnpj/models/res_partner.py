@@ -282,12 +282,15 @@ class Partner(models.Model):
     def write(self, vals):
 
         if "legal_name" in vals:
-            if len(vals["legal_name"]) <= 60:
+            if vals["legal_name"] != False and len(vals["legal_name"]) <= 60:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
                 self.cnpjws_manual_razao_social = False
-            else:
+            elif vals["legal_name"] != False:
                 self.cnpjws_size_legal_name = len(vals["legal_name"])
                 self.cnpjws_manual_razao_social = True
+            else:
+                self.cnpjws_size_legal_name = 0
+                self.cnpjws_manual_razao_social = False
 
         if "street" in vals:
             if vals["street"] != False and len(vals["street"]) <= 60:
