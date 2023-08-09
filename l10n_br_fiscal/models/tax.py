@@ -396,6 +396,8 @@ class Tax(models.Model):
             tax_dict_cofins = taxes_dict.get("cofins", {})
             tax_dict["add_to_base"] += tax_dict_cofins.get("tax_value", 0.00)
 
+            tax_dict["add_to_base"] += kwargs.get("afrmm", 0.00)
+
             tax_dict["add_to_base"] += kwargs.get("ii_customhouse_charges", 0.00)
 
             # Comentei aqui pq o other_value deve entrar na BASE

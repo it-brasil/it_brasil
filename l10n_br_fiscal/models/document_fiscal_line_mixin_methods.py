@@ -149,7 +149,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
         for record in self:
             round_curr = record.currency_id or self.env.ref("base.BRL")
             # Valor dos produtos
-            
+            # import pudb;pu.db
             record.price_gross = round_curr.round(record.price_unit * record.quantity)
 
             record.amount_untaxed = record.price_gross - record.discount_value
@@ -158,7 +158,6 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
                 round_curr.round(record.fiscal_price * record.fiscal_quantity)
                 - record.discount_value
             )
-
             record.amount_tax = record.amount_tax_not_included
 
             add_to_amount = sum([record[a] for a in record._add_fields_to_amount()])
@@ -186,6 +185,9 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             else:
                 record.financial_total_gross = record.financial_total = 0.0
                 record.financial_discount_value = 0.0
+
+            # if record.afrmm_value:
+            #     record.icms_base += record.afrmm_value
 
     def _compute_taxes(self, taxes, cst=None):
         self.ensure_one()
@@ -215,6 +217,7 @@ class FiscalDocumentLineMixinMethods(models.AbstractModel):
             icms_origin=self.icms_origin,
             icms_cst_id=self.icms_cst_id,
             ind_final=self.ind_final,
+            afrmm=self.afrmm_value,
         )
 
     def _prepare_br_fiscal_dict(self, default=False):
