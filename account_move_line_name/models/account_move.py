@@ -23,11 +23,3 @@ class AccountMove(models.Model):
                     installments += 1
         return result
 
-    def button_draft(self):
-        result = super().button_draft()
-        # Apaga o campo rotulo da linha
-        for line in self.line_ids:
-            line.write({
-                'name': False
-            })
-        return result
