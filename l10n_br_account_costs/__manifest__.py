@@ -8,7 +8,7 @@
     "author": "ATSTi, ",
     "website": "",
     "version": "14.0.1.0.0",
-    "depends": ["l10n_br_fiscal", "l10n_br_sale", "l10n_br_account", "l10n_br_purchase"],
+    "depends": ["l10n_br_purchase", "l10n_br_account"],
     "data": [
         # Data
         # "data/company.xml",
@@ -18,14 +18,14 @@
         # "security/l10n_br_sale_security.xml",
 
         # View
-        "views/account_invoice_view.xml",
+        #"views/account_invoice_view.xml",
     ],
     "demo": [
         # Demo
         # "demo/l10n_br_account_invoice.xml",
     ],
     "installable": True,
-    "auto_install": True,
+    "auto_install": False,
     # "post_init_hook": "post_init_hook",
     # "development_status": "Production/Stable",
     "maintainers": ["carlos"],

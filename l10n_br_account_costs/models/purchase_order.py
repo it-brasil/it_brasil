@@ -9,9 +9,7 @@ class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
 
     def _prepare_invoice(self):
-
         # frete, outros e seguro nao entrando na fatura
-
         self.ensure_one()
         invoice_vals = super()._prepare_invoice()
         invoice_vals.update(
